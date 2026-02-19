@@ -194,11 +194,14 @@ def _register_routes(application: FastAPI) -> None:
     async def health() -> dict[str, Any]:
         return ApiResponse(ok=True, data={"status": "healthy"}).model_dump()
 
-    # Future sub-routers go here (BEFORE including v1 into the app):
-    # from backend.api.student import router as student_router
+    # Sub-routers (BEFORE including v1 into the app):
+    from backend.api.student import router as student_router
+
+    v1.include_router(student_router, prefix="/student", tags=["student"])
+
+    # Future sub-routers:
     # from backend.api.teacher import router as teacher_router
     # from backend.api.composer import router as composer_router
-    # v1.include_router(student_router, prefix="/student", tags=["student"])
     # v1.include_router(teacher_router, prefix="/teacher", tags=["teacher"])
     # v1.include_router(composer_router, prefix="/composer", tags=["composer"])
 
