@@ -203,9 +203,10 @@ def _register_routes(application: FastAPI) -> None:
 
     v1.include_router(teacher_router, prefix="/teacher", tags=["teacher"])
 
-    # Future sub-routers:
-    # from backend.api.composer import router as composer_router
-    # v1.include_router(composer_router, prefix="/composer", tags=["composer"])
+    from backend.api.composer import asset_router, router as composer_router
+
+    v1.include_router(composer_router, prefix="/composer", tags=["composer"])
+    v1.include_router(asset_router, prefix="/assets", tags=["assets"])
 
     application.include_router(v1)
 
