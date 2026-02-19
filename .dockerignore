@@ -1,0 +1,39 @@
+# Virtual environments
+venv/
+.venv/
+
+# Git
+.git/
+.gitignore
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Testing artifacts
+.pytest_cache/
+.testmondata
+
+# Environment (secrets)
+.env
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Planning infrastructure (not deployment artifacts)
+visions/
+bridge/
