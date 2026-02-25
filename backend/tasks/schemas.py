@@ -1,8 +1,9 @@
 """Task cartridge data models — the shared vocabulary of the Makaronas platform.
 
 Defines the type system for task content: base type aliases, typed presentation
-blocks (the open-type pattern), and the routing logic that lets unknown block
-types pass through instead of failing validation.
+blocks (the open-type pattern), interaction types (the phase-level open-type
+pattern), phase state machine models, and the routing logic that lets unknown
+block and interaction types pass through instead of failing validation.
 
 This is a Tier 1 leaf module: imports only pydantic and stdlib.
 No disk I/O, no framework imports. Everything else imports from here.
@@ -11,6 +12,8 @@ Usage:
     from backend.tasks.schemas import (
         TextBlock, ImageBlock, PresentationBlock, GenericBlock,
         TaskType, TaskStatus, ModelPreference, PersonaMode,
+        ButtonInteraction, FreeformInteraction, InvestigationInteraction,
+        InteractionConfig, GenericInteraction, AiTransitions, Phase,
     )
 """
 
@@ -18,7 +21,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, BeforeValidator
+from pydantic import BaseModel, ConfigDict, Field, BeforeValidator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -268,3 +271,228 @@ Known type strings route to their specific model with full validation.
 Unknown type strings route to GenericBlock — no ValidationError.
 Use this type annotation in any model that contains presentation blocks.
 """
+
+
+# ---------------------------------------------------------------------------
+# Known interaction types
+# ---------------------------------------------------------------------------
+
+
+class ButtonChoice(BaseModel):
+    """A single button option within a ButtonInteraction.
+
+    Carries the display label, the target phase to transition to, and an
+    optional context_label recorded to session history for AI continuity
+    in hybrid tasks.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    label: str
+    target_phase: str
+    context_label: str | None = None
+
+
+class ButtonInteraction(BaseModel):
+    """Button interaction — the student picks from a set of choices.
+
+    Each choice carries a label, a target phase, and an optional context
+    label for hybrid tasks where AI phases need to know what was clicked.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["button"] = "button"
+    choices: list[ButtonChoice] = Field(default_factory=list)
+
+
+class FreeformInteraction(BaseModel):
+    """Freeform AI dialogue — multi-turn conversation with the Trickster.
+
+    Exchange bounds control the conversation length. An exchange is one
+    student turn + one Trickster turn. min_exchanges prevents premature
+    evaluation; max_exchanges triggers the on_max_exchanges transition.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["freeform"] = "freeform"
+    trickster_opening: str
+    min_exchanges: int = Field(ge=1)
+    max_exchanges: int = Field(ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_exchange_bounds(cls, values: Any) -> Any:
+        """Ensures min_exchanges <= max_exchanges."""
+        if isinstance(values, dict):
+            min_ex = values.get("min_exchanges")
+            max_ex = values.get("max_exchanges")
+            if min_ex is not None and max_ex is not None and min_ex > max_ex:
+                raise ValueError(
+                    f"min_exchanges ({min_ex}) must not exceed "
+                    f"max_exchanges ({max_ex})"
+                )
+        return values
+
+
+class InvestigationInteraction(BaseModel):
+    """Investigation interaction — search tree navigation.
+
+    Governs navigation rules for the investigation tree. The tree data
+    lives in SearchResultBlock instances; this config controls which
+    queries start available, where to go when done, and the minimum
+    key findings threshold.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["investigation"] = "investigation"
+    starting_queries: list[str] = Field(min_length=1)
+    submit_target: str
+    min_key_findings: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Generic fallback interaction
+# ---------------------------------------------------------------------------
+
+
+class GenericInteraction(BaseModel):
+    """Fallback for unknown interaction types — preserves type and config.
+
+    When a cartridge contains an interaction type not in the known set,
+    the routing function collects all fields except type into the config
+    dict. This keeps the authoring format flat while giving
+    GenericInteraction a consistent shape.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    type: str
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Interaction type registry and routing
+# ---------------------------------------------------------------------------
+
+KNOWN_INTERACTION_TYPES: dict[str, type[BaseModel]] = {
+    "button": ButtonInteraction,
+    "freeform": FreeformInteraction,
+    "investigation": InvestigationInteraction,
+}
+"""Maps interaction type strings to their Pydantic model classes."""
+
+
+def _route_interaction(data: Any) -> Any:
+    """Routes interaction data to the correct model based on the type string.
+
+    Handles two input shapes:
+    1. Raw dict from JSON (authoring format): {"type": "button", "choices": [...]}
+    2. Already-constructed model instance from Python code
+
+    For unknown types, collects all fields except type into a config dict
+    before constructing GenericInteraction. If the dict already has a config
+    field and no other extra keys, treats it as pre-serialized format.
+    """
+    if isinstance(data, BaseModel):
+        return data
+
+    if not isinstance(data, dict):
+        raise ValueError("InteractionConfig must be a dict or model instance")
+
+    interaction_type = data.get("type")
+    if interaction_type is None:
+        raise ValueError("InteractionConfig requires a 'type' field")
+
+    model_cls = KNOWN_INTERACTION_TYPES.get(interaction_type)
+    if model_cls is not None:
+        return model_cls.model_validate(data)
+
+    # Unknown type → GenericInteraction
+    # Detect whether this is already in GenericInteraction serialized form
+    # (has 'config' dict and no other extra keys) vs flat authoring form
+    known_keys = {"type", "config"}
+    extra_keys = set(data.keys()) - known_keys
+    if not extra_keys and isinstance(data.get("config"), dict):
+        return GenericInteraction.model_validate(data)
+
+    # Flat authoring format — collect extra fields into config
+    extra = {k: v for k, v in data.items() if k != "type"}
+    return GenericInteraction.model_validate({
+        "type": interaction_type,
+        "config": extra,
+    })
+
+
+InteractionConfig = Annotated[
+    Union[
+        ButtonInteraction,
+        FreeformInteraction,
+        InvestigationInteraction,
+        GenericInteraction,
+    ],
+    BeforeValidator(_route_interaction),
+]
+"""Open-type union for interaction configs.
+
+Known type strings route to their specific model with full validation.
+Unknown type strings route to GenericInteraction — no ValidationError.
+Use this type annotation in any model that contains an interaction config.
+"""
+
+
+# ---------------------------------------------------------------------------
+# AI transitions and evaluation outcomes
+# ---------------------------------------------------------------------------
+
+EvaluationOutcome = Literal["trickster_wins", "partial", "trickster_loses"]
+"""Named outcomes for terminal phases — what the evaluation concluded."""
+
+
+class AiTransitions(BaseModel):
+    """Maps Trickster engine signals to target phase IDs.
+
+    All three fields are required. If a task author doesn't distinguish
+    partial from max_exchanges, they map both to the same target phase.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    on_success: str
+    on_max_exchanges: str
+    on_partial: str
+
+
+# ---------------------------------------------------------------------------
+# Phase model — the state machine node
+# ---------------------------------------------------------------------------
+
+
+class Phase(BaseModel):
+    """A single phase in the task state machine.
+
+    Each phase defines what the student sees (visible_blocks), how they
+    interact (interaction), where the flow goes (button targets or
+    ai_transitions), and whether this is a terminal evaluation point.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # Identity
+    id: str
+    title: str
+
+    # Content
+    visible_blocks: list[str] = Field(default_factory=list)
+    trickster_content: str | None = None
+
+    # Interaction
+    is_ai_phase: bool = False
+    interaction: InteractionConfig | None = None
+    ai_transitions: AiTransitions | None = None
+
+    # Terminal state
+    is_terminal: bool = False
+    evaluation_outcome: EvaluationOutcome | None = None

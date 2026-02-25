@@ -1,18 +1,30 @@
-"""Tests for backend.tasks.schemas — Task cartridge base types and presentation blocks."""
+"""Tests for backend.tasks.schemas — Task cartridge base types, presentation blocks,
+interaction types, and phase model."""
+
+from typing import Literal
 
 import pytest
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from backend.tasks.schemas import (
+    AiTransitions,
     AudioBlock,
+    ButtonChoice,
+    ButtonInteraction,
     ChatMessageBlock,
     Difficulty,
+    FreeformInteraction,
     GenericBlock,
+    GenericInteraction,
     ImageBlock,
+    InteractionConfig,
+    InvestigationInteraction,
     KNOWN_BLOCK_TYPES,
+    KNOWN_INTERACTION_TYPES,
     MemeBlock,
     ModelPreference,
     PersonaMode,
+    Phase,
     PresentationBlock,
     SearchResultBlock,
     SocialPostBlock,
@@ -791,6 +803,787 @@ class TestKnownBlockTypes:
 
     def test_all_known_types_are_frozen(self) -> None:
         for type_str, model_cls in KNOWN_BLOCK_TYPES.items():
+            config = model_cls.model_config
+            assert config.get("frozen") is True, (
+                f"{model_cls.__name__} is not frozen"
+            )
+
+
+# ===========================================================================
+# Phase 1b — Interaction types, AiTransitions, Phase
+# ===========================================================================
+
+# TypeAdapter for validating InteractionConfig outside a model context
+_interaction_adapter = TypeAdapter(InteractionConfig)
+
+
+def _validate_interaction(data: dict) -> BaseModel:
+    """Validates a raw dict as an InteractionConfig via TypeAdapter."""
+    return _interaction_adapter.validate_python(data)
+
+
+# ---------------------------------------------------------------------------
+# ButtonChoice
+# ---------------------------------------------------------------------------
+
+
+class TestButtonChoice:
+    """ButtonChoice — a single button option."""
+
+    def test_valid_construction(self) -> None:
+        c = ButtonChoice(label="Dalintis", target_phase="phase_bitten")
+        assert c.label == "Dalintis"
+        assert c.target_phase == "phase_bitten"
+        assert c.context_label is None
+
+    def test_with_context_label(self) -> None:
+        c = ButtonChoice(
+            label="Dalintis",
+            target_phase="phase_bitten",
+            context_label="Pasidalino neperskaitęs",
+        )
+        assert c.context_label == "Pasidalino neperskaitęs"
+
+    def test_missing_label_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="label"):
+            ButtonChoice(target_phase="p1")  # type: ignore[call-arg]
+
+    def test_missing_target_phase_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="target_phase"):
+            ButtonChoice(label="Click me")  # type: ignore[call-arg]
+
+    def test_frozen(self) -> None:
+        c = ButtonChoice(label="Dalintis", target_phase="phase_bitten")
+        with pytest.raises(ValidationError):
+            c.label = "Changed"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        c = ButtonChoice(
+            label="Skaityti", target_phase="phase_read", context_label="Skaitė"
+        )
+        assert ButtonChoice.model_validate(c.model_dump(mode="json")) == c
+
+
+# ---------------------------------------------------------------------------
+# ButtonInteraction
+# ---------------------------------------------------------------------------
+
+
+class TestButtonInteraction:
+    """ButtonInteraction — button choices with labels and target phases."""
+
+    def test_valid_construction(self) -> None:
+        b = ButtonInteraction(
+            choices=[
+                ButtonChoice(label="Dalintis", target_phase="phase_bitten"),
+                ButtonChoice(label="Skaityti", target_phase="phase_read"),
+            ]
+        )
+        assert b.type == "button"
+        assert len(b.choices) == 2
+        assert b.choices[0].label == "Dalintis"
+
+    def test_empty_choices_accepted(self) -> None:
+        b = ButtonInteraction()
+        assert b.choices == []
+
+    def test_frozen(self) -> None:
+        b = ButtonInteraction(
+            choices=[ButtonChoice(label="A", target_phase="p1")]
+        )
+        with pytest.raises(ValidationError):
+            b.type = "other"  # type: ignore[misc]
+
+    def test_serialization_roundtrip(self) -> None:
+        b = ButtonInteraction(
+            choices=[
+                ButtonChoice(label="A", target_phase="p1", context_label="Chose A"),
+                ButtonChoice(label="B", target_phase="p2"),
+            ]
+        )
+        assert ButtonInteraction.model_validate(b.model_dump()) == b
+
+    def test_json_roundtrip(self) -> None:
+        b = ButtonInteraction(
+            choices=[
+                ButtonChoice(label="A", target_phase="p1"),
+            ]
+        )
+        assert ButtonInteraction.model_validate(b.model_dump(mode="json")) == b
+
+
+# ---------------------------------------------------------------------------
+# FreeformInteraction
+# ---------------------------------------------------------------------------
+
+
+class TestFreeformInteraction:
+    """FreeformInteraction — AI dialogue with exchange bounds."""
+
+    def test_valid_construction(self) -> None:
+        f = FreeformInteraction(
+            trickster_opening="Ką pastebėjai?",
+            min_exchanges=2,
+            max_exchanges=6,
+        )
+        assert f.type == "freeform"
+        assert f.trickster_opening == "Ką pastebėjai?"
+        assert f.min_exchanges == 2
+        assert f.max_exchanges == 6
+
+    def test_missing_trickster_opening_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="trickster_opening"):
+            FreeformInteraction(min_exchanges=1, max_exchanges=3)  # type: ignore[call-arg]
+
+    def test_min_exchanges_zero_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            FreeformInteraction(
+                trickster_opening="Hi", min_exchanges=0, max_exchanges=3
+            )
+
+    def test_max_exchanges_zero_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            FreeformInteraction(
+                trickster_opening="Hi", min_exchanges=1, max_exchanges=0
+            )
+
+    def test_min_exceeds_max_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            FreeformInteraction(
+                trickster_opening="Hi", min_exchanges=5, max_exchanges=3
+            )
+
+    def test_min_equals_max_accepted(self) -> None:
+        f = FreeformInteraction(
+            trickster_opening="Hi", min_exchanges=3, max_exchanges=3
+        )
+        assert f.min_exchanges == 3
+        assert f.max_exchanges == 3
+
+    def test_frozen(self) -> None:
+        f = FreeformInteraction(
+            trickster_opening="Hi", min_exchanges=1, max_exchanges=3
+        )
+        with pytest.raises(ValidationError):
+            f.trickster_opening = "Changed"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        f = FreeformInteraction(
+            trickster_opening="Ką pastebėjai?",
+            min_exchanges=2,
+            max_exchanges=6,
+        )
+        assert FreeformInteraction.model_validate(f.model_dump(mode="json")) == f
+
+
+# ---------------------------------------------------------------------------
+# InvestigationInteraction
+# ---------------------------------------------------------------------------
+
+
+class TestInvestigationInteraction:
+    """InvestigationInteraction — search tree navigation config."""
+
+    def test_valid_construction(self) -> None:
+        i = InvestigationInteraction(
+            starting_queries=["duomenų centras", "finansavimas"],
+            submit_target="phase_evaluation",
+        )
+        assert i.type == "investigation"
+        assert i.starting_queries == ["duomenų centras", "finansavimas"]
+        assert i.submit_target == "phase_evaluation"
+        assert i.min_key_findings == 0
+
+    def test_with_min_key_findings(self) -> None:
+        i = InvestigationInteraction(
+            starting_queries=["q1"],
+            submit_target="phase_eval",
+            min_key_findings=3,
+        )
+        assert i.min_key_findings == 3
+
+    def test_empty_starting_queries_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            InvestigationInteraction(
+                starting_queries=[],
+                submit_target="phase_eval",
+            )
+
+    def test_missing_submit_target_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="submit_target"):
+            InvestigationInteraction(
+                starting_queries=["q1"],
+            )  # type: ignore[call-arg]
+
+    def test_frozen(self) -> None:
+        i = InvestigationInteraction(
+            starting_queries=["q1"], submit_target="phase_eval"
+        )
+        with pytest.raises(ValidationError):
+            i.submit_target = "changed"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        i = InvestigationInteraction(
+            starting_queries=["q1", "q2"],
+            submit_target="phase_eval",
+            min_key_findings=2,
+        )
+        assert InvestigationInteraction.model_validate(i.model_dump(mode="json")) == i
+
+
+# ---------------------------------------------------------------------------
+# GenericInteraction
+# ---------------------------------------------------------------------------
+
+
+class TestGenericInteraction:
+    """GenericInteraction — fallback for unknown interaction types."""
+
+    def test_valid_construction(self) -> None:
+        g = GenericInteraction(
+            type="timeline_scrub",
+            config={"start_time": 0, "end_time": 120},
+        )
+        assert g.type == "timeline_scrub"
+        assert g.config == {"start_time": 0, "end_time": 120}
+
+    def test_empty_config(self) -> None:
+        g = GenericInteraction(type="unknown_interaction")
+        assert g.config == {}
+
+    def test_any_type_string(self) -> None:
+        g = GenericInteraction(type="future_interaction")
+        assert g.type == "future_interaction"
+
+    def test_frozen(self) -> None:
+        g = GenericInteraction(type="timeline_scrub", config={"x": 1})
+        with pytest.raises(ValidationError):
+            g.type = "other"  # type: ignore[misc]
+
+    def test_serialization_roundtrip(self) -> None:
+        g = GenericInteraction(type="drag_sort", config={"items": [1, 2, 3]})
+        assert GenericInteraction.model_validate(g.model_dump()) == g
+
+    def test_json_roundtrip(self) -> None:
+        g = GenericInteraction(
+            type="highlight", config={"regions": [{"start": 0, "end": 10}]}
+        )
+        assert GenericInteraction.model_validate(g.model_dump(mode="json")) == g
+
+
+# ---------------------------------------------------------------------------
+# InteractionConfig routing
+# ---------------------------------------------------------------------------
+
+
+class TestInteractionConfigRouting:
+    """Open-type routing — known interactions validate, unknown pass through."""
+
+    def test_known_type_routes_to_button(self) -> None:
+        result = _validate_interaction({
+            "type": "button",
+            "choices": [{"label": "A", "target_phase": "p1"}],
+        })
+        assert isinstance(result, ButtonInteraction)
+        assert len(result.choices) == 1
+
+    def test_known_type_routes_to_freeform(self) -> None:
+        result = _validate_interaction({
+            "type": "freeform",
+            "trickster_opening": "Hi",
+            "min_exchanges": 1,
+            "max_exchanges": 3,
+        })
+        assert isinstance(result, FreeformInteraction)
+        assert result.trickster_opening == "Hi"
+
+    def test_known_type_routes_to_investigation(self) -> None:
+        result = _validate_interaction({
+            "type": "investigation",
+            "starting_queries": ["q1"],
+            "submit_target": "phase_eval",
+        })
+        assert isinstance(result, InvestigationInteraction)
+        assert result.starting_queries == ["q1"]
+
+    def test_all_known_types_route_correctly(self) -> None:
+        samples = {
+            "button": {
+                "type": "button",
+                "choices": [{"label": "Go", "target_phase": "p1"}],
+            },
+            "freeform": {
+                "type": "freeform",
+                "trickster_opening": "Hi",
+                "min_exchanges": 1,
+                "max_exchanges": 3,
+            },
+            "investigation": {
+                "type": "investigation",
+                "starting_queries": ["q1"],
+                "submit_target": "phase_eval",
+            },
+        }
+        for type_str, data in samples.items():
+            result = _validate_interaction(data)
+            expected_cls = KNOWN_INTERACTION_TYPES[type_str]
+            assert isinstance(result, expected_cls), (
+                f"Expected {expected_cls.__name__} for type '{type_str}'"
+            )
+
+    def test_unknown_type_routes_to_generic(self) -> None:
+        result = _validate_interaction({
+            "type": "timeline_scrub",
+            "start_time": 0,
+            "end_time": 120,
+        })
+        assert isinstance(result, GenericInteraction)
+        assert result.type == "timeline_scrub"
+        assert result.config == {"start_time": 0, "end_time": 120}
+
+    def test_unknown_type_preserves_all_fields_in_config(self) -> None:
+        result = _validate_interaction({
+            "type": "drag_sort",
+            "items": ["a", "b", "c"],
+            "allow_reorder": True,
+        })
+        assert isinstance(result, GenericInteraction)
+        assert result.config == {"items": ["a", "b", "c"], "allow_reorder": True}
+
+    def test_missing_type_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _validate_interaction({"choices": [{"label": "A", "target_phase": "p1"}]})
+
+    def test_known_type_with_invalid_fields_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _validate_interaction({"type": "freeform"})  # missing required fields
+
+    def test_model_instance_passes_through(self) -> None:
+        original = ButtonInteraction(
+            choices=[ButtonChoice(label="A", target_phase="p1")]
+        )
+        result = _validate_interaction(original)
+        assert result is original
+
+    def test_non_dict_non_model_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            _validate_interaction("not a dict")
+
+    def test_multiple_unknown_types_coexist(self) -> None:
+        r1 = _validate_interaction({"type": "timeline_scrub", "duration": 60})
+        r2 = _validate_interaction({"type": "highlight", "color": "yellow"})
+        assert isinstance(r1, GenericInteraction)
+        assert isinstance(r2, GenericInteraction)
+        assert r1.type == "timeline_scrub"
+        assert r2.type == "highlight"
+
+    def test_no_id_field_required(self) -> None:
+        """Interactions do NOT have an id field — unlike PresentationBlocks."""
+        result = _validate_interaction({
+            "type": "button",
+            "choices": [{"label": "A", "target_phase": "p1"}],
+        })
+        assert isinstance(result, ButtonInteraction)
+        assert not hasattr(result, "id") or "id" not in result.model_fields
+
+
+# ---------------------------------------------------------------------------
+# GenericInteraction round-trip through routing
+# ---------------------------------------------------------------------------
+
+
+class TestGenericInteractionRoundTrip:
+    """GenericInteraction must survive serialization → routing → equality."""
+
+    def test_serialized_generic_interaction_round_trips(self) -> None:
+        original = _validate_interaction({
+            "type": "timeline_scrub", "start_time": 0, "end_time": 120
+        })
+        assert isinstance(original, GenericInteraction)
+
+        serialized = original.model_dump()
+        restored = _validate_interaction(serialized)
+        assert isinstance(restored, GenericInteraction)
+        assert restored == original
+
+    def test_serialized_json_generic_interaction_round_trips(self) -> None:
+        original = _validate_interaction({
+            "type": "drag_sort", "nested": {"a": [1, 2, 3]}
+        })
+        assert isinstance(original, GenericInteraction)
+
+        json_data = original.model_dump(mode="json")
+        restored = _validate_interaction(json_data)
+        assert isinstance(restored, GenericInteraction)
+        assert restored == original
+
+    def test_generic_interaction_with_empty_config_round_trips(self) -> None:
+        original = _validate_interaction({"type": "empty_interaction"})
+        assert isinstance(original, GenericInteraction)
+        assert original.config == {}
+
+        serialized = original.model_dump()
+        restored = _validate_interaction(serialized)
+        assert restored == original
+
+
+# ---------------------------------------------------------------------------
+# AiTransitions
+# ---------------------------------------------------------------------------
+
+
+class TestAiTransitions:
+    """AiTransitions — maps engine signals to target phase IDs."""
+
+    def test_valid_construction(self) -> None:
+        t = AiTransitions(
+            on_success="phase_reveal_win",
+            on_max_exchanges="phase_reveal_timeout",
+            on_partial="phase_reveal_partial",
+        )
+        assert t.on_success == "phase_reveal_win"
+        assert t.on_max_exchanges == "phase_reveal_timeout"
+        assert t.on_partial == "phase_reveal_partial"
+
+    def test_missing_on_success_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="on_success"):
+            AiTransitions(
+                on_max_exchanges="p2", on_partial="p3"
+            )  # type: ignore[call-arg]
+
+    def test_missing_on_max_exchanges_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="on_max_exchanges"):
+            AiTransitions(
+                on_success="p1", on_partial="p3"
+            )  # type: ignore[call-arg]
+
+    def test_missing_on_partial_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="on_partial"):
+            AiTransitions(
+                on_success="p1", on_max_exchanges="p2"
+            )  # type: ignore[call-arg]
+
+    def test_same_target_for_all_accepted(self) -> None:
+        t = AiTransitions(
+            on_success="phase_reveal",
+            on_max_exchanges="phase_reveal",
+            on_partial="phase_reveal",
+        )
+        assert t.on_success == t.on_max_exchanges == t.on_partial
+
+    def test_frozen(self) -> None:
+        t = AiTransitions(
+            on_success="p1", on_max_exchanges="p2", on_partial="p3"
+        )
+        with pytest.raises(ValidationError):
+            t.on_success = "changed"  # type: ignore[misc]
+
+    def test_serialization_roundtrip(self) -> None:
+        t = AiTransitions(
+            on_success="p1", on_max_exchanges="p2", on_partial="p3"
+        )
+        assert AiTransitions.model_validate(t.model_dump()) == t
+
+    def test_json_roundtrip(self) -> None:
+        t = AiTransitions(
+            on_success="p1", on_max_exchanges="p2", on_partial="p3"
+        )
+        assert AiTransitions.model_validate(t.model_dump(mode="json")) == t
+
+
+# ---------------------------------------------------------------------------
+# EvaluationOutcome
+# ---------------------------------------------------------------------------
+
+
+class TestEvaluationOutcome:
+    """EvaluationOutcome — named terminal phase outcomes."""
+
+    _adapter = TypeAdapter(Literal["trickster_wins", "partial", "trickster_loses"])
+
+    def test_valid_values(self) -> None:
+        for value in ("trickster_wins", "partial", "trickster_loses"):
+            assert self._adapter.validate_python(value) == value
+
+    def test_invalid_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            self._adapter.validate_python("draw")
+
+
+# ---------------------------------------------------------------------------
+# Phase
+# ---------------------------------------------------------------------------
+
+
+class TestPhase:
+    """Phase — the core state machine node."""
+
+    def test_valid_static_phase(self) -> None:
+        p = Phase(
+            id="phase_intro",
+            title="Įvadas",
+            visible_blocks=["block-headline", "block-snippet"],
+            trickster_content="Pažiūrėk į šią antraštę...",
+            interaction=ButtonInteraction(
+                choices=[
+                    ButtonChoice(label="Dalintis", target_phase="phase_bitten"),
+                    ButtonChoice(label="Skaityti", target_phase="phase_read"),
+                ]
+            ),
+        )
+        assert p.id == "phase_intro"
+        assert p.title == "Įvadas"
+        assert p.visible_blocks == ["block-headline", "block-snippet"]
+        assert p.is_ai_phase is False
+        assert p.trickster_content == "Pažiūrėk į šią antraštę..."
+        assert isinstance(p.interaction, ButtonInteraction)
+        assert p.ai_transitions is None
+        assert p.is_terminal is False
+        assert p.evaluation_outcome is None
+
+    def test_valid_ai_phase(self) -> None:
+        p = Phase(
+            id="phase_dialogue",
+            title="Diskusija",
+            visible_blocks=["block-article"],
+            is_ai_phase=True,
+            interaction=FreeformInteraction(
+                trickster_opening="Ką pastebėjai?",
+                min_exchanges=2,
+                max_exchanges=6,
+            ),
+            ai_transitions=AiTransitions(
+                on_success="phase_reveal_win",
+                on_max_exchanges="phase_reveal_timeout",
+                on_partial="phase_reveal_partial",
+            ),
+        )
+        assert p.is_ai_phase is True
+        assert isinstance(p.interaction, FreeformInteraction)
+        assert isinstance(p.ai_transitions, AiTransitions)
+        assert p.ai_transitions.on_success == "phase_reveal_win"
+
+    def test_valid_terminal_phase(self) -> None:
+        p = Phase(
+            id="phase_reveal_win",
+            title="Atskleidimas",
+            visible_blocks=["block-reveal"],
+            is_terminal=True,
+            evaluation_outcome="trickster_loses",
+        )
+        assert p.is_terminal is True
+        assert p.evaluation_outcome == "trickster_loses"
+        assert p.interaction is None
+
+    def test_terminal_without_evaluation_outcome_accepted(self) -> None:
+        """Schema level doesn't enforce that terminal phases have outcomes.
+        That's Phase 2b's business rule."""
+        p = Phase(
+            id="phase_end",
+            title="Pabaiga",
+            is_terminal=True,
+        )
+        assert p.is_terminal is True
+        assert p.evaluation_outcome is None
+
+    def test_non_terminal_with_evaluation_outcome_accepted(self) -> None:
+        """Schema doesn't cross-validate terminal + outcome. Phase 2b does."""
+        p = Phase(
+            id="phase_mid",
+            title="Vidurys",
+            evaluation_outcome="partial",
+        )
+        assert p.is_terminal is False
+        assert p.evaluation_outcome == "partial"
+
+    def test_empty_visible_blocks_accepted(self) -> None:
+        p = Phase(id="phase_chat", title="Pokalbis")
+        assert p.visible_blocks == []
+
+    def test_interaction_defaults_to_none(self) -> None:
+        p = Phase(id="phase_end", title="Pabaiga")
+        assert p.interaction is None
+
+    def test_ai_transitions_defaults_to_none(self) -> None:
+        p = Phase(id="phase_end", title="Pabaiga")
+        assert p.ai_transitions is None
+
+    def test_evaluation_outcome_defaults_to_none(self) -> None:
+        p = Phase(id="phase_mid", title="Vidurys")
+        assert p.evaluation_outcome is None
+
+    def test_invalid_evaluation_outcome_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            Phase(
+                id="phase_end",
+                title="Pabaiga",
+                evaluation_outcome="draw",
+            )
+
+    def test_frozen(self) -> None:
+        p = Phase(id="phase_intro", title="Įvadas")
+        with pytest.raises(ValidationError):
+            p.title = "Changed"  # type: ignore[misc]
+
+    def test_missing_id_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="id"):
+            Phase(title="No ID")  # type: ignore[call-arg]
+
+    def test_missing_title_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="title"):
+            Phase(id="phase_1")  # type: ignore[call-arg]
+
+    def test_serialization_roundtrip(self) -> None:
+        p = Phase(
+            id="phase_intro",
+            title="Įvadas",
+            visible_blocks=["b1", "b2"],
+            trickster_content="Text",
+            interaction=ButtonInteraction(
+                choices=[ButtonChoice(label="A", target_phase="p1")]
+            ),
+        )
+        assert Phase.model_validate(p.model_dump()) == p
+
+    def test_json_roundtrip(self) -> None:
+        p = Phase(
+            id="phase_dialogue",
+            title="Diskusija",
+            visible_blocks=["b1"],
+            is_ai_phase=True,
+            interaction=FreeformInteraction(
+                trickster_opening="Hi",
+                min_exchanges=2,
+                max_exchanges=6,
+            ),
+            ai_transitions=AiTransitions(
+                on_success="p1", on_max_exchanges="p2", on_partial="p3"
+            ),
+        )
+        assert Phase.model_validate(p.model_dump(mode="json")) == p
+
+    def test_json_roundtrip_terminal(self) -> None:
+        p = Phase(
+            id="phase_end",
+            title="Pabaiga",
+            is_terminal=True,
+            evaluation_outcome="trickster_wins",
+        )
+        assert Phase.model_validate(p.model_dump(mode="json")) == p
+
+    def test_interaction_from_raw_dict(self) -> None:
+        """Phase should accept interaction as a raw dict (JSON deserialization)."""
+        p = Phase.model_validate({
+            "id": "phase_intro",
+            "title": "Intro",
+            "interaction": {
+                "type": "button",
+                "choices": [{"label": "Go", "target_phase": "p1"}],
+            },
+        })
+        assert isinstance(p.interaction, ButtonInteraction)
+
+    def test_interaction_unknown_type_from_raw_dict(self) -> None:
+        """Phase accepts unknown interaction types via GenericInteraction."""
+        p = Phase.model_validate({
+            "id": "phase_custom",
+            "title": "Custom",
+            "interaction": {
+                "type": "timeline_scrub",
+                "start_time": 0,
+                "end_time": 120,
+            },
+        })
+        assert isinstance(p.interaction, GenericInteraction)
+        assert p.interaction.type == "timeline_scrub"
+
+
+# ---------------------------------------------------------------------------
+# Mixed Phase list serialization
+# ---------------------------------------------------------------------------
+
+
+class TestMixedPhaseListSerialization:
+    """Lists of phases with different interaction types survive JSON round-trip."""
+
+    def _make_mixed_phases(self) -> list[Phase]:
+        return [
+            Phase(
+                id="phase_intro",
+                title="Intro",
+                visible_blocks=["b1"],
+                trickster_content="Look at this...",
+                interaction=ButtonInteraction(
+                    choices=[
+                        ButtonChoice(label="Share", target_phase="phase_bitten"),
+                        ButtonChoice(label="Read", target_phase="phase_read"),
+                    ]
+                ),
+            ),
+            Phase(
+                id="phase_dialogue",
+                title="Dialogue",
+                visible_blocks=["b1", "b2"],
+                is_ai_phase=True,
+                interaction=FreeformInteraction(
+                    trickster_opening="What did you notice?",
+                    min_exchanges=2,
+                    max_exchanges=6,
+                ),
+                ai_transitions=AiTransitions(
+                    on_success="phase_win",
+                    on_max_exchanges="phase_timeout",
+                    on_partial="phase_partial",
+                ),
+            ),
+            Phase(
+                id="phase_win",
+                title="Victory",
+                visible_blocks=["b3"],
+                is_terminal=True,
+                evaluation_outcome="trickster_loses",
+            ),
+        ]
+
+    def test_mixed_phases_json_roundtrip(self) -> None:
+        phases = self._make_mixed_phases()
+        serialized = [p.model_dump(mode="json") for p in phases]
+        restored = [Phase.model_validate(d) for d in serialized]
+
+        assert len(restored) == len(phases)
+        for original, restored_phase in zip(phases, restored):
+            assert original == restored_phase
+
+    def test_mixed_phases_dict_roundtrip(self) -> None:
+        phases = self._make_mixed_phases()
+        serialized = [p.model_dump() for p in phases]
+        restored = [Phase.model_validate(d) for d in serialized]
+
+        for original, restored_phase in zip(phases, restored):
+            assert original == restored_phase
+
+
+# ---------------------------------------------------------------------------
+# KNOWN_INTERACTION_TYPES registry
+# ---------------------------------------------------------------------------
+
+
+class TestKnownInteractionTypes:
+    """The interaction type registry maps type strings to model classes."""
+
+    def test_registry_has_three_types(self) -> None:
+        assert len(KNOWN_INTERACTION_TYPES) == 3
+
+    def test_registry_keys_match_type_fields(self) -> None:
+        for type_str, model_cls in KNOWN_INTERACTION_TYPES.items():
+            field_info = model_cls.model_fields["type"]
+            assert field_info.default == type_str, (
+                f"{model_cls.__name__}.type default '{field_info.default}' "
+                f"doesn't match registry key '{type_str}'"
+            )
+
+    def test_all_known_types_are_frozen(self) -> None:
+        for type_str, model_cls in KNOWN_INTERACTION_TYPES.items():
             config = model_cls.model_config
             assert config.get("frozen") is True, (
                 f"{model_cls.__name__} is not frozen"
