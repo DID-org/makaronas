@@ -1,0 +1,35 @@
+{
+  "triggers": {
+    "urgency": "Skubumas",
+    "belonging": "Priklausomybė",
+    "injustice": "Neteisybė",
+    "authority": "Autoritetas",
+    "identity": "Tapatybė",
+    "fear": "Baimė",
+    "greed": "Godumas",
+    "cynicism": "Cinizmas"
+  },
+  "techniques": {
+    "cherry_picking": "Selektyvus citavimas",
+    "fabrication": "Fabricavimas",
+    "emotional_framing": "Emocinis rėminimas",
+    "wedge_driving": "Kiršinimas",
+    "omission": "Nutylėjimas",
+    "false_authority": "Netikras autoritetas",
+    "manufactured_deadline": "Dirbtinis terminas",
+    "headline_manipulation": "Antraštės manipuliacija",
+    "source_weaponization": "Šaltinio instrumentalizavimas",
+    "phantom_quote": "Fantominė citata"
+  },
+  "mediums": {
+    "article": "Straipsnis",
+    "social_post": "Socialinis įrašas",
+    "chat": "Pokalbis",
+    "investigation": "Tyrimas",
+    "meme": "Memas",
+    "feed": "Srautas",
+    "audio": "Garso įrašas",
+    "video_transcript": "Vaizdo įrašo transkripcija",
+    "image": "Vaizdas"
+  }
+}
