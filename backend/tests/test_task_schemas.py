@@ -1,18 +1,24 @@
 """Tests for backend.tasks.schemas — Task cartridge base types, presentation blocks,
-interaction types, and phase model."""
+interaction types, phase model, evaluation contract, AI config, and TaskCartridge."""
 
+import warnings
 from typing import Literal
 
 import pytest
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from backend.tasks.schemas import (
+    AiConfig,
     AiTransitions,
     AudioBlock,
     ButtonChoice,
     ButtonInteraction,
     ChatMessageBlock,
+    ChecklistItem,
+    ContextRequirements,
     Difficulty,
+    EmbeddedPattern,
+    EvaluationContract,
     FreeformInteraction,
     GenericBlock,
     GenericInteraction,
@@ -23,13 +29,18 @@ from backend.tasks.schemas import (
     KNOWN_INTERACTION_TYPES,
     MemeBlock,
     ModelPreference,
+    PassConditions,
     PersonaMode,
     Phase,
     PresentationBlock,
+    RevealContent,
+    SafetyConfig,
     SearchResultBlock,
     SocialPostBlock,
+    TaskCartridge,
     TaskStatus,
     TaskType,
+    TaxonomyWarning,
     TextBlock,
     VideoTranscriptBlock,
 )
@@ -1588,3 +1599,995 @@ class TestKnownInteractionTypes:
             assert config.get("frozen") is True, (
                 f"{model_cls.__name__} is not frozen"
             )
+
+
+# ===========================================================================
+# Phase 1c: Evaluation contract, AI config, reveal, safety, TaskCartridge
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# ContextRequirements type alias
+# ---------------------------------------------------------------------------
+
+
+class TestContextRequirements:
+    """ContextRequirements Literal — session_only, learning_profile, full_history."""
+
+    _adapter = TypeAdapter(ContextRequirements)
+
+    def test_valid_values(self) -> None:
+        for value in ("session_only", "learning_profile", "full_history"):
+            assert self._adapter.validate_python(value) == value
+
+    def test_invalid_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            self._adapter.validate_python("invalid_context")
+
+
+# ---------------------------------------------------------------------------
+# EmbeddedPattern
+# ---------------------------------------------------------------------------
+
+
+class TestEmbeddedPattern:
+    """EmbeddedPattern — a single manipulation pattern in task content."""
+
+    def test_valid_construction(self) -> None:
+        p = EmbeddedPattern(
+            id="pattern-urgency",
+            description="Artificial deadline",
+            technique="manufactured_deadline",
+            real_world_connection="News outlets use countdown timers",
+        )
+        assert p.id == "pattern-urgency"
+        assert p.technique == "manufactured_deadline"
+
+    def test_missing_id_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="id"):
+            EmbeddedPattern(  # type: ignore[call-arg]
+                description="d",
+                technique="t",
+                real_world_connection="r",
+            )
+
+    def test_missing_description_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="description"):
+            EmbeddedPattern(  # type: ignore[call-arg]
+                id="p1",
+                technique="t",
+                real_world_connection="r",
+            )
+
+    def test_missing_technique_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="technique"):
+            EmbeddedPattern(  # type: ignore[call-arg]
+                id="p1",
+                description="d",
+                real_world_connection="r",
+            )
+
+    def test_missing_real_world_connection_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="real_world_connection"):
+            EmbeddedPattern(  # type: ignore[call-arg]
+                id="p1",
+                description="d",
+                technique="t",
+            )
+
+    def test_frozen(self) -> None:
+        p = EmbeddedPattern(
+            id="p1", description="d", technique="t", real_world_connection="r",
+        )
+        with pytest.raises(ValidationError):
+            p.id = "p2"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        p = EmbeddedPattern(
+            id="pattern-urgency",
+            description="Artificial deadline",
+            technique="manufactured_deadline",
+            real_world_connection="News outlets use countdown timers",
+        )
+        assert EmbeddedPattern.model_validate(p.model_dump(mode="json")) == p
+
+    def test_serialization_roundtrip(self) -> None:
+        p = EmbeddedPattern(
+            id="p1", description="d", technique="t", real_world_connection="r",
+        )
+        assert EmbeddedPattern.model_validate(p.model_dump()) == p
+
+
+# ---------------------------------------------------------------------------
+# ChecklistItem
+# ---------------------------------------------------------------------------
+
+
+class TestChecklistItem:
+    """ChecklistItem — what the student should demonstrate."""
+
+    def test_valid_construction(self) -> None:
+        item = ChecklistItem(
+            id="check-headline",
+            description="Recognized headline mismatch",
+            pattern_refs=["pattern-headline"],
+            is_mandatory=True,
+        )
+        assert item.id == "check-headline"
+        assert item.is_mandatory is True
+
+    def test_defaults(self) -> None:
+        item = ChecklistItem(id="c1", description="d")
+        assert item.pattern_refs == []
+        assert item.is_mandatory is False
+
+    def test_missing_id_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="id"):
+            ChecklistItem(description="d")  # type: ignore[call-arg]
+
+    def test_missing_description_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="description"):
+            ChecklistItem(id="c1")  # type: ignore[call-arg]
+
+    def test_frozen(self) -> None:
+        item = ChecklistItem(id="c1", description="d")
+        with pytest.raises(ValidationError):
+            item.id = "c2"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        item = ChecklistItem(
+            id="check-1",
+            description="d",
+            pattern_refs=["p1", "p2"],
+            is_mandatory=True,
+        )
+        assert ChecklistItem.model_validate(item.model_dump(mode="json")) == item
+
+    def test_serialization_roundtrip(self) -> None:
+        item = ChecklistItem(id="c1", description="d")
+        assert ChecklistItem.model_validate(item.model_dump()) == item
+
+
+# ---------------------------------------------------------------------------
+# PassConditions
+# ---------------------------------------------------------------------------
+
+
+class TestPassConditions:
+    """PassConditions — textual descriptions of each evaluation outcome."""
+
+    def test_valid_construction(self) -> None:
+        pc = PassConditions(
+            trickster_wins="Student shared without reading",
+            partial="Student read but missed patterns",
+            trickster_loses="Student identified techniques",
+        )
+        assert pc.trickster_wins == "Student shared without reading"
+
+    def test_missing_trickster_wins_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="trickster_wins"):
+            PassConditions(  # type: ignore[call-arg]
+                partial="p",
+                trickster_loses="l",
+            )
+
+    def test_missing_partial_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="partial"):
+            PassConditions(  # type: ignore[call-arg]
+                trickster_wins="w",
+                trickster_loses="l",
+            )
+
+    def test_missing_trickster_loses_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="trickster_loses"):
+            PassConditions(  # type: ignore[call-arg]
+                trickster_wins="w",
+                partial="p",
+            )
+
+    def test_frozen(self) -> None:
+        pc = PassConditions(trickster_wins="w", partial="p", trickster_loses="l")
+        with pytest.raises(ValidationError):
+            pc.trickster_wins = "new"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        pc = PassConditions(trickster_wins="w", partial="p", trickster_loses="l")
+        assert PassConditions.model_validate(pc.model_dump(mode="json")) == pc
+
+    def test_serialization_roundtrip(self) -> None:
+        pc = PassConditions(trickster_wins="w", partial="p", trickster_loses="l")
+        assert PassConditions.model_validate(pc.model_dump()) == pc
+
+
+# ---------------------------------------------------------------------------
+# EvaluationContract
+# ---------------------------------------------------------------------------
+
+
+class TestEvaluationContract:
+    """EvaluationContract — the rubric consumed by V6's scoring engine."""
+
+    def _make_contract(self) -> EvaluationContract:
+        return EvaluationContract(
+            patterns_embedded=[
+                EmbeddedPattern(
+                    id="p1", description="d", technique="t", real_world_connection="r",
+                ),
+            ],
+            checklist=[
+                ChecklistItem(id="c1", description="d", pattern_refs=["p1"]),
+            ],
+            pass_conditions=PassConditions(
+                trickster_wins="w", partial="p", trickster_loses="l",
+            ),
+        )
+
+    def test_valid_construction(self) -> None:
+        ec = self._make_contract()
+        assert len(ec.patterns_embedded) == 1
+        assert len(ec.checklist) == 1
+        assert ec.pass_conditions.trickster_wins == "w"
+
+    def test_empty_patterns_accepted(self) -> None:
+        ec = EvaluationContract(
+            patterns_embedded=[],
+            checklist=[],
+            pass_conditions=PassConditions(
+                trickster_wins="w", partial="p", trickster_loses="l",
+            ),
+        )
+        assert ec.patterns_embedded == []
+
+    def test_missing_pass_conditions_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="pass_conditions"):
+            EvaluationContract(  # type: ignore[call-arg]
+                patterns_embedded=[],
+                checklist=[],
+            )
+
+    def test_frozen(self) -> None:
+        ec = self._make_contract()
+        with pytest.raises(ValidationError):
+            ec.checklist = []  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        ec = self._make_contract()
+        assert EvaluationContract.model_validate(ec.model_dump(mode="json")) == ec
+
+    def test_serialization_roundtrip(self) -> None:
+        ec = self._make_contract()
+        assert EvaluationContract.model_validate(ec.model_dump()) == ec
+
+
+# ---------------------------------------------------------------------------
+# AiConfig
+# ---------------------------------------------------------------------------
+
+
+class TestAiConfig:
+    """AiConfig — AI layer configuration for a task."""
+
+    def _make_config(self) -> AiConfig:
+        return AiConfig(
+            model_preference="standard",
+            prompt_directory="prompts/tasks/task-001",
+            persona_mode="presenting",
+            has_static_fallback=True,
+            context_requirements="session_only",
+        )
+
+    def test_valid_construction(self) -> None:
+        ac = self._make_config()
+        assert ac.model_preference == "standard"
+        assert ac.persona_mode == "presenting"
+        assert ac.context_requirements == "session_only"
+
+    def test_missing_model_preference_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="model_preference"):
+            AiConfig(  # type: ignore[call-arg]
+                prompt_directory="p",
+                persona_mode="presenting",
+                has_static_fallback=True,
+                context_requirements="session_only",
+            )
+
+    def test_invalid_model_preference_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            AiConfig(
+                model_preference="turbo",  # type: ignore[arg-type]
+                prompt_directory="p",
+                persona_mode="presenting",
+                has_static_fallback=True,
+                context_requirements="session_only",
+            )
+
+    def test_invalid_persona_mode_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            AiConfig(
+                model_preference="fast",
+                prompt_directory="p",
+                persona_mode="invalid",  # type: ignore[arg-type]
+                has_static_fallback=True,
+                context_requirements="session_only",
+            )
+
+    def test_invalid_context_requirements_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            AiConfig(
+                model_preference="fast",
+                prompt_directory="p",
+                persona_mode="presenting",
+                has_static_fallback=True,
+                context_requirements="invalid",  # type: ignore[arg-type]
+            )
+
+    def test_frozen(self) -> None:
+        ac = self._make_config()
+        with pytest.raises(ValidationError):
+            ac.model_preference = "fast"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        ac = self._make_config()
+        assert AiConfig.model_validate(ac.model_dump(mode="json")) == ac
+
+    def test_serialization_roundtrip(self) -> None:
+        ac = self._make_config()
+        assert AiConfig.model_validate(ac.model_dump()) == ac
+
+
+# ---------------------------------------------------------------------------
+# RevealContent
+# ---------------------------------------------------------------------------
+
+
+class TestRevealContent:
+    """RevealContent — post-task reveal content."""
+
+    def test_valid_construction(self) -> None:
+        rc = RevealContent(
+            key_lesson="The headline was designed to trigger urgency",
+            additional_resources=["https://example.com/media-literacy"],
+        )
+        assert rc.key_lesson.startswith("The headline")
+        assert len(rc.additional_resources) == 1
+
+    def test_defaults(self) -> None:
+        rc = RevealContent(key_lesson="lesson")
+        assert rc.additional_resources == []
+
+    def test_missing_key_lesson_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="key_lesson"):
+            RevealContent()  # type: ignore[call-arg]
+
+    def test_frozen(self) -> None:
+        rc = RevealContent(key_lesson="lesson")
+        with pytest.raises(ValidationError):
+            rc.key_lesson = "new"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        rc = RevealContent(key_lesson="lesson", additional_resources=["a", "b"])
+        assert RevealContent.model_validate(rc.model_dump(mode="json")) == rc
+
+    def test_serialization_roundtrip(self) -> None:
+        rc = RevealContent(key_lesson="lesson")
+        assert RevealContent.model_validate(rc.model_dump()) == rc
+
+
+# ---------------------------------------------------------------------------
+# SafetyConfig
+# ---------------------------------------------------------------------------
+
+
+class TestSafetyConfig:
+    """SafetyConfig — safety guardrails for a task."""
+
+    def test_valid_construction(self) -> None:
+        sc = SafetyConfig(
+            content_boundaries=["no_real_harm", "no_violence"],
+            intensity_ceiling=3,
+            cold_start_safe=True,
+        )
+        assert sc.intensity_ceiling == 3
+        assert sc.cold_start_safe is True
+
+    def test_defaults_content_boundaries(self) -> None:
+        sc = SafetyConfig(intensity_ceiling=1, cold_start_safe=False)
+        assert sc.content_boundaries == []
+
+    def test_intensity_ceiling_min(self) -> None:
+        sc = SafetyConfig(intensity_ceiling=1, cold_start_safe=True)
+        assert sc.intensity_ceiling == 1
+
+    def test_intensity_ceiling_max(self) -> None:
+        sc = SafetyConfig(intensity_ceiling=5, cold_start_safe=True)
+        assert sc.intensity_ceiling == 5
+
+    def test_intensity_ceiling_below_min_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            SafetyConfig(intensity_ceiling=0, cold_start_safe=True)
+
+    def test_intensity_ceiling_above_max_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            SafetyConfig(intensity_ceiling=6, cold_start_safe=True)
+
+    def test_missing_intensity_ceiling_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="intensity_ceiling"):
+            SafetyConfig(cold_start_safe=True)  # type: ignore[call-arg]
+
+    def test_missing_cold_start_safe_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="cold_start_safe"):
+            SafetyConfig(intensity_ceiling=3)  # type: ignore[call-arg]
+
+    def test_frozen(self) -> None:
+        sc = SafetyConfig(intensity_ceiling=3, cold_start_safe=True)
+        with pytest.raises(ValidationError):
+            sc.intensity_ceiling = 1  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        sc = SafetyConfig(
+            content_boundaries=["a"], intensity_ceiling=3, cold_start_safe=True,
+        )
+        assert SafetyConfig.model_validate(sc.model_dump(mode="json")) == sc
+
+    def test_serialization_roundtrip(self) -> None:
+        sc = SafetyConfig(intensity_ceiling=2, cold_start_safe=False)
+        assert SafetyConfig.model_validate(sc.model_dump()) == sc
+
+
+# ---------------------------------------------------------------------------
+# TaskCartridge — helpers
+# ---------------------------------------------------------------------------
+
+
+def _minimal_cartridge_data(**overrides: object) -> dict:
+    """Returns a minimal valid TaskCartridge dict for testing.
+
+    Override any field by passing keyword arguments.
+    """
+    data: dict = {
+        "task_id": "task-test-001",
+        "task_type": "hybrid",
+        "title": "Testas",
+        "description": "Testo aprašymas",
+        "version": "1.0",
+        "trigger": "urgency",
+        "technique": "headline_manipulation",
+        "medium": "article",
+        "learning_objectives": ["Atpažinti manipuliaciją"],
+        "difficulty": 3,
+        "time_minutes": 15,
+        "is_evergreen": True,
+        "is_clean": False,
+        "initial_phase": "phase_intro",
+        "evaluation": {
+            "patterns_embedded": [
+                {
+                    "id": "p1",
+                    "description": "Urgency pattern",
+                    "technique": "manufactured_deadline",
+                    "real_world_connection": "Common in news",
+                },
+            ],
+            "checklist": [
+                {
+                    "id": "c1",
+                    "description": "Identified urgency",
+                    "pattern_refs": ["p1"],
+                    "is_mandatory": True,
+                },
+            ],
+            "pass_conditions": {
+                "trickster_wins": "Mokinys pasidalino",
+                "partial": "Mokinys perskaitė, bet praleido",
+                "trickster_loses": "Mokinys atpažino technikas",
+            },
+        },
+        "reveal": {"key_lesson": "Antraštė buvo sukurta skubos jausmui sukelti"},
+        "safety": {
+            "content_boundaries": ["no_real_harm"],
+            "intensity_ceiling": 3,
+            "cold_start_safe": True,
+        },
+    }
+    data.update(overrides)
+    return data
+
+
+def _make_cartridge(**overrides: object) -> TaskCartridge:
+    """Constructs a minimal valid TaskCartridge for testing."""
+    return TaskCartridge.model_validate(_minimal_cartridge_data(**overrides))
+
+
+# ---------------------------------------------------------------------------
+# TaskCartridge — core
+# ---------------------------------------------------------------------------
+
+
+class TestTaskCartridge:
+    """TaskCartridge — the top-level cartridge model."""
+
+    def test_valid_construction(self) -> None:
+        tc = _make_cartridge()
+        assert tc.task_id == "task-test-001"
+        assert tc.task_type == "hybrid"
+        assert tc.difficulty == 3
+        assert tc.time_minutes == 15
+
+    def test_defaults(self) -> None:
+        tc = _make_cartridge()
+        assert tc.tags == []
+        assert tc.status == "active"
+        assert tc.prerequisites == []
+        assert tc.language == "lt"
+        assert tc.available_languages == ["lt"]
+        assert tc.presentation_blocks == []
+        assert tc.phases == []
+        assert tc.ai_config is None
+
+    def test_ai_config_none_accepted(self) -> None:
+        tc = _make_cartridge(ai_config=None)
+        assert tc.ai_config is None
+
+    def test_ai_config_present(self) -> None:
+        tc = _make_cartridge(
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "prompts/tasks/task-test-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": True,
+                "context_requirements": "session_only",
+            },
+        )
+        assert tc.ai_config is not None
+        assert tc.ai_config.model_preference == "standard"
+
+    def test_missing_task_id_rejected(self) -> None:
+        data = _minimal_cartridge_data()
+        del data["task_id"]
+        with pytest.raises(ValidationError, match="task_id"):
+            TaskCartridge.model_validate(data)
+
+    def test_missing_evaluation_rejected(self) -> None:
+        data = _minimal_cartridge_data()
+        del data["evaluation"]
+        with pytest.raises(ValidationError, match="evaluation"):
+            TaskCartridge.model_validate(data)
+
+    def test_missing_reveal_rejected(self) -> None:
+        data = _minimal_cartridge_data()
+        del data["reveal"]
+        with pytest.raises(ValidationError, match="reveal"):
+            TaskCartridge.model_validate(data)
+
+    def test_missing_safety_rejected(self) -> None:
+        data = _minimal_cartridge_data()
+        del data["safety"]
+        with pytest.raises(ValidationError, match="safety"):
+            TaskCartridge.model_validate(data)
+
+    def test_empty_learning_objectives_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_cartridge(learning_objectives=[])
+
+    def test_time_minutes_zero_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_cartridge(time_minutes=0)
+
+    def test_time_minutes_negative_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_cartridge(time_minutes=-1)
+
+    def test_difficulty_out_of_range_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_cartridge(difficulty=0)
+        with pytest.raises(ValidationError):
+            _make_cartridge(difficulty=6)
+
+    def test_invalid_task_type_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_cartridge(task_type="interactive")
+
+    def test_invalid_status_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            _make_cartridge(status="deleted")
+
+    def test_frozen(self) -> None:
+        tc = _make_cartridge()
+        with pytest.raises(ValidationError):
+            tc.task_id = "new"  # type: ignore[misc]
+
+    def test_json_roundtrip(self) -> None:
+        tc = _make_cartridge()
+        assert TaskCartridge.model_validate(tc.model_dump(mode="json")) == tc
+
+    def test_serialization_roundtrip(self) -> None:
+        tc = _make_cartridge()
+        assert TaskCartridge.model_validate(tc.model_dump()) == tc
+
+
+# ---------------------------------------------------------------------------
+# TaskCartridge — is_clean cross-validation
+# ---------------------------------------------------------------------------
+
+
+class TestTaskCartridgeIsClean:
+    """is_clean cross-validation with evaluation.patterns_embedded."""
+
+    def test_clean_true_empty_patterns_ok(self) -> None:
+        """Clean task with no patterns — valid, no warning."""
+        data = _minimal_cartridge_data(is_clean=True)
+        data["evaluation"]["patterns_embedded"] = []
+        data["evaluation"]["checklist"] = []
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tc = TaskCartridge.model_validate(data)
+            assert tc.is_clean is True
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            assert len(taxonomy_warnings) == 0
+
+    def test_clean_true_with_patterns_hard_error(self) -> None:
+        """Clean task with embedded patterns — logical contradiction, hard error."""
+        data = _minimal_cartridge_data(is_clean=True)
+        # patterns_embedded is non-empty in the default data
+        with pytest.raises(ValidationError, match="is_clean=True"):
+            TaskCartridge.model_validate(data)
+
+    def test_clean_false_empty_patterns_warning(self) -> None:
+        """Non-clean task with no patterns — warning (may be draft in progress)."""
+        data = _minimal_cartridge_data(is_clean=False)
+        data["evaluation"]["patterns_embedded"] = []
+        data["evaluation"]["checklist"] = []
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tc = TaskCartridge.model_validate(data)
+            assert tc.is_clean is False
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            assert len(taxonomy_warnings) == 1
+            assert "draft in progress" in str(taxonomy_warnings[0].message)
+
+    def test_clean_false_with_patterns_ok(self) -> None:
+        """Non-clean task with patterns — normal case, no warning."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tc = _make_cartridge(is_clean=False)
+            assert tc.is_clean is False
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            assert len(taxonomy_warnings) == 0
+
+
+# ---------------------------------------------------------------------------
+# TaskCartridge — taxonomy validation
+# ---------------------------------------------------------------------------
+
+
+_TEST_TAXONOMY = {
+    "triggers": {"urgency", "belonging", "injustice"},
+    "techniques": {"headline_manipulation", "cherry_picking", "fabrication"},
+    "mediums": {"article", "social_post", "chat"},
+}
+
+
+class TestTaskCartridgeTaxonomy:
+    """Taxonomy-aware validation via Pydantic context injection."""
+
+    def test_known_values_no_warning(self) -> None:
+        """All taxonomy values known — no warnings emitted."""
+        data = _minimal_cartridge_data(
+            trigger="urgency",
+            technique="headline_manipulation",
+            medium="article",
+        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            TaskCartridge.model_validate(data, context={"taxonomy": _TEST_TAXONOMY})
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            assert len(taxonomy_warnings) == 0
+
+    def test_unknown_trigger_warning(self) -> None:
+        """Unknown trigger emits TaxonomyWarning."""
+        data = _minimal_cartridge_data(trigger="greed")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tc = TaskCartridge.model_validate(
+                data, context={"taxonomy": _TEST_TAXONOMY},
+            )
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            # Filter to just trigger warnings (not is_clean warnings)
+            trigger_warnings = [
+                x for x in taxonomy_warnings if "trigger" in str(x.message).lower()
+            ]
+            assert len(trigger_warnings) == 1
+            assert "greed" in str(trigger_warnings[0].message)
+            # Model still constructs successfully
+            assert tc.trigger == "greed"
+
+    def test_unknown_technique_warning(self) -> None:
+        """Unknown technique emits TaxonomyWarning."""
+        data = _minimal_cartridge_data(technique="novel_technique")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            TaskCartridge.model_validate(
+                data, context={"taxonomy": _TEST_TAXONOMY},
+            )
+            technique_warnings = [
+                x for x in w
+                if issubclass(x.category, TaxonomyWarning)
+                and "technique" in str(x.message).lower()
+            ]
+            assert len(technique_warnings) == 1
+            assert "novel_technique" in str(technique_warnings[0].message)
+
+    def test_unknown_medium_warning(self) -> None:
+        """Unknown medium emits TaxonomyWarning."""
+        data = _minimal_cartridge_data(medium="podcast")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            TaskCartridge.model_validate(
+                data, context={"taxonomy": _TEST_TAXONOMY},
+            )
+            medium_warnings = [
+                x for x in w
+                if issubclass(x.category, TaxonomyWarning)
+                and "medium" in str(x.message).lower()
+            ]
+            assert len(medium_warnings) == 1
+            assert "podcast" in str(medium_warnings[0].message)
+
+    def test_no_context_no_warnings(self) -> None:
+        """Without taxonomy context, no warnings are emitted."""
+        data = _minimal_cartridge_data(trigger="unknown_trigger")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            tc = TaskCartridge.model_validate(data)
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            assert len(taxonomy_warnings) == 0
+            assert tc.trigger == "unknown_trigger"
+
+    def test_empty_taxonomy_context_no_warnings(self) -> None:
+        """With empty taxonomy dict, no warnings (no known values to check against)."""
+        data = _minimal_cartridge_data()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            TaskCartridge.model_validate(data, context={"taxonomy": {}})
+            taxonomy_warnings = [
+                x for x in w if issubclass(x.category, TaxonomyWarning)
+            ]
+            assert len(taxonomy_warnings) == 0
+
+
+# ---------------------------------------------------------------------------
+# TaskCartridge — with nested content (blocks and phases)
+# ---------------------------------------------------------------------------
+
+
+class TestTaskCartridgeWithContent:
+    """TaskCartridge with real blocks and phases — integration-level round-trip."""
+
+    def _make_full_cartridge_data(self) -> dict:
+        """Returns a realistic cartridge dict with blocks, phases, and all nested models."""
+        return {
+            "task_id": "task-clickbait-001",
+            "task_type": "hybrid",
+            "title": "Paspęsti spąstai",
+            "description": "Ar atpažinsite manipuliaciją antraštėje?",
+            "version": "1.0",
+            "trigger": "urgency",
+            "technique": "headline_manipulation",
+            "medium": "article",
+            "learning_objectives": [
+                "Atpažinti emocines manipuliacijas antraštėse",
+                "Palyginti antraštę su straipsnio turiniu",
+            ],
+            "difficulty": 3,
+            "time_minutes": 15,
+            "is_evergreen": True,
+            "is_clean": False,
+            "tags": ["urgency", "news"],
+            "status": "active",
+            "prerequisites": [],
+            "language": "lt",
+            "available_languages": ["lt"],
+            "presentation_blocks": [
+                {"id": "b-headline", "type": "text", "text": "SKUBU: naujas atradimas!"},
+                {"id": "b-snippet", "type": "text", "text": "Mokslininkai teigia..."},
+                {"id": "b-full", "type": "text", "text": "Ilgas straipsnio tekstas..."},
+                {
+                    "id": "b-image",
+                    "type": "image",
+                    "src": "assets/graph.png",
+                    "alt_text": "Klaidinanti diagrama",
+                },
+            ],
+            "phases": [
+                {
+                    "id": "phase_intro",
+                    "title": "Įvadas",
+                    "visible_blocks": ["b-headline", "b-snippet"],
+                    "trickster_content": "Pažiūrėk į šią naujieną...",
+                    "interaction": {
+                        "type": "button",
+                        "choices": [
+                            {"label": "Dalintis", "target_phase": "phase_bitten",
+                             "context_label": "Mokinys pasidalino"},
+                            {"label": "Skaityti", "target_phase": "phase_read"},
+                        ],
+                    },
+                },
+                {
+                    "id": "phase_bitten",
+                    "title": "Triksteris laimi",
+                    "visible_blocks": ["b-headline"],
+                    "trickster_content": "Pasidalinai nepatikrinęs!",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_wins",
+                },
+                {
+                    "id": "phase_read",
+                    "title": "Skaitymas",
+                    "visible_blocks": ["b-headline", "b-snippet", "b-full"],
+                    "is_ai_phase": True,
+                    "interaction": {
+                        "type": "freeform",
+                        "trickster_opening": "Ką pastebėjai?",
+                        "min_exchanges": 2,
+                        "max_exchanges": 6,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_win",
+                        "on_max_exchanges": "phase_timeout",
+                        "on_partial": "phase_partial",
+                    },
+                },
+                {
+                    "id": "phase_win",
+                    "title": "Pergalė",
+                    "visible_blocks": ["b-full"],
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+                {
+                    "id": "phase_timeout",
+                    "title": "Laikas baigėsi",
+                    "visible_blocks": ["b-full"],
+                    "is_terminal": True,
+                    "evaluation_outcome": "partial",
+                },
+                {
+                    "id": "phase_partial",
+                    "title": "Dalinai",
+                    "visible_blocks": ["b-full"],
+                    "is_terminal": True,
+                    "evaluation_outcome": "partial",
+                },
+            ],
+            "initial_phase": "phase_intro",
+            "evaluation": {
+                "patterns_embedded": [
+                    {
+                        "id": "p-urgency",
+                        "description": "Dirbtinis skubumo jausmas",
+                        "technique": "manufactured_deadline",
+                        "real_world_connection": "Naujienų portalai naudoja",
+                    },
+                    {
+                        "id": "p-headline",
+                        "description": "Antraštė neatitinka turinio",
+                        "technique": "headline_manipulation",
+                        "real_world_connection": "Clickbait strategija",
+                    },
+                ],
+                "checklist": [
+                    {
+                        "id": "c-urgency",
+                        "description": "Atpažino skubumo signalą",
+                        "pattern_refs": ["p-urgency"],
+                        "is_mandatory": True,
+                    },
+                    {
+                        "id": "c-headline",
+                        "description": "Palygino antraštę su turiniu",
+                        "pattern_refs": ["p-headline"],
+                        "is_mandatory": False,
+                    },
+                ],
+                "pass_conditions": {
+                    "trickster_wins": "Mokinys pasidalino neperskaitęs",
+                    "partial": "Mokinys perskaitė, bet praleido raktus",
+                    "trickster_loses": "Mokinys atpažino manipuliacijos technikas",
+                },
+            },
+            "ai_config": {
+                "model_preference": "standard",
+                "prompt_directory": "prompts/tasks/task-clickbait-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": True,
+                "context_requirements": "session_only",
+            },
+            "reveal": {
+                "key_lesson": "Antraštė buvo sukurta tam, kad sukeltų skubumo jausmą.",
+                "additional_resources": [],
+            },
+            "safety": {
+                "content_boundaries": ["no_real_harm", "no_violence"],
+                "intensity_ceiling": 3,
+                "cold_start_safe": True,
+            },
+        }
+
+    def test_full_cartridge_construction(self) -> None:
+        """A realistic cartridge with all nested models constructs correctly."""
+        data = self._make_full_cartridge_data()
+        tc = TaskCartridge.model_validate(data)
+
+        assert tc.task_id == "task-clickbait-001"
+        assert len(tc.presentation_blocks) == 4
+        assert len(tc.phases) == 6
+        assert len(tc.evaluation.patterns_embedded) == 2
+        assert len(tc.evaluation.checklist) == 2
+        assert tc.ai_config is not None
+        assert tc.ai_config.model_preference == "standard"
+
+    def test_full_cartridge_json_roundtrip(self) -> None:
+        """The acid test — full cartridge survives JSON serialization and back."""
+        data = self._make_full_cartridge_data()
+        tc = TaskCartridge.model_validate(data)
+        restored = TaskCartridge.model_validate(tc.model_dump(mode="json"))
+        assert restored == tc
+
+    def test_full_cartridge_dict_roundtrip(self) -> None:
+        """Full cartridge survives Python dict serialization and back."""
+        data = self._make_full_cartridge_data()
+        tc = TaskCartridge.model_validate(data)
+        restored = TaskCartridge.model_validate(tc.model_dump())
+        assert restored == tc
+
+    def test_blocks_routed_correctly(self) -> None:
+        """Presentation blocks are routed to their correct model types."""
+        data = self._make_full_cartridge_data()
+        tc = TaskCartridge.model_validate(data)
+
+        from backend.tasks.schemas import TextBlock, ImageBlock
+        text_blocks = [b for b in tc.presentation_blocks if isinstance(b, TextBlock)]
+        image_blocks = [b for b in tc.presentation_blocks if isinstance(b, ImageBlock)]
+        assert len(text_blocks) == 3
+        assert len(image_blocks) == 1
+
+    def test_phases_have_correct_interactions(self) -> None:
+        """Phase interaction types are correctly routed."""
+        data = self._make_full_cartridge_data()
+        tc = TaskCartridge.model_validate(data)
+
+        intro = next(p for p in tc.phases if p.id == "phase_intro")
+        assert isinstance(intro.interaction, ButtonInteraction)
+
+        read = next(p for p in tc.phases if p.id == "phase_read")
+        assert isinstance(read.interaction, FreeformInteraction)
+        assert read.ai_transitions is not None
+
+    def test_cartridge_with_unknown_block_type(self) -> None:
+        """Unknown block types route to GenericBlock within a full cartridge."""
+        data = self._make_full_cartridge_data()
+        data["presentation_blocks"].append({
+            "id": "b-custom",
+            "type": "timeline",
+            "events": [{"date": "2024-01-01", "label": "Event"}],
+        })
+        tc = TaskCartridge.model_validate(data)
+        assert len(tc.presentation_blocks) == 5
+        last = tc.presentation_blocks[-1]
+        assert isinstance(last, GenericBlock)
+        assert last.type == "timeline"
