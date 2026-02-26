@@ -1,0 +1,1072 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://makaronas.lt/schemas/task-cartridge/v1",
+  "title": "Makaronas Task Cartridge",
+  "description": "A complete task cartridge definition for the Makaronas platform. Defines a single learning experience: what the student sees, how they interact, what the AI does, how they're evaluated, and what gets revealed.",
+  "type": "object",
+  "required": [
+    "task_id",
+    "task_type",
+    "title",
+    "description",
+    "version",
+    "trigger",
+    "technique",
+    "medium",
+    "learning_objectives",
+    "difficulty",
+    "time_minutes",
+    "is_evergreen",
+    "is_clean",
+    "initial_phase",
+    "evaluation",
+    "reveal",
+    "safety"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+      "description": "Unique identifier. Must match the parent directory name. Lowercase alphanumeric and hyphens only."
+    },
+    "task_type": {
+      "type": "string",
+      "enum": [
+        "ai_driven",
+        "static",
+        "hybrid"
+      ],
+      "description": "Task type. 'ai_driven': AI engages the student in real-time. 'static': deterministic button choices only. 'hybrid': static phases set context, AI phases deepen the teaching."
+    },
+    "title": {
+      "type": "string",
+      "description": "Display title shown to teachers and students. Lithuanian."
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the task scenario and learning goal. Lithuanian. Shown in the teacher library."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version string (e.g. '1.0.0'). Increment when content changes."
+    },
+    "trigger": {
+      "type": "string",
+      "description": "The psychological trigger this task exploits. Known values: urgency, belonging, injustice, authority, identity, fear, greed, cynicism. New values can be added to content/taxonomy.json."
+    },
+    "technique": {
+      "type": "string",
+      "description": "The manipulation technique this task teaches. Known values: cherry_picking, fabrication, emotional_framing, wedge_driving, omission, false_authority, manufactured_deadline, headline_manipulation, source_weaponization, phantom_quote. New values can be added to content/taxonomy.json."
+    },
+    "medium": {
+      "type": "string",
+      "description": "The content medium this task uses. Known values: article, social_post, chat, investigation, meme, feed, audio, video_transcript, image. New values can be added to content/taxonomy.json."
+    },
+    "learning_objectives": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "What the student should learn from this task. At least one objective required. Lithuanian."
+    },
+    "difficulty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Difficulty level from 1 (easiest) to 5 (hardest)."
+    },
+    "time_minutes": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Estimated time to complete in minutes. Must be greater than 0."
+    },
+    "is_evergreen": {
+      "type": "boolean",
+      "description": "True if this task uses no current events, real public figures, or dated references. Active tasks must be evergreen."
+    },
+    "is_clean": {
+      "type": "boolean",
+      "description": "True if this task contains NO manipulation — student must recognize legitimate content. Clean tasks must have empty patterns_embedded."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Freeform tags for filtering. No taxonomy validation — use any strings useful for discovery."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "deprecated",
+        "draft"
+      ],
+      "default": "active",
+      "description": "Lifecycle status. 'active': visible to teachers and students. 'deprecated': hidden but preserved. 'draft': work in progress, excluded from active queries."
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Task IDs that should be completed before this task. Used for sequencing recommendations."
+    },
+    "language": {
+      "type": "string",
+      "default": "lt",
+      "description": "Primary language code. Currently always 'lt' (Lithuanian)."
+    },
+    "available_languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "lt"
+      ],
+      "description": "Languages this cartridge is available in. Currently always ['lt']."
+    },
+    "presentation_blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PresentationBlock"
+      },
+      "default": [],
+      "description": "Content blocks the student sees — text, images, chat messages, search results, etc. Each block has a unique id referenced by phases via visible_blocks."
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Phase"
+      },
+      "default": [],
+      "description": "The task's state machine. Each phase shows content, offers interaction, and transitions to the next phase. Must include at least one terminal phase."
+    },
+    "initial_phase": {
+      "type": "string",
+      "description": "The id of the first phase shown to the student. Must match a phase id in the phases array."
+    },
+    "evaluation": {
+      "$ref": "#/$defs/EvaluationContract",
+      "description": "The rubric contract — what patterns are embedded, what the student should demonstrate, and what each outcome looks like."
+    },
+    "ai_config": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/AiConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "AI layer configuration. Required for ai_driven and hybrid tasks. Null/omitted for static tasks."
+    },
+    "reveal": {
+      "$ref": "#/$defs/RevealContent",
+      "description": "Post-task reveal — the lesson behind the trick. Pre-authored by the content author."
+    },
+    "safety": {
+      "$ref": "#/$defs/SafetyConfig",
+      "description": "Safety guardrails — content boundaries, intensity ceiling, cold-start safety."
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "TextBlock": {
+      "type": "object",
+      "description": "Text content — headlines, articles, snippets, captions.",
+      "required": [
+        "id",
+        "type",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier. Referenced by phases via visible_blocks."
+        },
+        "type": {
+          "const": "text",
+          "description": "Block type discriminator."
+        },
+        "text": {
+          "type": "string",
+          "description": "The text content. Lithuanian. Supports newlines for paragraphs."
+        },
+        "style": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional style hint (e.g. 'headline', 'snippet'). Interpreted by the frontend."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ImageBlock": {
+      "type": "object",
+      "description": "Image content — misleading graphs, decontextualised photos. alt_text is required for accessibility.",
+      "required": [
+        "id",
+        "type",
+        "src",
+        "alt_text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "image",
+          "description": "Block type discriminator."
+        },
+        "src": {
+          "type": "string",
+          "description": "Image filename relative to this task's assets/ directory (e.g. 'graph.png')."
+        },
+        "alt_text": {
+          "type": "string",
+          "description": "Required. Accessible description of the image. Lithuanian."
+        },
+        "audio_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional longer audio description preserving deceptive framing for blind students in manipulation tasks."
+        },
+        "caption": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional visible caption below the image."
+        }
+      },
+      "additionalProperties": false
+    },
+    "AudioBlock": {
+      "type": "object",
+      "description": "Audio content — voice notes, tone-of-voice manipulation, podcast clips. transcript is required for accessibility.",
+      "required": [
+        "id",
+        "type",
+        "src",
+        "transcript"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "audio",
+          "description": "Block type discriminator."
+        },
+        "src": {
+          "type": "string",
+          "description": "Audio filename relative to this task's assets/ directory."
+        },
+        "transcript": {
+          "type": "string",
+          "description": "Required. Full text transcript of the audio content. Lithuanian."
+        },
+        "duration_seconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional audio duration in seconds."
+        }
+      },
+      "additionalProperties": false
+    },
+    "VideoTranscriptBlock": {
+      "type": "object",
+      "description": "Video transcript — full text of a video with optional source context.",
+      "required": [
+        "id",
+        "type",
+        "transcript"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "video_transcript",
+          "description": "Block type discriminator."
+        },
+        "transcript": {
+          "type": "string",
+          "description": "Full transcript of the video. Lithuanian."
+        },
+        "source_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional description of the video source (channel, context)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "MemeBlock": {
+      "type": "object",
+      "description": "Meme content — image with overlay text. alt_text is required for accessibility.",
+      "required": [
+        "id",
+        "type",
+        "image_src",
+        "alt_text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "meme",
+          "description": "Block type discriminator."
+        },
+        "image_src": {
+          "type": "string",
+          "description": "Meme image filename relative to this task's assets/ directory."
+        },
+        "top_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional text overlaid at the top of the meme image."
+        },
+        "bottom_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional text overlaid at the bottom of the meme image."
+        },
+        "alt_text": {
+          "type": "string",
+          "description": "Required. Accessible description of the meme. Lithuanian."
+        },
+        "audio_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional longer audio description preserving deceptive framing for blind students."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChatMessageBlock": {
+      "type": "object",
+      "description": "Chat message — one message in a group chat or DM thread.",
+      "required": [
+        "id",
+        "type",
+        "username",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "chat_message",
+          "description": "Block type discriminator."
+        },
+        "username": {
+          "type": "string",
+          "description": "Display name of the message sender."
+        },
+        "text": {
+          "type": "string",
+          "description": "Message content. Lithuanian."
+        },
+        "timestamp": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional timestamp string (e.g. '14:32')."
+        },
+        "is_highlighted": {
+          "type": "boolean",
+          "default": false,
+          "description": "True to visually highlight this message (e.g. the wedge message in a chat thread)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "SocialPostBlock": {
+      "type": "object",
+      "description": "Social media post — evocative, not branded (no real platform names).",
+      "required": [
+        "id",
+        "type",
+        "author",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "social_post",
+          "description": "Block type discriminator."
+        },
+        "author": {
+          "type": "string",
+          "description": "Display name of the post author."
+        },
+        "text": {
+          "type": "string",
+          "description": "Post content. Lithuanian."
+        },
+        "engagement": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional engagement metrics (e.g. {\"likes\": 1243, \"shares\": 341})."
+        },
+        "cited_source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional source citation shown in the post."
+        },
+        "platform_hint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional hint for frontend styling (e.g. 'social_feed', 'forum'). Not a real platform name."
+        }
+      },
+      "additionalProperties": false
+    },
+    "SearchResultBlock": {
+      "type": "object",
+      "description": "Search result node in an investigation tree. The tree structure emerges from child_queries linking results to further queries.",
+      "required": [
+        "id",
+        "type",
+        "query",
+        "title",
+        "snippet"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "const": "search_result",
+          "description": "Block type discriminator."
+        },
+        "query": {
+          "type": "string",
+          "description": "The search query that returns this result."
+        },
+        "title": {
+          "type": "string",
+          "description": "Search result title. Lithuanian."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Search result snippet text. Lithuanian."
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional fake URL for the search result display."
+        },
+        "is_key_finding": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this result contains a critical finding the student should discover."
+        },
+        "is_dead_end": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this is a deliberate dead end (plausible but unhelpful result)."
+        },
+        "child_queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Query strings that become available after viewing this result. Creates the investigation tree branches."
+        }
+      },
+      "additionalProperties": false
+    },
+    "GenericBlock": {
+      "type": "object",
+      "description": "Fallback for unknown block types. The platform passes these through without type-specific validation. Use for new block types before they get first-class support.",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier."
+        },
+        "type": {
+          "type": "string",
+          "not": {
+            "enum": [
+              "text",
+              "image",
+              "audio",
+              "video_transcript",
+              "meme",
+              "chat_message",
+              "social_post",
+              "search_result"
+            ]
+          },
+          "description": "Block type string. Must NOT be one of the known types (those have their own schemas)."
+        }
+      },
+      "additionalProperties": true
+    },
+    "PresentationBlock": {
+      "description": "A content block shown to the student. Known types get full validation; unknown types pass through with minimal checks (id + type required).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TextBlock"
+        },
+        {
+          "$ref": "#/$defs/ImageBlock"
+        },
+        {
+          "$ref": "#/$defs/AudioBlock"
+        },
+        {
+          "$ref": "#/$defs/VideoTranscriptBlock"
+        },
+        {
+          "$ref": "#/$defs/MemeBlock"
+        },
+        {
+          "$ref": "#/$defs/ChatMessageBlock"
+        },
+        {
+          "$ref": "#/$defs/SocialPostBlock"
+        },
+        {
+          "$ref": "#/$defs/SearchResultBlock"
+        },
+        {
+          "$ref": "#/$defs/GenericBlock"
+        }
+      ]
+    },
+    "ButtonChoice": {
+      "type": "object",
+      "description": "A single button option within a ButtonInteraction.",
+      "required": [
+        "label",
+        "target_phase"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Button text shown to the student. Lithuanian."
+        },
+        "target_phase": {
+          "type": "string",
+          "description": "Phase id to transition to when this button is clicked."
+        },
+        "context_label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional label recorded to session history for AI continuity in hybrid tasks (e.g. 'Student chose to share without reading')."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ButtonInteraction": {
+      "type": "object",
+      "description": "Button interaction — the student picks from a set of choices. Each choice transitions to a different phase.",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "button",
+          "description": "Interaction type discriminator."
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ButtonChoice"
+          },
+          "default": [],
+          "description": "The button choices available to the student."
+        }
+      },
+      "additionalProperties": false
+    },
+    "FreeformInteraction": {
+      "type": "object",
+      "description": "Freeform AI dialogue — multi-turn conversation with the Trickster. Exchange bounds control conversation length.",
+      "required": [
+        "type",
+        "trickster_opening",
+        "min_exchanges",
+        "max_exchanges"
+      ],
+      "properties": {
+        "type": {
+          "const": "freeform",
+          "description": "Interaction type discriminator."
+        },
+        "trickster_opening": {
+          "type": "string",
+          "description": "The Trickster's opening line for this conversation phase. Lithuanian."
+        },
+        "min_exchanges": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum number of exchanges before evaluation can trigger. One exchange = one student turn + one Trickster turn."
+        },
+        "max_exchanges": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum exchanges before on_max_exchanges transition fires. Must be >= min_exchanges."
+        }
+      },
+      "additionalProperties": false
+    },
+    "InvestigationInteraction": {
+      "type": "object",
+      "description": "Investigation interaction — search tree navigation. The student follows queries through SearchResultBlocks to find key findings.",
+      "required": [
+        "type",
+        "starting_queries",
+        "submit_target"
+      ],
+      "properties": {
+        "type": {
+          "const": "investigation",
+          "description": "Interaction type discriminator."
+        },
+        "starting_queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Query strings available to the student at the start of the investigation."
+        },
+        "submit_target": {
+          "type": "string",
+          "description": "Phase id to transition to when the student submits their findings."
+        },
+        "min_key_findings": {
+          "type": "integer",
+          "default": 0,
+          "description": "Minimum key findings the student should discover (advisory, not enforced by schema)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "GenericInteraction": {
+      "type": "object",
+      "description": "Fallback for unknown interaction types. Use for new interaction types before they get first-class support.",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "not": {
+            "enum": [
+              "button",
+              "freeform",
+              "investigation"
+            ]
+          },
+          "description": "Interaction type string. Must NOT be one of the known types."
+        }
+      },
+      "additionalProperties": true
+    },
+    "InteractionConfig": {
+      "description": "How the student interacts in this phase. Known types get full validation; unknown types pass through.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ButtonInteraction"
+        },
+        {
+          "$ref": "#/$defs/FreeformInteraction"
+        },
+        {
+          "$ref": "#/$defs/InvestigationInteraction"
+        },
+        {
+          "$ref": "#/$defs/GenericInteraction"
+        }
+      ]
+    },
+    "AiTransitions": {
+      "type": "object",
+      "description": "Maps Trickster engine signals to target phase IDs. All three fields are required — map both on_partial and on_max_exchanges to the same phase if you don't distinguish them.",
+      "required": [
+        "on_success",
+        "on_max_exchanges",
+        "on_partial"
+      ],
+      "properties": {
+        "on_success": {
+          "type": "string",
+          "description": "Phase id to transition to when the Trickster decides the student has won."
+        },
+        "on_max_exchanges": {
+          "type": "string",
+          "description": "Phase id to transition to when the conversation hits max_exchanges."
+        },
+        "on_partial": {
+          "type": "string",
+          "description": "Phase id to transition to when the student shows partial understanding."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Phase": {
+      "type": "object",
+      "description": "A single phase in the task state machine. Shows content, offers interaction, transitions to the next phase.",
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique phase identifier within this task. Referenced by button targets, ai_transitions, and initial_phase."
+        },
+        "title": {
+          "type": "string",
+          "description": "Phase title for internal reference and teacher preview. Lithuanian."
+        },
+        "visible_blocks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of presentation_block ids to show in this phase. Order matters — blocks display in this sequence."
+        },
+        "trickster_content": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Pre-authored Trickster text for static phases (reveals, introductions). Not used in AI phases. Lithuanian."
+        },
+        "is_ai_phase": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this phase involves real-time AI dialogue. Requires a freeform interaction and ai_transitions."
+        },
+        "interaction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/InteractionConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How the student interacts in this phase. Null for terminal/display-only phases."
+        },
+        "ai_transitions": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AiTransitions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for AI phases. Maps engine signals to target phases."
+        },
+        "is_terminal": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this is a terminal phase (reveal/ending). Terminal phases should have evaluation_outcome set."
+        },
+        "evaluation_outcome": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "trickster_wins",
+            "partial",
+            "trickster_loses",
+            null
+          ],
+          "default": null,
+          "description": "The evaluation outcome for terminal phases. 'trickster_wins': student was manipulated. 'partial': student partially resisted. 'trickster_loses': student fully identified the manipulation."
+        }
+      },
+      "additionalProperties": false
+    },
+    "EmbeddedPattern": {
+      "type": "object",
+      "description": "A single manipulation pattern embedded in the task content for the student to find.",
+      "required": [
+        "id",
+        "description",
+        "technique",
+        "real_world_connection"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique pattern identifier within this task. Referenced by checklist items via pattern_refs."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this pattern does in the task content. Lithuanian."
+        },
+        "technique": {
+          "type": "string",
+          "description": "The manipulation technique this pattern represents. Should match a value in content/taxonomy.json techniques."
+        },
+        "real_world_connection": {
+          "type": "string",
+          "description": "How this pattern appears in real-world misinformation. Lithuanian."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChecklistItem": {
+      "type": "object",
+      "description": "What the student should demonstrate to earn credit.",
+      "required": [
+        "id",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique checklist item identifier within this task."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the student should demonstrate. Lithuanian."
+        },
+        "pattern_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "IDs of embedded patterns this item relates to. References EmbeddedPattern.id values."
+        },
+        "is_mandatory": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if this item must be met for a 'trickster_loses' outcome."
+        }
+      },
+      "additionalProperties": false
+    },
+    "PassConditions": {
+      "type": "object",
+      "description": "Textual descriptions of what each evaluation outcome looks like for this task.",
+      "required": [
+        "trickster_wins",
+        "partial",
+        "trickster_loses"
+      ],
+      "properties": {
+        "trickster_wins": {
+          "type": "string",
+          "description": "What it looks like when the student was fully manipulated. Lithuanian."
+        },
+        "partial": {
+          "type": "string",
+          "description": "What it looks like when the student partially resisted. Lithuanian."
+        },
+        "trickster_loses": {
+          "type": "string",
+          "description": "What it looks like when the student fully identified the manipulation. Lithuanian."
+        }
+      },
+      "additionalProperties": false
+    },
+    "EvaluationContract": {
+      "type": "object",
+      "description": "The rubric contract between the content author and the evaluation engine. Declares what to check.",
+      "required": [
+        "pass_conditions"
+      ],
+      "properties": {
+        "patterns_embedded": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EmbeddedPattern"
+          },
+          "default": [],
+          "description": "Manipulation patterns the author embedded in the content. Empty for clean tasks (is_clean: true)."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ChecklistItem"
+          },
+          "default": [],
+          "description": "What the student should demonstrate during the task."
+        },
+        "pass_conditions": {
+          "$ref": "#/$defs/PassConditions",
+          "description": "Textual descriptions of each evaluation outcome."
+        }
+      },
+      "additionalProperties": false
+    },
+    "AiConfig": {
+      "type": "object",
+      "description": "How this task connects to the AI layer. Required for ai_driven and hybrid tasks.",
+      "required": [
+        "model_preference",
+        "prompt_directory",
+        "persona_mode",
+        "has_static_fallback",
+        "context_requirements"
+      ],
+      "properties": {
+        "model_preference": {
+          "type": "string",
+          "enum": [
+            "fast",
+            "standard",
+            "complex"
+          ],
+          "description": "AI capability tier. 'fast': simple evaluations (cheapest). 'standard': most tasks. 'complex': sophisticated adversarial dialogue (most expensive). Maps to model IDs via models.py."
+        },
+        "prompt_directory": {
+          "type": "string",
+          "description": "Path to the prompt directory relative to project root (e.g. 'prompts/tasks/task-clickbait-trap-001'). Contains task.md base prompt and optional model-specific overrides."
+        },
+        "persona_mode": {
+          "type": "string",
+          "enum": [
+            "presenting",
+            "chat_participant",
+            "narrator",
+            "commenter"
+          ],
+          "description": "How the Trickster presents itself. 'presenting': default, direct address. 'chat_participant': embedded in a chat thread. 'narrator': omniscient observer. 'commenter': reacting to content."
+        },
+        "has_static_fallback": {
+          "type": "boolean",
+          "description": "True if this task has a static fallback path when AI is unavailable."
+        },
+        "context_requirements": {
+          "type": "string",
+          "enum": [
+            "session_only",
+            "learning_profile",
+            "full_history"
+          ],
+          "description": "How much student context the AI needs. 'session_only': current session exchanges. 'learning_profile': plus student's weakness patterns. 'full_history': plus complete task history."
+        }
+      },
+      "additionalProperties": false
+    },
+    "RevealContent": {
+      "type": "object",
+      "description": "Post-task reveal — the lesson behind the trick. Pre-authored by the content author. AI personalizes around it but the key_lesson is always shown verbatim.",
+      "required": [
+        "key_lesson"
+      ],
+      "properties": {
+        "key_lesson": {
+          "type": "string",
+          "description": "The core lesson text shown to the student after the task. This is rendered programmatically, not generated by AI. Lithuanian."
+        },
+        "additional_resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Optional list of additional resources or references."
+        }
+      },
+      "additionalProperties": false
+    },
+    "SafetyConfig": {
+      "type": "object",
+      "description": "Safety guardrails for this task. Content boundaries and intensity ceiling are enforced by the safety layer.",
+      "required": [
+        "intensity_ceiling",
+        "cold_start_safe"
+      ],
+      "properties": {
+        "content_boundaries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Content areas this task must not touch (e.g. 'no_real_harm', 'no_real_institutions'). Checked by the safety layer."
+        },
+        "intensity_ceiling": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Maximum adversarial pressure level (1-5). The Trickster engine caps its escalation at this level."
+        },
+        "cold_start_safe": {
+          "type": "boolean",
+          "description": "True if this task is appropriate as a student's first encounter with the platform."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

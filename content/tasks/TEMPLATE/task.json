@@ -1,0 +1,177 @@
+{
+  "$schema": "../task.schema.json",
+  "_comment": "Copy this directory, rename it to your task_id, then edit. See AUTHORING_GUIDE.md for the full workflow.",
+  "task_id": "my-new-task-001",
+  "_comment_task_id": "Must match the parent directory name. Lowercase, alphanumeric and hyphens only.",
+  "task_type": "hybrid",
+  "title": "[PLACEHOLDER: Užduoties pavadinimas]",
+  "description": "[PLACEHOLDER: Trumpas užduoties scenarijaus ir mokymosi tikslo aprašymas]",
+  "version": "1.0.0",
+  "trigger": "urgency",
+  "_comment_trigger": "Known values: urgency, belonging, injustice, authority, identity, fear, greed, cynicism. Or add new values to content/taxonomy.json.",
+  "technique": "emotional_framing",
+  "_comment_technique": "Known values: cherry_picking, fabrication, emotional_framing, wedge_driving, omission, false_authority, manufactured_deadline, headline_manipulation, source_weaponization, phantom_quote. Or add new values to content/taxonomy.json.",
+  "medium": "article",
+  "_comment_medium": "Known values: article, social_post, chat, investigation, meme, feed, audio, video_transcript, image. Or add new values to content/taxonomy.json.",
+  "learning_objectives": [
+    "[PLACEHOLDER: Pirmas mokymosi tikslas]",
+    "[PLACEHOLDER: Antras mokymosi tikslas]"
+  ],
+  "difficulty": 2,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "_comment_is_clean": "Set to true ONLY if this task contains NO manipulation. Clean tasks must have empty patterns_embedded.",
+  "tags": [],
+  "status": "draft",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "main-content",
+      "type": "text",
+      "text": "[PLACEHOLDER: Pagrindinis turinys, kuri matys mokinys]"
+    }
+  ],
+  "_comment_presentation_blocks": "Each block needs a unique id. Phases reference these ids via visible_blocks. See AUTHORING_GUIDE.md for all block types.",
+  "phases": [
+    {
+      "id": "intro",
+      "title": "[PLACEHOLDER: Ivadine faze]",
+      "visible_blocks": [
+        "main-content"
+      ],
+      "trickster_content": "[PLACEHOLDER: Sukciaus ivadinis tekstas]",
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "[PLACEHOLDER: Pirmas pasirinkimas]",
+            "target_phase": "bitten",
+            "context_label": "[PLACEHOLDER: Mokinys pasirinko pirma varianta]"
+          },
+          {
+            "label": "[PLACEHOLDER: Antras pasirinkimas]",
+            "target_phase": "evaluate",
+            "context_label": "[PLACEHOLDER: Mokinys pasirinko antra varianta]"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "bitten",
+      "title": "[PLACEHOLDER: Sukcius laimi]",
+      "visible_blocks": [
+        "main-content"
+      ],
+      "trickster_content": "[PLACEHOLDER: Sukciaus komentaras apie tai, kaip mokinys pasidave manipuliacijai]",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_wins"
+    },
+    {
+      "id": "evaluate",
+      "title": "[PLACEHOLDER: AI vertinimo faze]",
+      "visible_blocks": [
+        "main-content"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "[PLACEHOLDER: Sukciaus pradinis klausimas]",
+        "min_exchanges": 2,
+        "max_exchanges": 6
+      },
+      "ai_transitions": {
+        "on_success": "reveal_win",
+        "on_partial": "reveal_partial",
+        "on_max_exchanges": "reveal_timeout"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal_win",
+      "title": "[PLACEHOLDER: Atskleidimas - mokinys laimi]",
+      "visible_blocks": [
+        "main-content"
+      ],
+      "trickster_content": "[PLACEHOLDER: Atskleidimo tekstas kai mokinys atpazino manipuliacija]",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    },
+    {
+      "id": "reveal_partial",
+      "title": "[PLACEHOLDER: Atskleidimas - dalinai]",
+      "visible_blocks": [
+        "main-content"
+      ],
+      "trickster_content": "[PLACEHOLDER: Atskleidimo tekstas kai mokinys dalini suprato]",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    },
+    {
+      "id": "reveal_timeout",
+      "title": "[PLACEHOLDER: Atskleidimas - laikas baigesi]",
+      "visible_blocks": [
+        "main-content"
+      ],
+      "trickster_content": "[PLACEHOLDER: Atskleidimo tekstas kai pokalbis baigiasi]",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    }
+  ],
+  "_comment_phases": "Each phase needs a unique id. Button target_phase and ai_transitions reference these ids. At least one terminal phase required.",
+  "initial_phase": "intro",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-pattern-1",
+        "description": "[PLACEHOLDER: Aprasymas, kokia manipuliacijos technika ideta i turini]",
+        "technique": "emotional_framing",
+        "real_world_connection": "[PLACEHOLDER: Kaip si technika pasirodo realiame pasaulyje]"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-item-1",
+        "description": "[PLACEHOLDER: Ka mokinys turi parodyti]",
+        "pattern_refs": [
+          "p-pattern-1"
+        ],
+        "is_mandatory": true
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "[PLACEHOLDER: Aprasymas kai mokinys buvo apgautas]",
+      "partial": "[PLACEHOLDER: Aprasymas kai mokinys dalini suprato]",
+      "trickster_loses": "[PLACEHOLDER: Aprasymas kai mokinys pilnai atpazino manipuliacija]"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/my-new-task-001",
+    "persona_mode": "presenting",
+    "has_static_fallback": true,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "[PLACEHOLDER: Pagrindinee pamoka - kas buvo pagrindinis triukas ir ko mokinys turetu isimokti]",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm"
+    ],
+    "intensity_ceiling": 2,
+    "cold_start_safe": true
+  },
+  "_comment_ai_config": "For hybrid/ai_driven tasks: create prompts/tasks/{task_id}/task.md with the Trickster prompt. prompt_directory in ai_config must point there."
+}
