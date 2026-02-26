@@ -194,6 +194,19 @@ class ErrorEvent(BaseModel):
     partial_text: str = ""
 
 
+class RedactEvent(BaseModel):
+    """Post-completion safety violation — frontend replaces the streamed message.
+
+    Emitted when the safety pipeline (Framework Principle 12) detects a
+    content boundary violation after the full AI response has been accumulated.
+    The frontend must replace the just-displayed content with fallback_text.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    fallback_text: str
+
+
 # ---------------------------------------------------------------------------
 # Content markers
 # ---------------------------------------------------------------------------

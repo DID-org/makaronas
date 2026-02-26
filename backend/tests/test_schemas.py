@@ -14,6 +14,7 @@ from backend.schemas import (
     ErrorEvent,
     Exchange,
     GameSession,
+    RedactEvent,
     StudentProfile,
     TechniqueStats,
     TokenEvent,
@@ -498,6 +499,29 @@ class TestErrorEvent:
     def test_serialization_roundtrip(self) -> None:
         e = ErrorEvent(code="RATE_LIMIT", message="Too fast", partial_text="Partial")
         assert ErrorEvent.model_validate(e.model_dump()) == e
+
+
+class TestRedactEvent:
+    """Post-completion safety violation — frontend replaces streamed message."""
+
+    def test_construction(self) -> None:
+        e = RedactEvent(fallback_text="Atsiprašau — mano atsakymas buvo netinkamas ir pašalintas.")
+        assert "Atsiprašau" in e.fallback_text
+
+    def test_frozen(self) -> None:
+        e = RedactEvent(fallback_text="fallback")
+        with pytest.raises(ValidationError):
+            e.fallback_text = "changed"  # type: ignore[misc]
+
+    def test_serialization_roundtrip(self) -> None:
+        e = RedactEvent(fallback_text="Safe replacement text")
+        assert RedactEvent.model_validate(e.model_dump()) == e
+
+    def test_json_roundtrip(self) -> None:
+        e = RedactEvent(fallback_text="Atsiprašau — per toli nuėjau.")
+        json_str = e.model_dump_json()
+        restored = RedactEvent.model_validate_json(json_str)
+        assert restored == e
 
 
 # ---------------------------------------------------------------------------
