@@ -1,8 +1,9 @@
-"""Tests for TricksterEngine (Phase 5a).
+"""Tests for TricksterEngine (Phases 5a + 5b).
 
 Tests the core dialogue orchestration: streaming, exchange accumulation,
 transition signal extraction, safety checking, malformed response retry,
-and phase validation.
+phase validation, debrief generation, prompt snapshotting, context label
+injection, and redaction context injection.
 
 Uses real ContextManager with PromptLoader pointed at temp prompts,
 and MockProvider (or custom test providers) for deterministic AI responses.
@@ -27,7 +28,7 @@ from backend.ai.providers.base import (
 )
 from backend.ai.providers.mock import MockProvider
 from backend.ai.safety import FALLBACK_BOUNDARY
-from backend.ai.trickster import TricksterEngine, TricksterResult
+from backend.ai.trickster import DebriefResult, TricksterEngine, TricksterResult
 from backend.schemas import Exchange
 from backend.tasks.schemas import TaskCartridge
 
@@ -68,6 +69,14 @@ def _get_intro_phase(cartridge: TaskCartridge):
 
 async def _consume_tokens(result: TricksterResult) -> str:
     """Exhausts token_iterator and returns accumulated text."""
+    tokens = []
+    async for token in result.token_iterator:
+        tokens.append(token)
+    return "".join(tokens)
+
+
+async def _consume_debrief_tokens(result: DebriefResult) -> str:
+    """Exhausts debrief token_iterator and returns accumulated text."""
     tokens = []
     async for token in result.token_iterator:
         tokens.append(token)
@@ -729,3 +738,392 @@ class TestPhaseValidation:
             await engine.respond(
                 session, cartridge, phase_no_transitions, "Test",
             )
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Debrief Engine
+# ---------------------------------------------------------------------------
+
+
+class TestDebrief:
+    """Debrief flow: streaming, safety with is_debrief, exchange saving."""
+
+    @pytest.mark.asyncio
+    async def test_happy_path(self, make_engine, make_session, make_cartridge):
+        """Debrief streams tokens and sets done_data with debrief_complete."""
+        engine = make_engine(responses=["Tai buvo manipuliacijos technika."])
+        session = make_session()
+        cartridge = make_cartridge()
+
+        # Pre-fill some exchange history (debrief needs prior conversation)
+        _prefill_exchanges(session, 3)
+
+        result = await engine.debrief(session, cartridge)
+        text = await _consume_debrief_tokens(result)
+
+        assert text == "Tai buvo manipuliacijos technika."
+        assert isinstance(result, DebriefResult)
+        assert result.done_data == {"debrief_complete": True}
+        assert result.redaction_data is None
+
+    @pytest.mark.asyncio
+    async def test_debrief_exchange_saved(
+        self, make_engine, make_session, make_cartridge,
+    ):
+        """Debrief saves trickster exchange after streaming."""
+        engine = make_engine(responses=["Atskleidimas apie triukus."])
+        session = make_session()
+        cartridge = make_cartridge()
+        _prefill_exchanges(session, 2)
+        exchanges_before = len(session.exchanges)
+
+        result = await engine.debrief(session, cartridge)
+        await _consume_debrief_tokens(result)
+
+        assert len(session.exchanges) == exchanges_before + 1
+        assert session.exchanges[-1].role == "trickster"
+        assert session.exchanges[-1].content == "Atskleidimas apie triukus."
+
+    @pytest.mark.asyncio
+    async def test_safety_pedagogical_exemption(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """Debrief with pedagogical context passes safety (is_debrief=True).
+
+        Text containing a blocklist term near a pedagogical marker should
+        NOT be flagged during debrief.
+        """
+        # "nusižudyti" is in self_harm blocklist, but near "technika" +
+        # "panaudojau" it should be exempted in debrief mode.
+        debrief_text = (
+            "Panaudojau manipuliacijos technika, kuri gali "
+            "priminti nusižudyti - bet tai buvo tik triukas."
+        )
+        provider = MockProvider(responses=[debrief_text])
+        engine = TricksterEngine(provider, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        _prefill_exchanges(session, 2)
+
+        result = await engine.debrief(session, cartridge)
+        text = await _consume_debrief_tokens(result)
+
+        # Pedagogical exemption: no redaction
+        assert result.done_data == {"debrief_complete": True}
+        assert result.redaction_data is None
+        assert text == debrief_text
+
+    @pytest.mark.asyncio
+    async def test_safety_violation_in_debrief(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """Debrief with harmful content without pedagogical context is redacted."""
+        provider = MockProvider(
+            responses=["You should kill yourself right now"],
+        )
+        engine = TricksterEngine(provider, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        _prefill_exchanges(session, 2)
+
+        result = await engine.debrief(session, cartridge)
+        await _consume_debrief_tokens(result)
+
+        assert result.redaction_data is not None
+        assert result.redaction_data["boundary"] == "self_harm"
+        assert result.redaction_data["fallback_text"] == FALLBACK_BOUNDARY
+        assert result.done_data is None
+
+        # Fallback exchange saved
+        assert session.exchanges[-1].role == "trickster"
+        assert session.exchanges[-1].content == FALLBACK_BOUNDARY
+        assert session.last_redaction_reason == "self_harm"
+
+    @pytest.mark.asyncio
+    async def test_malformed_debrief_retry(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """Empty debrief triggers retry; second attempt's tokens yielded."""
+        provider = MultiCallProvider(
+            call_responses=[
+                [""],
+                ["Tai buvo manipuliacijos atskleidimas."],
+            ],
+        )
+        engine = TricksterEngine(provider, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        _prefill_exchanges(session, 2)
+
+        result = await engine.debrief(session, cartridge)
+        text = await _consume_debrief_tokens(result)
+
+        assert "Tai buvo manipuliacijos atskleidimas." in text
+        assert result.done_data == {"debrief_complete": True}
+        assert result.done_data.get("error") is None
+
+    @pytest.mark.asyncio
+    async def test_debrief_no_tools(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """Debrief calls provider with tools=None (no transition tool)."""
+        spy = SpyProvider(responses=["Debrief content for spy test."])
+        engine = TricksterEngine(spy, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        _prefill_exchanges(session, 2)
+
+        result = await engine.debrief(session, cartridge)
+        await _consume_debrief_tokens(result)
+
+        assert len(spy.stream_calls) == 1
+        assert spy.stream_calls[0]["tools"] is None
+
+    @pytest.mark.asyncio
+    async def test_debrief_usage_capture(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """Debrief captures usage info from provider."""
+        provider = MockProvider(responses=["Debrief with usage tracking."])
+        provider._last_usage = UsageInfo(prompt_tokens=200, completion_tokens=75)
+        engine = TricksterEngine(provider, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        _prefill_exchanges(session, 2)
+
+        result = await engine.debrief(session, cartridge)
+        await _consume_debrief_tokens(result)
+
+        assert result.usage == UsageInfo(200, 75)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Prompt Snapshotting
+# ---------------------------------------------------------------------------
+
+
+class TestPromptSnapshotting:
+    """Prompt snapshotting in respond() — Principle 21 live session integrity."""
+
+    @pytest.mark.asyncio
+    async def test_first_respond_snapshots_prompts(
+        self, make_engine, make_session, make_cartridge,
+    ):
+        """First respond() call populates session.prompt_snapshots."""
+        engine = make_engine(responses=["First response from Trickster."])
+        session = make_session()
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        assert session.prompt_snapshots is None
+
+        result = await engine.respond(session, cartridge, phase, "Hello")
+        await _consume_tokens(result)
+
+        assert session.prompt_snapshots is not None
+        assert "persona" in session.prompt_snapshots
+        assert "behaviour" in session.prompt_snapshots
+        assert "safety" in session.prompt_snapshots
+
+    @pytest.mark.asyncio
+    async def test_second_respond_uses_snapshot(
+        self, context_manager, make_session, make_cartridge, prompts_dir,
+    ):
+        """Second respond() uses snapshot — changing prompt files has no effect."""
+        provider = MockProvider(responses=["Response text here."])
+        engine = TricksterEngine(provider, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        # First call: snapshots prompts
+        result1 = await engine.respond(session, cartridge, phase, "First msg")
+        await _consume_tokens(result1)
+
+        original_persona = session.prompt_snapshots["persona"]
+
+        # Modify the persona prompt file on disk
+        _write(
+            prompts_dir / "trickster" / "persona_base.md",
+            "CHANGED persona content!",
+        )
+        # Invalidate loader cache so it would reload from disk
+        context_manager._loader.invalidate()
+
+        # Second call: should use snapshot, not the changed file
+        provider2 = MockProvider(responses=["Second response here."])
+        engine2 = TricksterEngine(provider2, context_manager)
+
+        result2 = await engine2.respond(session, cartridge, phase, "Second msg")
+        await _consume_tokens(result2)
+
+        # Snapshot unchanged
+        assert session.prompt_snapshots["persona"] == original_persona
+
+    @pytest.mark.asyncio
+    async def test_debrief_uses_snapshot(
+        self, context_manager, make_session, make_cartridge, prompts_dir,
+    ):
+        """Debrief uses the snapshot created by respond()."""
+        provider = MockProvider(responses=["Initial response text."])
+        engine = TricksterEngine(provider, context_manager)
+        session = make_session()
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        # respond() snapshots prompts
+        result1 = await engine.respond(session, cartridge, phase, "Message")
+        await _consume_tokens(result1)
+        original_persona = session.prompt_snapshots["persona"]
+
+        # Change prompt on disk and invalidate cache
+        _write(
+            prompts_dir / "trickster" / "persona_base.md",
+            "DIFFERENT persona for debrief test",
+        )
+        context_manager._loader.invalidate()
+
+        # Debrief should use the snapshot
+        spy = SpyProvider(responses=["Debrief using snapshot."])
+        engine2 = TricksterEngine(spy, context_manager)
+
+        result2 = await engine2.debrief(session, cartridge)
+        await _consume_debrief_tokens(result2)
+
+        # The snapshot persona should appear in the system prompt,
+        # not the changed file content
+        system_prompt = spy.stream_calls[0]["system_prompt"]
+        assert original_persona in system_prompt
+        assert "DIFFERENT persona for debrief test" not in system_prompt
+
+    @pytest.mark.asyncio
+    async def test_snapshot_not_overwritten_on_second_call(
+        self, make_engine, make_session, make_cartridge,
+    ):
+        """Snapshot is only created once — second respond() skips snapshotting."""
+        engine = make_engine(responses=["Response text."])
+        session = make_session()
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        # First call
+        result1 = await engine.respond(session, cartridge, phase, "Msg 1")
+        await _consume_tokens(result1)
+        snapshot_after_first = dict(session.prompt_snapshots)
+
+        # Manually tamper with snapshot to verify it's not overwritten
+        session.prompt_snapshots["persona"] = "TAMPERED"
+
+        engine2 = make_engine(responses=["Another response."])
+        result2 = await engine2.respond(session, cartridge, phase, "Msg 2")
+        await _consume_tokens(result2)
+
+        # Snapshot was NOT overwritten (still has the tampered value)
+        assert session.prompt_snapshots["persona"] == "TAMPERED"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Context Label Verification (end-to-end through engine)
+# ---------------------------------------------------------------------------
+
+
+class TestContextLabels:
+    """Context labels from session.choices flow into the system prompt."""
+
+    @pytest.mark.asyncio
+    async def test_context_label_in_system_prompt(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """Choices with context_label appear in the provider's system prompt."""
+        spy = SpyProvider(responses=["Response with context labels."])
+        engine = TricksterEngine(spy, context_manager)
+        session = make_session(
+            choices=[{"context_label": "Mokinys pasirinko pradeti pokalbi"}],
+        )
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        result = await engine.respond(session, cartridge, phase, "Hello")
+        await _consume_tokens(result)
+
+        system_prompt = spy.stream_calls[0]["system_prompt"]
+        assert "Mokinys pasirinko pradeti pokalbi" in system_prompt
+        assert "Mokinio pasirinkimai" in system_prompt
+
+    @pytest.mark.asyncio
+    async def test_no_context_labels_when_empty(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """No context_label section when choices have no context_label."""
+        spy = SpyProvider(responses=["Response without labels."])
+        engine = TricksterEngine(spy, context_manager)
+        session = make_session()  # No choices
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        result = await engine.respond(session, cartridge, phase, "Hello")
+        await _consume_tokens(result)
+
+        system_prompt = spy.stream_calls[0]["system_prompt"]
+        assert "Mokinio pasirinkimai" not in system_prompt
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Redaction Context Verification (end-to-end through engine)
+# ---------------------------------------------------------------------------
+
+
+class TestRedactionContext:
+    """Redaction context injection and clearing after use."""
+
+    @pytest.mark.asyncio
+    async def test_redaction_context_in_system_prompt(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """last_redaction_reason injects redaction note in system prompt."""
+        spy = SpyProvider(responses=["Post-redaction response."])
+        engine = TricksterEngine(spy, context_manager)
+        session = make_session(last_redaction_reason="self_harm")
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        result = await engine.respond(session, cartridge, phase, "What happened?")
+        await _consume_tokens(result)
+
+        system_prompt = spy.stream_calls[0]["system_prompt"]
+        assert "Sistemos pastaba" in system_prompt
+        assert "self_harm" in system_prompt
+
+    @pytest.mark.asyncio
+    async def test_redaction_reason_cleared_after_use(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """last_redaction_reason is cleared to None after being consumed."""
+        spy = SpyProvider(responses=["Continuing conversation."])
+        engine = TricksterEngine(spy, context_manager)
+        session = make_session(last_redaction_reason="self_harm")
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        result = await engine.respond(session, cartridge, phase, "Tell me more")
+        await _consume_tokens(result)
+
+        # Flag cleared after use
+        assert session.last_redaction_reason is None
+
+    @pytest.mark.asyncio
+    async def test_no_redaction_context_when_not_set(
+        self, context_manager, make_session, make_cartridge,
+    ):
+        """No redaction note when last_redaction_reason is None."""
+        spy = SpyProvider(responses=["Normal response."])
+        engine = TricksterEngine(spy, context_manager)
+        session = make_session()  # last_redaction_reason defaults to None
+        cartridge = make_cartridge()
+        phase = _get_ai_phase(cartridge)
+
+        result = await engine.respond(session, cartridge, phase, "Hello")
+        await _consume_tokens(result)
+
+        system_prompt = spy.stream_calls[0]["system_prompt"]
+        assert "Sistemos pastaba" not in system_prompt

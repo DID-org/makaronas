@@ -2,14 +2,15 @@
 
 Orchestrates the conversation loop between student and Trickster:
 provider streaming, exchange accumulation, transition signal extraction,
-safety checking, and malformed response retry.
+safety checking, malformed response retry, debrief generation, and
+prompt snapshotting for live session integrity.
 
 This is the first component that wires all prior V3 modules together.
 The engine is the ONLY code path that modifies session.exchanges.
 
 Consumed by:
-- Student endpoint (Phase 6b) \u2014 calls respond() and iterates token_iterator
-- Phase 5b \u2014 adds debrief() method on top of this core
+- Student endpoint (Phase 6b) \u2014 calls respond()/debrief() and iterates
+  token_iterator
 
 Tier 2 service: imports from providers/base (T1), context (T2), safety (T2),
 schemas (T1), tasks/schemas (T1), models (T1).
@@ -59,6 +60,31 @@ class TricksterResult:
         token_iterator: Async iterator of text tokens for SSE streaming.
         done_data: Set after iteration if response is safe. Contains
             phase_transition, next_phase, exchanges_count.
+        redaction_data: Set after iteration if safety violation detected.
+            Contains fallback_text, boundary.
+        usage: Token usage from the provider (may be None for MockProvider).
+    """
+
+    token_iterator: AsyncIterator[str]
+    done_data: dict[str, Any] | None = field(default=None, init=False)
+    redaction_data: dict[str, Any] | None = field(default=None, init=False)
+    usage: UsageInfo | None = field(default=None, init=False)
+
+
+@dataclass
+class DebriefResult:
+    """Streaming debrief response plus post-completion metadata.
+
+    Same consumer pattern as TricksterResult: iterate token_iterator
+    to exhaustion, then read done_data/redaction_data/usage.
+
+    Debrief has no phase transitions \u2014 done_data contains
+    ``{"debrief_complete": True}`` on success.
+
+    Attributes:
+        token_iterator: Async iterator of text tokens for SSE streaming.
+        done_data: Set after iteration if response is safe. Contains
+            debrief_complete=True.
         redaction_data: Set after iteration if safety violation detected.
             Contains fallback_text, boundary.
         usage: Token usage from the provider (may be None for MockProvider).
@@ -130,18 +156,26 @@ class TricksterEngine:
                 f"Phase '{phase.id}' does not have ai_transitions"
             )
 
-        # 2. Save student exchange (before AI call \u2014 never lose student input)
+        # 2. Snapshot prompts on first AI call for this task (Principle 21)
+        if session.prompt_snapshots is None:
+            snap_config = resolve_tier(cartridge.ai_config.model_preference)
+            prompts = self._context_manager._loader.load_trickster_prompts(
+                snap_config.provider, cartridge.task_id,
+            )
+            self._context_manager.snapshot_prompts(session, prompts)
+
+        # 3. Save student exchange (before AI call \u2014 never lose student input)
         session.exchanges.append(
             Exchange(role="student", content=student_input)
         )
 
-        # 3. Input validation (warn-and-log only, never blocks)
+        # 4. Input validation (warn-and-log only, never blocks)
         safety.validate_input(student_input, cartridge.task_id)
 
-        # 4. Resolve model tier
+        # 5. Resolve model tier
         model_config = resolve_tier(cartridge.ai_config.model_preference)
 
-        # 5. Assemble context
+        # 6. Assemble context
         exchange_count = sum(
             1 for e in session.exchanges if e.role == "student"
         )
@@ -302,4 +336,126 @@ class TricksterEngine:
             result.usage = getattr(provider, "_last_usage", None)
 
         result = TricksterResult(token_iterator=_stream())
+        return result
+
+    async def debrief(
+        self,
+        session: GameSession,
+        cartridge: TaskCartridge,
+    ) -> DebriefResult:
+        """Generates the Trickster's debrief (honest reveal) for the student.
+
+        Assembles debrief-specific context (EvaluationContract data + full
+        exchange history), streams through the provider, and runs safety
+        with pedagogical exemption (is_debrief=True).
+
+        No phase parameter \u2014 debrief is task-level. No transitions, no
+        exchange counting, no min/max gates.
+
+        Args:
+            session: Game session with exchanges and prompt snapshot.
+            cartridge: Task cartridge with evaluation contract and safety.
+
+        Returns:
+            DebriefResult with token iterator and post-completion fields.
+        """
+        # 1. Resolve model tier
+        model_config = resolve_tier(cartridge.ai_config.model_preference)
+
+        # 2. Assemble debrief context
+        ctx = self._context_manager.assemble_debrief_call(
+            session, cartridge, model_config.provider,
+        )
+
+        logger.info(
+            "Trickster debrief: task=%s exchanges=%d",
+            cartridge.task_id,
+            len(session.exchanges),
+        )
+
+        provider = self._provider
+
+        async def _stream() -> AsyncIterator[str]:
+            accumulated = ""
+
+            # 3. Call provider and stream + accumulate
+            async for event in provider.stream(
+                system_prompt=ctx.system_prompt,
+                messages=ctx.messages,
+                model_config=model_config,
+                tools=None,
+            ):
+                if isinstance(event, TextChunk):
+                    accumulated += event.text
+                    yield event.text
+                elif isinstance(event, ToolCallEvent):
+                    logger.warning(
+                        "Unexpected tool call in debrief: %s",
+                        event.function_name,
+                    )
+
+            # 4. Malformed response check \u2014 retry once if < 10 chars
+            if len(accumulated) < _MIN_RESPONSE_LENGTH:
+                logger.warning(
+                    "Malformed debrief (<%d chars), retrying",
+                    _MIN_RESPONSE_LENGTH,
+                )
+                async for event in provider.stream(
+                    system_prompt=ctx.system_prompt,
+                    messages=ctx.messages,
+                    model_config=model_config,
+                    tools=None,
+                ):
+                    if isinstance(event, TextChunk):
+                        accumulated += event.text
+                        yield event.text
+
+                if len(accumulated) < _MIN_RESPONSE_LENGTH:
+                    logger.error(
+                        "Both debrief attempts produced malformed response "
+                        "(<%d chars)",
+                        _MIN_RESPONSE_LENGTH,
+                    )
+                    result.done_data = {"error": "malformed_response"}
+                    result.usage = getattr(
+                        provider, "_last_usage", None,
+                    )
+                    return
+
+            # 5. Post-completion safety check (pedagogical exemption)
+            safety_result = safety.check_output(
+                accumulated, cartridge.safety, is_debrief=True,
+            )
+
+            # 6. Handle violation
+            if not safety_result.is_safe:
+                violation = safety_result.violation
+                session.exchanges.append(
+                    Exchange(
+                        role="trickster",
+                        content=violation.fallback_text,
+                    )
+                )
+                session.last_redaction_reason = violation.boundary
+                result.redaction_data = {
+                    "fallback_text": violation.fallback_text,
+                    "boundary": violation.boundary,
+                }
+                result.done_data = None
+                logger.info(
+                    "Debrief safety violation: boundary=%s",
+                    violation.boundary,
+                )
+            else:
+                # 7. Safe \u2014 store debrief exchange
+                session.exchanges.append(
+                    Exchange(role="trickster", content=accumulated)
+                )
+                result.done_data = {"debrief_complete": True}
+                result.redaction_data = None
+
+            # 8. Capture usage
+            result.usage = getattr(provider, "_last_usage", None)
+
+        result = DebriefResult(token_iterator=_stream())
         return result
