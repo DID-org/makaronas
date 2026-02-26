@@ -1,0 +1,225 @@
+{
+  "task_id": "task-cherry-pick-001",
+  "task_type": "hybrid",
+  "title": "Rinkta citata",
+  "description": "Socialinio tinklo įrašas cituoja mokslini tyrimą, tačiau pasirenka tik vieną teigiamą išvadą, ignoruodamas paties tyrimo perspėjimus. Mokinys turi nuspręsti: pasitikėti citata ar patikrinti šaltinį.",
+  "version": "1.0.0",
+  "trigger": "authority",
+  "technique": "cherry_picking",
+  "medium": "social_post",
+  "learning_objectives": [
+    "Atpažinti pasirinktinai cituojamus mokslinius tyrimus",
+    "Suprasti, kaip autoriteto signalai atgraso nuo šaltinio tikrinimo"
+  ],
+  "difficulty": 2,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "socialinis_įrašas",
+    "citavimas",
+    "šaltinio_tikrinimas"
+  ],
+  "status": "draft",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "social-post",
+      "type": "social_post",
+      "author": "SveikasProtas",
+      "text": "Naujausias Europos sveikatos universiteto tyrimas įrodo: kasdien vaikščiojantys žmonės serga 47% rečiau. Pasidalink su draugu, kuris vis dar sėdi ant sofos. 💪 #sveikata #mokslas",
+      "engagement": {
+        "likes": 1243,
+        "shares": 341,
+        "comments": 89
+      },
+      "cited_source": "Europos sveikatos universiteto žurnalas, 2024 m.",
+      "platform_hint": "social_feed"
+    },
+    {
+      "id": "source-study",
+      "type": "text",
+      "text": "Tyrimo santrauka: Europos sveikatos universiteto komanda atliko 18 mėnesių stebėjimo tyrimą su 2400 dalyvių. Pagrindinės išvados: reguliariai vaikščiojantys dalyviai pranešė apie 47% mažiau peršalimo atvejų per žiemos sezoną. Tačiau tyrėjai pažymi keletą svarbių apribojimų: duomenys remiasi dalyvių savistaba, o ne medicininiais įrašais; tyrimo dalyviai buvo savanoriai, todėl jie jau buvo labiau motyvuoti rūpintis sveikata; kontrolinė grupė nebuvo atsitiktinai parinkta; ir svarbiausia — 47% skirtumas statistiškai reikšmingas tik žiemos sezonu, o metinis vidurkis siekė vos 12%, kas nėra statistiškai reikšminga. Tyrėjai pabrėžia: „Šie rezultatai yra preliminarūs ir neturėtų būti interpretuojami kaip priežastinis ryšys tarp vaikščiojimo ir imuniteto stiprinimo.“"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intro",
+      "title": "Įrašo peržiūra",
+      "visible_blocks": [
+        "social-post"
+      ],
+      "trickster_content": "Pažiūrėk į šį įrašą. Ką darysi?",
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Pasidalinti",
+            "target_phase": "bitten_share",
+            "context_label": "Mokinys pasirinko pasidalinti įrašu nepatikrinus šaltinio"
+          },
+          {
+            "label": "Kažkas negerai",
+            "target_phase": "bitten_vague",
+            "context_label": "Mokinys pajuto manipuliaciją, bet negalėjo įvardyti konkrečiai"
+          },
+          {
+            "label": "Patikrinti tyrimą",
+            "target_phase": "evaluate",
+            "context_label": "Mokinys nuspręndė patikrinti cituojamą šaltinį"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "bitten_share",
+      "title": "Dalinimosi spąstai",
+      "visible_blocks": [
+        "social-post"
+      ],
+      "trickster_content": "Pasidalinai universiteto tyrimo citata — skamba patikimai, tiesa? Bet tu net nepažiūrėjai, ką tas tyrimas iš tikrųjų sako. 47% — tai tik žiemos sezono skaičius, paremtas žmonių savistaba, ne medicininiais duomenimis. Metinis vidurkis — vos 12%. Universiteto vardas ir žurnalo nuoroda sukūrė pasitikėjimo iliuziją.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_wins"
+    },
+    {
+      "id": "bitten_vague",
+      "title": "Neaiškus įtarimas",
+      "visible_blocks": [
+        "social-post"
+      ],
+      "trickster_content": "Pajutai, kad kažkas ne taip — bet negalėjai pasakyti, kas konkrečiai. Tai dažnas atvejis: emocija sako „palauk“, bet be konkrečių įrankių neįmanoma paaiškinti kodėl. Įrašas cituoja tikrą tyrimą, bet pasirinko tik vieną skaičių ir nutylėjo visus perspėjimus, kuriuos patys tyrėjai įdėjo.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_wins"
+    },
+    {
+      "id": "evaluate",
+      "title": "Šaltinio analizė",
+      "visible_blocks": [
+        "social-post",
+        "source-study"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Citata tikra. Universitetas tikras. Tai kur problema?",
+        "min_exchanges": 2,
+        "max_exchanges": 6
+      },
+      "ai_transitions": {
+        "on_success": "reveal_win",
+        "on_partial": "reveal_partial",
+        "on_max_exchanges": "reveal_timeout"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal_win",
+      "title": "Atskleidimas — Sukčius pralaimi",
+      "visible_blocks": [
+        "social-post",
+        "source-study"
+      ],
+      "trickster_content": "Tu perskaitei tai, ką dauguma praleidžia. Štai trys triukai, kuriuos panaudojau:\n\n1. Pasirinkta citata — iš viso tyrimo paimtas tik vienas skaičius, ignoruojant tyrėjų perspėjimus\n2. Autoriteto signalas — universiteto vardas ir žurnalo nuoroda sukuria pasitikėjimą, kuris atgraso nuo tikrinimo\n3. Socialinis ginklas — „Pasidalink su draugu“ paverčia citatą socialiniu spaudimu",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    },
+    {
+      "id": "reveal_partial",
+      "title": "Atskleidimas — dalinai",
+      "visible_blocks": [
+        "social-post",
+        "source-study"
+      ],
+      "trickster_content": "Kažką pagavai, bet ne viską. Štai visi trys triukai:\n\n1. Pasirinkta citata — 47% yra tik žiemos sezono, savistabos pagrindu surinktas skaičius. Metinis vidurkis — 12%\n2. Autoriteto signalas — universiteto ir žurnalo vardai sukuria pasitikėjimo iliuziją\n3. Socialinis ginklas — raginimas dalintis paverčia citatą grandinine žinute",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    },
+    {
+      "id": "reveal_timeout",
+      "title": "Atskleidimas — laikas baigėsi",
+      "visible_blocks": [
+        "social-post",
+        "source-study"
+      ],
+      "trickster_content": "Pokalbis baigėsi, bet dar neradai visko.\n\n1. Pasirinkta citata — iš tyrimo paimtas tik vienas palankus skaičius\n2. Autoriteto signalas — universiteto vardas atgraso nuo šaltinio tikrinimo\n3. Socialinis ginklas — „Pasidalink“ paverčia mokslinę citatą socialiniu spaudimu\n\nKitą kartą: kai matai skaičius su šaltiniu — perskaityk šaltinį.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    }
+  ],
+  "initial_phase": "intro",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-cherry-pick",
+        "description": "Įrašas pasirinko vieną teigiamą tyrimo išvadą, ignoruodamas tyrėjų perspėjimus apie ribotumus ir statistinį nereikšmingumą",
+        "technique": "cherry_picking",
+        "real_world_connection": "Socialiniuose tinkluose dažnai cituojami moksliniai tyrimai, pasirenkant tik palankiausius skaičius ir nutylint kontekstą"
+      },
+      {
+        "id": "p-authority-signal",
+        "description": "Universiteto vardas ir žurnalo nuoroda sukuria autoriteto įspūdį, kuris atgraso nuo šaltinio tikrinimo",
+        "technique": "false_authority",
+        "real_world_connection": "Institucijos vardas prie citatos sukuria pasitikėjimą — žmonės rečiau tikrina šaltinį, kai mato „universitetas“ ar „žurnalas“"
+      },
+      {
+        "id": "p-social-weaponization",
+        "description": "Raginimas „Pasidalink su draugu“ paverčia mokslinę citatą socialiniu ginklu — dalijimasis tampa pritarimo aktu",
+        "technique": "cherry_picking",
+        "real_world_connection": "„Pasidalink“ mygtukas socialiniuose tinkluose paverčia kiekvieną vartotoją informacijos platintoju, net jei jis niekada nepatikrino šaltinio"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-cherry-pick-identified",
+        "description": "Mokinys identifikuoja pasirinktinai cituojamą tyrimo išvadą ir paaiškina, ką tyrimas iš tikrųjų sako",
+        "pattern_refs": [
+          "p-cherry-pick"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-authority-recognized",
+        "description": "Mokinys atpažįsta, kaip autoriteto signalai atgraso nuo šaltinio tikrinimo",
+        "pattern_refs": [
+          "p-authority-signal"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys pasidalino arba pajuto nerimą, bet negalėjo įvardyti konkrečios manipuliacijos — nepatikrino šaltinio",
+      "partial": "Mokinys pastebėjo kažką įtartino, bet negalėjo artikuliuoti pasirinktos citatos problemos",
+      "trickster_loses": "Mokinys identifikavo pasirinktą citatą ir paaiškino, ką tyrimas iš tikrųjų rado"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-cherry-pick-001",
+    "persona_mode": "presenting",
+    "has_static_fallback": true,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Mokslinė citata nėra mokslas. Vienas skaičius be konteksto — tai reklama, ne informacija. Kai matai tyrimą socialiniame tinkle, klausk: ką tyrėjai iš tikrųjų sakė?",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 2,
+    "cold_start_safe": true
+  }
+}

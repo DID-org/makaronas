@@ -1,8 +1,11 @@
-"""Integration tests for reference cartridges (Phase 5a).
+"""Integration tests for reference cartridges (Phases 5a + 5b).
 
 Loads real cartridge JSON files from content/tasks/ and verifies them
 through the full pipeline: loader -> registry -> teacher API -> student API.
 No mocks for cartridge data — the point is to prove real content works.
+
+Phase 5a: 2 full-content cartridges (clickbait-trap, follow-money).
+Phase 5b: 4 skeleton cartridges (cherry-pick, phantom-quote, wedge, misleading-frame).
 
 Uses httpx.AsyncClient with ASGITransport (async test client). All tests
 use explicit @pytest.mark.asyncio per strict mode.
@@ -21,7 +24,25 @@ from backend.main import app
 from backend.schemas import GameSession, User
 from backend.tasks.loader import TaskLoader
 from backend.tasks.registry import TaskRegistry
-from backend.tasks.schemas import SearchResultBlock, TaskCartridge
+from backend.tasks.schemas import (
+    ChatMessageBlock,
+    FreeformInteraction,
+    ImageBlock,
+    SearchResultBlock,
+    SocialPostBlock,
+    TaskCartridge,
+)
+
+# ---------------------------------------------------------------------------
+# Skeleton task IDs (Phase 5b)
+# ---------------------------------------------------------------------------
+
+SKELETON_IDS = [
+    "task-cherry-pick-001",
+    "task-phantom-quote-001",
+    "task-wedge-001",
+    "task-misleading-frame-001",
+]
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -614,3 +635,418 @@ class TestInvestigationTree:
             f"Only {len(found_key_findings)} key findings reachable: "
             f"{found_key_findings}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Skeleton cartridge loader tests
+# ---------------------------------------------------------------------------
+
+
+class TestSkeletonLoaderValidation:
+    """All 4 skeleton cartridges load via TaskLoader with no errors."""
+
+    def _load(self, task_id: str, taxonomy: dict) -> tuple:
+        """Loads a skeleton cartridge and returns (cartridge, warnings)."""
+        loader = TaskLoader()
+        task_dir = CONTENT_DIR / "tasks" / task_id
+        result = loader.load_task(task_dir, taxonomy)
+        return result.cartridge, result.warnings
+
+    def test_cherry_pick_loads_as_draft(self, taxonomy: dict) -> None:
+        """Task 2 loads cleanly with draft status preserved."""
+        c, warnings = self._load("task-cherry-pick-001", taxonomy)
+        assert c.task_id == "task-cherry-pick-001"
+        assert c.status == "draft"
+        assert c.task_type == "hybrid"
+        assert c.medium == "social_post"
+        assert c.trigger == "authority"
+        assert c.technique == "cherry_picking"
+        assert c.difficulty == 2
+        assert len(warnings) == 0
+
+    def test_phantom_quote_loads_as_draft(self, taxonomy: dict) -> None:
+        """Task 3 loads cleanly with draft status preserved."""
+        c, warnings = self._load("task-phantom-quote-001", taxonomy)
+        assert c.task_id == "task-phantom-quote-001"
+        assert c.status == "draft"
+        assert c.task_type == "ai_driven"
+        assert c.medium == "article"
+        assert c.trigger == "belonging"
+        assert c.technique == "phantom_quote"
+        assert c.difficulty == 3
+        assert len(warnings) == 0
+
+    def test_wedge_loads_as_draft(self, taxonomy: dict) -> None:
+        """Task 5 loads cleanly with draft status preserved."""
+        c, warnings = self._load("task-wedge-001", taxonomy)
+        assert c.task_id == "task-wedge-001"
+        assert c.status == "draft"
+        assert c.task_type == "ai_driven"
+        assert c.medium == "chat"
+        assert c.trigger == "identity"
+        assert c.technique == "wedge_driving"
+        assert c.difficulty == 3
+        assert len(warnings) == 0
+
+    def test_misleading_frame_loads_as_draft(self, taxonomy: dict) -> None:
+        """Task 6 loads cleanly with draft status and no asset warnings."""
+        c, warnings = self._load("task-misleading-frame-001", taxonomy)
+        assert c.task_id == "task-misleading-frame-001"
+        assert c.status == "draft"
+        assert c.task_type == "ai_driven"
+        assert c.medium == "image"
+        assert c.trigger == "fear"
+        assert c.technique == "emotional_framing"
+        assert c.difficulty == 3
+        # Placeholder PNGs prevent asset-related warnings
+        assert len(warnings) == 0
+
+    def test_all_skeletons_load_together(self, taxonomy: dict) -> None:
+        """All 6 cartridges load via load_all_tasks with zero errors."""
+        loader = TaskLoader()
+        results, errors = loader.load_all_tasks(CONTENT_DIR, taxonomy)
+        assert len(errors) == 0, f"Load errors: {errors}"
+        assert len(results) == 6
+        loaded_ids = sorted(r.cartridge.task_id for r in results)
+        assert "task-cherry-pick-001" in loaded_ids
+        assert "task-phantom-quote-001" in loaded_ids
+        assert "task-wedge-001" in loaded_ids
+        assert "task-misleading-frame-001" in loaded_ids
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Skeleton graph integrity tests
+# ---------------------------------------------------------------------------
+
+
+class TestSkeletonGraphIntegrity:
+    """Phase graph validation for all 4 skeleton cartridges."""
+
+    def _get_cartridge(self, task_id: str, taxonomy: dict) -> TaskCartridge:
+        """Loads a single cartridge by task_id."""
+        loader = TaskLoader()
+        task_dir = CONTENT_DIR / "tasks" / task_id
+        return loader.load_task(task_dir, taxonomy).cartridge
+
+    def _bfs_reachable(self, cartridge: TaskCartridge) -> set[str]:
+        """Returns the set of phase IDs reachable from initial_phase via BFS."""
+        phase_map = {p.id: p for p in cartridge.phases}
+        reachable = set()
+        queue = [cartridge.initial_phase]
+        while queue:
+            pid = queue.pop(0)
+            if pid in reachable:
+                continue
+            reachable.add(pid)
+            phase = phase_map.get(pid)
+            if phase is None:
+                continue
+            if phase.interaction and hasattr(phase.interaction, "choices"):
+                for choice in phase.interaction.choices:
+                    queue.append(choice.target_phase)
+            if phase.interaction and hasattr(phase.interaction, "submit_target"):
+                queue.append(phase.interaction.submit_target)
+            if phase.ai_transitions:
+                queue.extend([
+                    phase.ai_transitions.on_success,
+                    phase.ai_transitions.on_partial,
+                    phase.ai_transitions.on_max_exchanges,
+                ])
+        return reachable
+
+    @pytest.mark.parametrize("task_id", SKELETON_IDS)
+    def test_all_phases_reachable(self, task_id: str, taxonomy: dict) -> None:
+        """Every phase is reachable from initial_phase."""
+        c = self._get_cartridge(task_id, taxonomy)
+        phase_ids = {p.id for p in c.phases}
+        reachable = self._bfs_reachable(c)
+        assert reachable == phase_ids, (
+            f"{task_id}: unreachable phases: {phase_ids - reachable}"
+        )
+
+    @pytest.mark.parametrize("task_id", SKELETON_IDS)
+    def test_terminal_phases_have_outcomes(
+        self, task_id: str, taxonomy: dict,
+    ) -> None:
+        """Every skeleton has terminal phases with evaluation outcomes."""
+        c = self._get_cartridge(task_id, taxonomy)
+        terminals = [p for p in c.phases if p.is_terminal]
+        assert len(terminals) >= 1, f"{task_id}: no terminal phases"
+        for t in terminals:
+            assert t.evaluation_outcome is not None, (
+                f"{task_id}: terminal '{t.id}' missing evaluation_outcome"
+            )
+
+    def test_hybrid_has_ai_and_static(self, taxonomy: dict) -> None:
+        """Task 2 (hybrid) has both AI and static phases."""
+        c = self._get_cartridge("task-cherry-pick-001", taxonomy)
+        ai_phases = [p for p in c.phases if p.is_ai_phase]
+        static_phases = [p for p in c.phases if not p.is_ai_phase]
+        assert len(ai_phases) >= 1, "hybrid task has no AI phases"
+        assert len(static_phases) >= 1, "hybrid task has no static phases"
+
+    @pytest.mark.parametrize("task_id", [
+        "task-phantom-quote-001",
+        "task-wedge-001",
+        "task-misleading-frame-001",
+    ])
+    def test_ai_driven_has_ai_phase(
+        self, task_id: str, taxonomy: dict,
+    ) -> None:
+        """ai_driven tasks have at least one AI phase."""
+        c = self._get_cartridge(task_id, taxonomy)
+        ai_phases = [p for p in c.phases if p.is_ai_phase]
+        assert len(ai_phases) >= 1, f"{task_id}: no AI phases"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Skeleton block type tests
+# ---------------------------------------------------------------------------
+
+
+class TestSkeletonBlockTypes:
+    """Verifies that skeleton cartridges use the expected block types."""
+
+    def _get_cartridge(self, task_id: str, taxonomy: dict) -> TaskCartridge:
+        """Loads a single cartridge by task_id."""
+        loader = TaskLoader()
+        task_dir = CONTENT_DIR / "tasks" / task_id
+        return loader.load_task(task_dir, taxonomy).cartridge
+
+    def test_cherry_pick_has_social_post_block(self, taxonomy: dict) -> None:
+        """Task 2 contains a SocialPostBlock with expected fields."""
+        c = self._get_cartridge("task-cherry-pick-001", taxonomy)
+        sp_blocks = [
+            b for b in c.presentation_blocks
+            if isinstance(b, SocialPostBlock)
+        ]
+        assert len(sp_blocks) == 1
+        sp = sp_blocks[0]
+        assert sp.id == "social-post"
+        assert sp.author == "SveikasProtas"
+        assert sp.engagement is not None
+        assert sp.cited_source is not None
+
+    def test_wedge_has_chat_message_blocks(self, taxonomy: dict) -> None:
+        """Task 5 contains 5 ChatMessageBlocks with expected structure."""
+        c = self._get_cartridge("task-wedge-001", taxonomy)
+        cm_blocks = [
+            b for b in c.presentation_blocks
+            if isinstance(b, ChatMessageBlock)
+        ]
+        assert len(cm_blocks) == 5
+        # Exactly one highlighted
+        highlighted = [b for b in cm_blocks if b.is_highlighted]
+        assert len(highlighted) == 1
+        assert highlighted[0].id == "msg-wedge"
+        # All have usernames
+        for b in cm_blocks:
+            assert len(b.username) > 0
+
+    def test_misleading_frame_has_image_blocks(self, taxonomy: dict) -> None:
+        """Task 6 contains 2 ImageBlocks with accessibility fields."""
+        c = self._get_cartridge("task-misleading-frame-001", taxonomy)
+        img_blocks = [
+            b for b in c.presentation_blocks
+            if isinstance(b, ImageBlock)
+        ]
+        assert len(img_blocks) == 2
+        for ib in img_blocks:
+            assert len(ib.alt_text) > 0, f"ImageBlock '{ib.id}' missing alt_text"
+            assert ib.audio_description is not None, (
+                f"ImageBlock '{ib.id}' missing audio_description"
+            )
+
+    def test_phantom_quote_initial_phase_is_ai(self, taxonomy: dict) -> None:
+        """Task 3 (ai_driven) starts directly with an AI freeform phase."""
+        c = self._get_cartridge("task-phantom-quote-001", taxonomy)
+        phase_map = {p.id: p for p in c.phases}
+        initial = phase_map[c.initial_phase]
+        assert initial.is_ai_phase is True
+        assert isinstance(initial.interaction, FreeformInteraction)
+        assert initial.interaction.min_exchanges == 3
+        assert initial.interaction.max_exchanges == 8
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Full registry indexing (all 6 cartridges)
+# ---------------------------------------------------------------------------
+
+
+class TestFullRegistryIndexing:
+    """All 6 cartridges index correctly in the registry."""
+
+    def test_total_cartridge_count(self, registry: TaskRegistry) -> None:
+        """Registry contains 2 active + 4 draft = 6 total."""
+        assert registry.count("active") >= 2
+        assert registry.count("draft") >= 4
+
+    def test_all_six_retrievable(self, registry: TaskRegistry) -> None:
+        """All 6 cartridges are retrievable by ID."""
+        all_ids = [
+            "task-clickbait-trap-001",
+            "task-follow-money-001",
+            "task-cherry-pick-001",
+            "task-phantom-quote-001",
+            "task-wedge-001",
+            "task-misleading-frame-001",
+        ]
+        for task_id in all_ids:
+            c = registry.get_task(task_id)
+            assert c is not None, f"{task_id} not found in registry"
+
+    def test_query_drafts(self, registry: TaskRegistry) -> None:
+        """Querying status=draft returns all 4 skeletons."""
+        drafts = registry.query(status="draft")
+        draft_ids = {t.task_id for t in drafts}
+        for sk_id in SKELETON_IDS:
+            assert sk_id in draft_ids, f"{sk_id} not in draft results"
+
+    def test_query_by_new_mediums(self, registry: TaskRegistry) -> None:
+        """New mediums are queryable: social_post, chat, image."""
+        social = registry.query(medium="social_post", status="draft")
+        assert any(t.task_id == "task-cherry-pick-001" for t in social)
+
+        chat = registry.query(medium="chat", status="draft")
+        assert any(t.task_id == "task-wedge-001" for t in chat)
+
+        image = registry.query(medium="image", status="draft")
+        assert any(t.task_id == "task-misleading-frame-001" for t in image)
+
+    def test_query_by_new_triggers(self, registry: TaskRegistry) -> None:
+        """New triggers are queryable: authority, belonging, identity, fear."""
+        for trigger, expected_id in [
+            ("authority", "task-cherry-pick-001"),
+            ("belonging", "task-phantom-quote-001"),
+            ("identity", "task-wedge-001"),
+            ("fear", "task-misleading-frame-001"),
+        ]:
+            results = registry.query(trigger=trigger, status="draft")
+            ids = [t.task_id for t in results]
+            assert expected_id in ids, (
+                f"trigger={trigger}: expected {expected_id}, got {ids}"
+            )
+
+    def test_phase_validity_for_skeletons(self, registry: TaskRegistry) -> None:
+        """Phase validity works for skeleton cartridges."""
+        assert registry.is_phase_valid("task-cherry-pick-001", "intro")
+        assert registry.is_phase_valid("task-cherry-pick-001", "evaluate")
+        assert registry.is_phase_valid("task-phantom-quote-001", "evaluate")
+        assert registry.is_phase_valid("task-wedge-001", "evaluate")
+        assert registry.is_phase_valid("task-misleading-frame-001", "evaluate")
+        assert not registry.is_phase_valid("task-wedge-001", "nonexistent")
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Teacher API with all 6 cartridges
+# ---------------------------------------------------------------------------
+
+
+class TestTeacherAPIFull:
+    """Teacher library serves all 6 cartridges with correct filtering."""
+
+    @pytest.mark.asyncio
+    async def test_library_drafts_listing(
+        self, client: httpx.AsyncClient, registry: TaskRegistry,
+    ) -> None:
+        """GET /teacher/library?status=draft returns the 4 skeletons."""
+        _use_teacher()
+        _use_registry(registry)
+
+        resp = await client.get(
+            "/api/v1/teacher/library?status=draft", headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        task_ids = {t["task_id"] for t in body["data"]["tasks"]}
+        for sk_id in SKELETON_IDS:
+            assert sk_id in task_ids, f"{sk_id} not in draft listing"
+
+    @pytest.mark.asyncio
+    async def test_library_filter_by_medium_social_post(
+        self, client: httpx.AsyncClient, registry: TaskRegistry,
+    ) -> None:
+        """Filtering by medium=social_post returns Task 2."""
+        _use_teacher()
+        _use_registry(registry)
+
+        resp = await client.get(
+            "/api/v1/teacher/library?medium=social_post&status=draft",
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        task_ids = [t["task_id"] for t in body["data"]["tasks"]]
+        assert "task-cherry-pick-001" in task_ids
+
+    @pytest.mark.asyncio
+    async def test_skeleton_detail_with_include_drafts(
+        self, client: httpx.AsyncClient, registry: TaskRegistry,
+    ) -> None:
+        """Draft skeletons are accessible via detail endpoint with include_drafts."""
+        _use_teacher()
+        _use_registry(registry)
+
+        resp = await client.get(
+            "/api/v1/teacher/library/task-cherry-pick-001?include_drafts=true",
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        detail = body["data"]
+        assert detail["task_id"] == "task-cherry-pick-001"
+        assert detail["status"] == "draft"
+        assert detail["medium"] == "social_post"
+        # SocialPostBlock produces a content_preview
+        assert len(detail["content_preview"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_skeleton_detail_hidden_without_include_drafts(
+        self, client: httpx.AsyncClient, registry: TaskRegistry,
+    ) -> None:
+        """Draft skeletons return 404 when include_drafts is not set."""
+        _use_teacher()
+        _use_registry(registry)
+
+        resp = await client.get(
+            "/api/v1/teacher/library/task-cherry-pick-001",
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Phase 5b: Student API draft rejection
+# ---------------------------------------------------------------------------
+
+
+class TestStudentAPIDraftRejection:
+    """Student endpoint correctly rejects draft cartridges."""
+
+    @pytest_asyncio.fixture
+    async def session_id(self) -> str:
+        """Creates a session in the store and returns its ID."""
+        session = GameSession(
+            session_id="test-skeleton-session",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+        )
+        await deps._session_store.save_session(session)
+        return session.session_id
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("task_id", SKELETON_IDS)
+    async def test_draft_task_returns_404(
+        self, task_id: str, client: httpx.AsyncClient,
+        registry: TaskRegistry, session_id: str,
+    ) -> None:
+        """Student API returns 404 for draft skeleton cartridges."""
+        _use_student()
+        _use_registry(registry)
+
+        resp = await client.get(
+            f"/api/v1/student/session/{session_id}/next?task_id={task_id}",
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 404

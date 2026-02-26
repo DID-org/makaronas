@@ -1,0 +1,180 @@
+{
+  "task_id": "task-misleading-frame-001",
+  "task_type": "ai_driven",
+  "title": "Klaidinantis kadras",
+  "description": "Dvi nuotraukos to paties įvykio — viena apkarpyta taip, kad sukuria pavojaus įspūdį, kita rodo platesnį kontekstą. Mokinys turi atpažinti, kaip vizualinis rėminimas keičia suvokima.",
+  "version": "1.0.0",
+  "trigger": "fear",
+  "technique": "emotional_framing",
+  "medium": "image",
+  "learning_objectives": [
+    "Atpažinti, kaip vizualinis rėminimas manipuliuoja suvokimu",
+    "Suprasti, kad nuotraukos yra pasirinkimai, o ne neutralūs faktai"
+  ],
+  "difficulty": 3,
+  "time_minutes": 12,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "vaizdas",
+    "rėminimas",
+    "nuotrauka"
+  ],
+  "status": "draft",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "image-misleading",
+      "type": "image",
+      "src": "misleading.png",
+      "alt_text": "Tamsi, grūsta nuotrauka: žmonių minia susigrūdusi siauroje gatvėje, kai kurie kelia rankas, veido išraiškos įtemptos. Kadras apkarpytas taip, kad matosi tik tankiausia minioje dalis.",
+      "audio_description": "Nuotrauka apkarpyta taip, kad rodytų tik siaurą minioje dalį, kur žmonės stovi tankiausiai. Kampas pasirinktas žemai iš apačios, todėl minia atrodo didesnė ir grėsmingesnė. Fonas užtamsytas, pakeltos rankos gali reikšti bet ką — nuo šventimo iki protesto — bet kontekstas pašalintas.",
+      "caption": "Chaosas miesto centre: šimtai žmonių užplūdo gatves"
+    },
+    {
+      "id": "image-context",
+      "type": "image",
+      "src": "context.png",
+      "alt_text": "Plati, šviesi nuotrauka: nedidelė grupė žmonių susirinkusi parko aikštėje, aplinkui vaikšto praeiviai, keli vaikai žaidžia. Nuotaika rami, diena saulėta.",
+      "audio_description": "Ta pati vieta, bet fotografuota iš aukščiau ir platesniu kampu. Matosi, kad „minia“ yra kelios dešimtys žmonių, susirinkusių nedidelėje aikštėje. Aplinkui ramus parkas, vaikšto šeimos su vaikais. Pakeltos rankos — tai žmonės mojuojantys draugams kitoje aikštės pusėje. Visas „chaoso“ įspūdis sukurtas kampu ir apkarpymu."
+    },
+    {
+      "id": "scene-description",
+      "type": "text",
+      "text": "Prieš tave — dvi nuotraukos to paties įvykio tą pačią dieną. Pažiūrėk į jas atidžiai."
+    }
+  ],
+  "phases": [
+    {
+      "id": "evaluate",
+      "title": "Nuotraukų analizė",
+      "visible_blocks": [
+        "image-misleading",
+        "image-context",
+        "scene-description"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Dvi nuotraukos to paties įvykio. Kokią istoriją pasakoja kiekviena?",
+        "min_exchanges": 2,
+        "max_exchanges": 6
+      },
+      "ai_transitions": {
+        "on_success": "reveal_win",
+        "on_partial": "reveal_partial",
+        "on_max_exchanges": "reveal_timeout"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal_win",
+      "title": "Atskleidimas — Sukčius pralaimi",
+      "visible_blocks": [
+        "image-misleading",
+        "image-context",
+        "scene-description"
+      ],
+      "trickster_content": "Tu pamatei tai, ka norėjau paslėpti. Štai trys triukai:\n\n1. Vizualinis apkarpymas — siauras kadras pašalina kontekstą, kuris keičia istoriją\n2. Antraštės šališkumas — „Chaosas miesto centre“ sustiprina klaidinantį vizualinį įspūdį\n3. Baimės rėminimas — tamsi nuotrauka iš žemo kampo aktyvuoja grėsmės suvokima\n\nNuotrauka nemelavo — ji tiesiog pasirinko, kokią dalį tiesos parodyti.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    },
+    {
+      "id": "reveal_partial",
+      "title": "Atskleidimas — dalinai",
+      "visible_blocks": [
+        "image-misleading",
+        "image-context",
+        "scene-description"
+      ],
+      "trickster_content": "Tu pastebėjai skirtumą, bet ne visą mechanizmą.\n\n1. Vizualinis apkarpymas — siauras kadras pašalina kontekstą ir sukuria „minioje“ įspūdį\n2. Antraštės šališkumas — tekstas prie nuotraukos sustiprina klaidinantį rėminimą\n3. Baimės rėminimas — žemas kampas, tamsus fonas — visa tai aktyvuoja grėsmės jausmą\n\nKiekvieną kartą matydamas dramatišką nuotrauką, klausk: kas liko už kadro?",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    },
+    {
+      "id": "reveal_timeout",
+      "title": "Atskleidimas — laikas baigėsi",
+      "visible_blocks": [
+        "image-misleading",
+        "image-context",
+        "scene-description"
+      ],
+      "trickster_content": "Pokalbis baigėsi. Štai ką paslėpiau:\n\n1. Vizualinis apkarpymas — kadras pasirinko tik tankiausia vieta, pašalindamas ramų kontekstą\n2. Antraštės šališkumas — „Chaosas“ ir „šimtai“ sustiprina vaizdo manipuliaciją\n3. Baimės rėminimas — kampas ir apšvietimas sukuria grėsmės įspūdį iš ramaus įvykio\n\nNuotraukos — tai pasirinkimai: ką įtraukti, ką iškirpti, iš kokio kampo žiūrėti.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    }
+  ],
+  "initial_phase": "evaluate",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-visual-crop",
+        "description": "Nuotraukos apkarpymas pašalina kontekstą, kuris visiškai keičia pasakojimą — rami aikštė tampa „chaosu“",
+        "technique": "emotional_framing",
+        "real_world_connection": "Naujienų portalai ir socialiniai tinklai reguliariai naudoja apkarpytas nuotraukas, kurios dramatizuoja įvykius pašalindamos ramų kontekstą"
+      },
+      {
+        "id": "p-caption-bias",
+        "description": "Antraštės tekstas „Chaosas miesto centre: šimtai žmonių“ sustiprina vizualinį klaidinima ir diktuoja, kaip interpretuoti vaizdą",
+        "technique": "emotional_framing",
+        "real_world_connection": "Nuotraukos antraštė formuoja suvokima dar prieš žmogui spėjant pačiam įvertinti vaizdą — tas pats vaizdas su skirtingomis antraštėmis sukelia visiškai skirtingas emocijas"
+      },
+      {
+        "id": "p-fear-framing",
+        "description": "Žeemas fotografavimo kampas, tamsus apšvietimas ir siauras kadras aktyvuoja baimės ir grėsmės suvokima",
+        "technique": "emotional_framing",
+        "real_world_connection": "Vizualiniai sprendimai — kampas, apšvietimas, apkarpymas — yra galingi emocijų įrankiai, kuriais fotožurnalistai ir redaktoriai gali formuoti suvokima"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-crop-changes-narrative",
+        "description": "Mokinys identifikuoja, kaip apkarpymas ir rėminimas keičia nuotraukos pasakojimą",
+        "pattern_refs": [
+          "p-visual-crop"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-caption-image-cooperation",
+        "description": "Mokinys atpažįsta, kaip antraštė ir vaizdas veikia kartu klaidinimui sustiprinti",
+        "pattern_refs": [
+          "p-caption-bias"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys neidentifikavo vizualinio rėminimo — priėmė klaidinancia nuotrauką kaip tiesą arba negalėjo artikuliuoti skirtumo tarp dviejų vaizdų",
+      "partial": "Mokinys pastebėjo, kad nuotraukos skiriasi, bet negalėjo artikuliuoti, kaip rėminimas keičia pasakojimą",
+      "trickster_loses": "Mokinys identifikavo, kaip rėminimas keičia pasakojimą, ir susiejo tai su emocine manipuliacija"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-misleading-frame-001",
+    "persona_mode": "presenting",
+    "has_static_fallback": true,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Nuotraukos yra pasirinkimai — ką įtraukti, ką iškirpti, iš kokio kampo žiūrėti. Kiekvienas kadras pasakoja istoriją, kurią pasirinko fotografas arba redaktorius, ne objektyvią tikrovę.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_events",
+      "no_graphic_content"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}

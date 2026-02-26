@@ -1,0 +1,209 @@
+{
+  "task_id": "task-wedge-001",
+  "task_type": "ai_driven",
+  "title": "Pleištas",
+  "description": "Draugĭškas forumas tarp lietuvių ir latvių vartotojų pavirsta ginču, kai pasirodo provokuojantis komentaras, skirtas išnaudoti kultūrinius jautrumas. Mokinys turi atpažinti skaldymo taktiką.",
+  "version": "1.0.0",
+  "trigger": "identity",
+  "technique": "wedge_driving",
+  "medium": "chat",
+  "learning_objectives": [
+    "Atpažinti skaldymo taktikas internetinėse diskusijose",
+    "Suprasti, kaip kultūriniai jautrumai išnaudojami draugĭškiems pokalbiams sugriauti"
+  ],
+  "difficulty": 3,
+  "time_minutes": 12,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "pokalbis",
+    "skaldymas",
+    "forumas"
+  ],
+  "status": "draft",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "msg-friendly-1",
+      "type": "chat_message",
+      "username": "LT_Gamer42",
+      "text": "Ar kas nors žaidžia naują strateginį? Ieškau komandos savaitgaliui 🎮",
+      "timestamp": "14:23",
+      "is_highlighted": false
+    },
+    {
+      "id": "msg-friendly-2",
+      "type": "chat_message",
+      "username": "Riga_Fox",
+      "text": "Mes su draugais pradėjom vakar! Galim sujungti komandas, bus smagiau 😄",
+      "timestamp": "14:25",
+      "is_highlighted": false
+    },
+    {
+      "id": "msg-friendly-3",
+      "type": "chat_message",
+      "username": "Vilnius_Owl",
+      "text": "O, Baltijos komanda! Man patinka idėja. Mes vis tiek panašiai galvojam apie strategijas 🤝",
+      "timestamp": "14:28",
+      "is_highlighted": false
+    },
+    {
+      "id": "msg-friendly-4",
+      "type": "chat_message",
+      "username": "LT_Gamer42",
+      "text": "Tikrai! Praeita kartą su latviais žaidėm — geriausias turnyras per metus",
+      "timestamp": "14:31",
+      "is_highlighted": false
+    },
+    {
+      "id": "msg-wedge",
+      "type": "chat_message",
+      "username": "Tiesos_Karys",
+      "text": "Baltijos komanda? Rimtai? Gal pirmiau prisiminkime, kaip latviai balsavo prieš mūsų interesus paskutiniame tarptautiniame balsavime. Bet aišku, jūs jaunimas to nežinot, nes jums svarbiau žaidimai nei savo šalies interesai. Pagaliau kažkas tai pasako.",
+      "timestamp": "14:33",
+      "is_highlighted": true
+    }
+  ],
+  "phases": [
+    {
+      "id": "evaluate",
+      "title": "Pokalbio analizė",
+      "visible_blocks": [
+        "msg-friendly-1",
+        "msg-friendly-2",
+        "msg-friendly-3",
+        "msg-friendly-4",
+        "msg-wedge"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Tu esi šiame pokalbyje. Ka atsakysi?",
+        "min_exchanges": 2,
+        "max_exchanges": 6
+      },
+      "ai_transitions": {
+        "on_success": "reveal_win",
+        "on_partial": "reveal_partial",
+        "on_max_exchanges": "reveal_timeout"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal_win",
+      "title": "Atskleidimas — Sukčius pralaimi",
+      "visible_blocks": [
+        "msg-friendly-1",
+        "msg-friendly-2",
+        "msg-friendly-3",
+        "msg-friendly-4",
+        "msg-wedge"
+      ],
+      "trickster_content": "Tu atpažinai, kas čia vyksta. Štai trys triukai:\n\n1. Temos užgrobimas — linksmas pokalbis apie žaidimus paverstas politiniu konfliktu\n2. Melaginga drąsa — „Pagaliau kažkas tai pasako“ sukuria herojiškumo iliuziją aplink provokaciją\n3. Tapatybės pleištas — tikras kultūrinis sudėtingumas panaudotas draugĭškam ryšiui sugriauti\n\nTikrasis tikslas nebuvo diskutuoti apie balsavimą — o sugriauti draugystę tarp žmonių, kurie puikiai sutarė.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    },
+    {
+      "id": "reveal_partial",
+      "title": "Atskleidimas — dalinai",
+      "visible_blocks": [
+        "msg-friendly-1",
+        "msg-friendly-2",
+        "msg-friendly-3",
+        "msg-friendly-4",
+        "msg-wedge"
+      ],
+      "trickster_content": "Tu reagavai, bet neatpažinai visos taktikos.\n\n1. Temos užgrobimas — draugĭškas pokalbis paverstas konfliktu apie istoriją\n2. Melaginga drąsa — „Pagaliau kažkas pasako“ formuoja komentarą kaip drąsią tiesą\n3. Tapatybės pleištas — tikri kultūriniai skirtumai panaudoti kaip ginklas\n\nAtsimink: provokatorius laimi ne tada, kai tu su juo sutinki, o tada, kai tu su juo ginčijiesi. Abu atvejai sugriauna pokalbį.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    },
+    {
+      "id": "reveal_timeout",
+      "title": "Atskleidimas — laikas baigėsi",
+      "visible_blocks": [
+        "msg-friendly-1",
+        "msg-friendly-2",
+        "msg-friendly-3",
+        "msg-friendly-4",
+        "msg-wedge"
+      ],
+      "trickster_content": "Pokalbis baigėsi. Štai kas čia vyko:\n\n1. Temos užgrobimas — žaidimų pokalbis paverstas politiniu ginču\n2. Melaginga drąsa — „Pagaliau kažkas pasako“ maskuoja provokaciją kaip drąsą\n3. Tapatybės pleištas — kultūriniai jautrumai panaudoti draugystei sugriauti\n\nKitą kartą: kai draugĭškame pokalbyje pasirodo aštriai politinis komentaras — pagalvok, ar tikslas yra diskutuoti, ar sugriauti.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    }
+  ],
+  "initial_phase": "evaluate",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-topic-hijack",
+        "description": "Linksmas ir draugĭškas pokalbis apie žaidimus netikėtai paverstas rimtu politiniu konfliktu su istorinėmis nuoskaudomis",
+        "technique": "wedge_driving",
+        "real_world_connection": "Internetinėse bendruomenėse provokatoriai dažnai užgrobia neformalius pokalbius, paversdami juos ginčais apie tautybę, politiką ar istoriją"
+      },
+      {
+        "id": "p-false-bravery",
+        "description": "Frazė „Pagaliau kažkas tai pasako“ formuoja provokuojantį komentarą kaip drąsų tiesos sakymą, nors tai yra sąmoningas pokalbio griovimas",
+        "technique": "wedge_driving",
+        "real_world_connection": "„Pagaliau kažkas tai pasako“ yra klasikinis retorinis triukas — jis paverčia bet kokį teiginį drąsiu ir neginčijamu, nes prieštarauti reiškia bijoti tiesos"
+      },
+      {
+        "id": "p-identity-wedge",
+        "description": "Tikras kultūrinis sudėtingumas tarp Baltijos šalių panaudotas kaip ginklas draugĭškam ryšiui tarp žmonių sugriauti",
+        "technique": "wedge_driving",
+        "real_world_connection": "Skaldymo taktikos veikia geriausiai ten, kur yra tikrų kultūrinių jautrumų — provokatoriai naudoja tikras istorines nuoskaudas kaip ginklą prieš bendruomenes"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-wedge-recognized",
+        "description": "Mokinys atpažįsta komentarą kaip sąmoningą skaldymo taktiką, o ne kaip nuoširdy politinį komentarą",
+        "pattern_refs": [
+          "p-topic-hijack",
+          "p-identity-wedge"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-engagement-trap-understood",
+        "description": "Mokinys artikuliuoja, kodėl ginčijimasis su istoriniu teiginiu tarnauja provokacijos tikslui",
+        "pattern_refs": [
+          "p-false-bravery"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys neidentifikavo taktikos — reagavo emociškai arba bandė ginčyti istorinį teiginį, nepamatydamas, kad tai yra sąmoningą provokacija",
+      "partial": "Mokinys nukreipė pokalbį, bet negalėjo įvardyti skaldymo taktikos — žinojo, kad kažkas negerai, bet negalėjo paaiškinti kodėl",
+      "trickster_loses": "Mokinys atpažino ir įvardijo skaldymo taktiką — paaiškino, kaip draugĭškas pokalbis buvo sąmoningai paverstas konfliktu"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-wedge-001",
+    "persona_mode": "chat_participant",
+    "has_static_fallback": true,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Skaldymo taktikos tikslas — ne diskutuoti, o sugriauti. Provokatorius laimi ir tada, kai su juo sutinki, ir tada, kai ginčijiesi. Abi reakcijos sugriauna draugĭšką pokalbį.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_nations",
+      "no_real_political_events"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}

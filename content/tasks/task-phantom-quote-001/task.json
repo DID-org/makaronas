@@ -1,0 +1,165 @@
+{
+  "task_id": "task-phantom-quote-001",
+  "task_type": "ai_driven",
+  "title": "Vaiduokliška citata",
+  "description": "Tinklaraščio straipsnis cituoja mokslinių tyrimų institutą, tačiau citata niekada nebuvo pasakyta — ji sugalvota. Mokinys turi perskaityti abu tekstus ir rasti, kad tiesioginė citata yra visiškai išgalvota.",
+  "version": "1.0.0",
+  "trigger": "belonging",
+  "technique": "phantom_quote",
+  "medium": "article",
+  "learning_objectives": [
+    "Atpažinti išgalvotas citatas straipsniuose",
+    "Suprasti, kad kabučių buvimas nėra autiškumo įrodymas"
+  ],
+  "difficulty": 3,
+  "time_minutes": 15,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "straipsnis",
+    "citata",
+    "fabrikavimas"
+  ],
+  "status": "draft",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "blog-article",
+      "type": "text",
+      "text": "Kodėl ekranų laikas nėra toks pavojingas, kaip galvoji\n\nPastaraisiais metais tėvai ir mokytojai nuolat girdėjo perspėjimus apie ekranų laiką. Tačiau naujausi tyrimai rodo visai kitą paveiksla.\n\nSocialinės elgsenos instituto vyriausio ji tyrėja dr. Rūta Balčiūnienė neseniai pareiškė: „Mūsų duomenys aiškiai rodo, kad vaikai, praleidžiantys iki 4 valandų su ekranais, demonstruoja geresnius socialinius įgūdžius nei tie, kurie ekranų visai nenaudoja. Ribojimas daro daugiau žalos nei naudos.“\n\nŠi išvada turėtų priversti mus permąstyti požiūrį į technologijas jaunimo gyvenime. Galbūt laikas nustoti kaltinti ekranus ir pradėti ieškoti tikrųjų priežasčių."
+    },
+    {
+      "id": "source-article",
+      "type": "text",
+      "text": "Socialinės elgsenos instituto metinis pranešimas: Skaitmeninės technologijos ir jaunimo raida\n\nSocialinės elgsenos institutas paskelbė išsamią 14 mėnesių trukmės longitudinę studiją, kurioje dalyvavo 3200 paauglių iš 45 mokyklų. Tyrimas nagrinėjo ekranų laiko ir socialinės raidos sąsajas.\n\nPageindinės išvados:\n\nTyrimo rezultatai atskleidė sudėtingą ir daugiasluoksnį ryšį tarp ekranų naudojimo ir socialinių įgūdžių. Mažas ekranų laikas (iki 1 valandos per dieną) turėjo neutralų poveikį socialiniams įgūdžiams. Vidutinis ekranų laikas (1-2 valandos) rodė nedidelį teigiamą efektą bendravimo srityje, tačiau šis efektas buvo statistiškai nereikšmingas kontroliuojant kitus kintamuosius.\n\nSvarbus kontekstas: tyrėjai pabrėžia, kad ekranų laiko kokybė yra daug svarbesnė nei kiekybė. Interaktyvūs, bendradarbiavimu paremti užsiėmimai turėjo teigiamą poveikį, o pasyvus turinio vartojimas — neigiamą. Dr. Rūta Balčiūnienė, projekto vadovė, komentavo: „Negalime pateikti paprastų rekomendacijų apie valandas. Kontekstas yra viskas — su kuo, ką ir kodėl vaikas daro ekrane.“\n\nTyrimas taip pat parodė, kad daugiau nei 3 valandos pasyvaus ekranų laiko per dieną buvo susijusios su prastesniais miego rodikliais ir didesniu socialinio nerimo lygiu. Tyrėjai perspėja prieš supaprastintas interpretacijas ir ragina atsižvelgti į visą kontekstą.\n\nInstituto rekomendacijos mokykloms apima individualų požiūrį į kievieną mokinį, dėmesį ekranų laiko kokybei ir reguliarų vertinimą."
+    }
+  ],
+  "phases": [
+    {
+      "id": "evaluate",
+      "title": "Tekstų analizė",
+      "visible_blocks": [
+        "blog-article",
+        "source-article"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Abu tekstai prieš tave. Kur čia manipuliacija? Pasakyk, ką radai.",
+        "min_exchanges": 3,
+        "max_exchanges": 8
+      },
+      "ai_transitions": {
+        "on_success": "reveal_win",
+        "on_partial": "reveal_partial",
+        "on_max_exchanges": "reveal_timeout"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal_win",
+      "title": "Atskleidimas — Sukčius pralaimi",
+      "visible_blocks": [
+        "blog-article",
+        "source-article"
+      ],
+      "trickster_content": "Tu radai tai, ką dauguma praleidžia. Pagrindinė citata tinklaraštyje — apie 4 valandas ir geresnius socialinius įgūdžius — niekada nebuvo pasakyta. Dr. Balčiūnienė iš tikrųjų kalbėjo apie konteksto svarbą, ne apie valandų skaičių.\n\nTriukai:\n1. Išgalvota citata — tiesioginė citata kabučiuose, kurios šaltinyje nėra\n2. Kabučių autoritetas — kabučių ir institucijos vardo derinys sukuria klaidinga įrodyma\n3. Temos artumas — šaltinis kalba apie panašia tema, todėl fabrikacija sunkiau pastebima",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    },
+    {
+      "id": "reveal_partial",
+      "title": "Atskleidimas — dalinai",
+      "visible_blocks": [
+        "blog-article",
+        "source-article"
+      ],
+      "trickster_content": "Tu kažką pastebėjai, bet pagrindinė manipuliacija liko nepastebėta.\n\nTa citata apie „4 valandas“ ir „geresnius socialinius įgūdžius“? Jos niekur šaltinyje nėra. Ji buvo visiškai išgalvota. Dr. Balčiūnienė kalbėjo apie kontekstą, ne apie valandas.\n\n1. Išgalvota citata — kabučiuose esanti frazė, kurios originalus šaltinis niekada nesakė\n2. Kabučių autoritetas — kabučės + institucijos vardas = klaidingas įrodymas\n3. Temos artumas — abi publikacijos kalba apie ekranus, todėl fabrikacija atrodo natūrali",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    },
+    {
+      "id": "reveal_timeout",
+      "title": "Atskleidimas — laikas baigėsi",
+      "visible_blocks": [
+        "blog-article",
+        "source-article"
+      ],
+      "trickster_content": "Mūsų pokalbis baigėsi. Pagrindinis triukas: tinklaraščio citata apie 4 valandas ekranų laiko ir geresnius socialinius įgūdžius yra visiškai išgalvota. Šaltinyje tokios frazės nėra.\n\n1. Išgalvota citata — sugalvota tiesioginė citata, kurios šaltinis nesakė\n2. Kabučių autoritetas — kabučės sukuria įrodymo iliuziją\n3. Temos artumas — panašios temos maskuoja fabrikaciją\n\nKitą kartą: kai matai tiesioginę citatą — surask ją originaliame šaltinyje.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    }
+  ],
+  "initial_phase": "evaluate",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-fabricated-quote",
+        "description": "Tiesioginė citata, priskirta tyrėjai, niekada nebuvo pasakyta — ji visiškai sugalvota tinklaraščio autoriaus",
+        "technique": "phantom_quote",
+        "real_world_connection": "Interneto straipsniai dažnai „cituoja“ ekspertus frazėmis, kurių tie niekada nesakė — kabučių buvimas negarantuoja autiškumo"
+      },
+      {
+        "id": "p-quotation-authority",
+        "description": "Kabučių ir institucijos vardo derinys sukuria klaidinga įrodymo įspūdį — skaitytojas mano matąs tiesioginę citatą",
+        "technique": "false_authority",
+        "real_world_connection": "Kabučės mūsų sąmonėje reiškia „tiksliai tai buvo pasakyta“ — manipuliatoriai tuo naudojasi, įdėdami savo žodžius kitų burnon"
+      },
+      {
+        "id": "p-topic-proximity",
+        "description": "Šaltinio straipsnis kalba apie panašia tema, todėl išgalvota citata atrodo natūrali ir sunkiau pastebima",
+        "technique": "phantom_quote",
+        "real_world_connection": "Fabrikuotos citatos dažnai remiasi tikrais tyrimais panašia tema — tai sukuria kontekstą, kuriame melas atrodo tikėtinas"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-fabricated-quote-found",
+        "description": "Mokinys identifikuoja, kad tiesioginė citata apie 4 valandas neegzistuoja šaltinio straipsnyje",
+        "pattern_refs": [
+          "p-fabricated-quote"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-quotation-authority-explained",
+        "description": "Mokinys paaiškina, kaip kabučės ir institucijos vardas sukuria klaidinga įrodymo įspūdį",
+        "pattern_refs": [
+          "p-quotation-authority"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys kartoja tinklaraščio teiginį nepalygines su šaltiniu — sako „paimta iš konteksto“, nors citata yra visiškai išgalvota",
+      "partial": "Mokinys pastebėjo neatitikimų, bet negalėjo tiksliai įvardyti, kad citata yra fabrikuota — ne iškraipyta, o sugalvota",
+      "trickster_loses": "Mokinys identifikavo citatą kaip visiškai išgalvotą ir artikuliavo, kodėl kabučės nėra autiškumo įrodymas"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-phantom-quote-001",
+    "persona_mode": "presenting",
+    "has_static_fallback": true,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Kabučės nėra tiesa. Tiesioginė citata straipsnyje gali būti visiškai išgalvota. Vienintelis būdas patikrinti — surasti ją originaliame šaltinyje.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}
