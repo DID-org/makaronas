@@ -107,6 +107,8 @@ class GameSession(BaseModel):
     checklist_progress: dict[str, Any] = Field(default_factory=dict)
     investigation_paths: list[str] = Field(default_factory=list)
     raw_performance: dict[str, Any] = Field(default_factory=dict)
+    prompt_snapshots: dict[str, str] | None = None
+    last_redaction_reason: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=24),
