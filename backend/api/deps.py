@@ -35,6 +35,7 @@ from backend.hooks.interfaces import (
 from backend.hooks.sessions import InMemorySessionStore
 from backend.hooks.storage import LocalFileStorage
 from backend.schemas import ApiError, ApiResponse, User
+from backend.tasks.registry import TaskRegistry
 
 # ---------------------------------------------------------------------------
 # Service singletons — the swap point
@@ -45,6 +46,7 @@ _auth_service: AuthService = FakeAuthService()
 _database: DatabaseAdapter = InMemoryStore()
 _session_store: SessionStore = InMemorySessionStore()
 _file_storage: FileStorage = LocalFileStorage()
+_task_registry: TaskRegistry | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +72,27 @@ def get_session_store() -> SessionStore:
 def get_file_storage() -> FileStorage:
     """Returns the file storage singleton."""
     return _file_storage
+
+
+def get_task_registry() -> TaskRegistry:
+    """Returns the task registry singleton.
+
+    Raises HTTPException(503) if the registry hasn't been loaded yet
+    (startup not complete). This prevents requests from hitting a
+    None registry during slow startup.
+    """
+    if _task_registry is None:
+        raise HTTPException(
+            status_code=503,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="SERVICE_UNAVAILABLE",
+                    message="Task registry is not yet available. Server is starting up.",
+                ),
+            ).model_dump(),
+        )
+    return _task_registry
 
 
 # ---------------------------------------------------------------------------

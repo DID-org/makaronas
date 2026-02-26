@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -145,6 +146,25 @@ def _unhandled_exception_response(request: Request, exc: Exception) -> JSONRespo
 # ---------------------------------------------------------------------------
 
 
+def _init_task_registry() -> None:
+    """Initializes the task registry singleton during app startup.
+
+    Derives content_dir and taxonomy_path from the project structure,
+    loads all cartridges, and sets the singleton in deps.py. Logs but
+    does not crash on empty or missing content directories.
+    """
+    from backend.api import deps
+    from backend.tasks.registry import TaskRegistry
+
+    project_root = Path(__file__).resolve().parent.parent
+    content_dir = project_root / "content"
+    taxonomy_path = content_dir / "taxonomy.json"
+
+    registry = TaskRegistry(content_dir, taxonomy_path)
+    registry.load()
+    deps._task_registry = registry
+
+
 def create_app() -> FastAPI:
     """Creates and configures the FastAPI application."""
     settings = get_settings()
@@ -179,6 +199,9 @@ def create_app() -> FastAPI:
 
     # -- Routers --
     _register_routes(application)
+
+    # -- Task registry --
+    _init_task_registry()
 
     return application
 
