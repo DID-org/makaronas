@@ -9,9 +9,10 @@ All responses use the ApiResponse envelope. No SSE streaming — all JSON.
 Auth is enforced on every endpoint via get_current_user dependency.
 Teacher/admin role required on all endpoints.
 
-Tier 2 service module: imports from deps (Tier 2), schemas (Tier 1).
+Tier 3 orchestration module: imports from deps (Tier 2-3), schemas (Tier 1).
 
 Created: Phase 4b
+Updated: Phase 4a — replaced library stubs with registry-backed queries
 """
 
 from uuid import uuid4
@@ -19,9 +20,19 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from backend.api.deps import get_current_user, get_database
+from backend.api.deps import get_current_user, get_database, get_task_registry
 from backend.hooks.interfaces import DatabaseAdapter
 from backend.schemas import ApiError, ApiResponse, User
+from backend.tasks.registry import TaskRegistry
+from backend.tasks.schemas import (
+    ChatMessageBlock,
+    MemeBlock,
+    SearchResultBlock,
+    SocialPostBlock,
+    TaskCartridge,
+    TextBlock,
+    VideoTranscriptBlock,
+)
 
 router = APIRouter()
 
@@ -64,59 +75,77 @@ def _require_teacher(user: User) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Stub data
+# Cartridge → API response helpers
 # ---------------------------------------------------------------------------
 
-_STUB_TASKS = [
-    {
-        "task_id": "task-urgency-article-001",
-        "title": "The Midnight Deadline",
-        "trigger": "urgency",
-        "technique": "manufactured_deadline",
-        "medium": "article",
-        "difficulty": "beginner",
-        "time_minutes": 10,
-        "tags": ["urgency", "news", "pressure"],
-    },
-    {
-        "task_id": "task-belonging-chat-002",
-        "title": "Everyone Already Knows",
-        "trigger": "belonging",
-        "technique": "bandwagon",
-        "medium": "group_chat",
-        "difficulty": "intermediate",
-        "time_minutes": 15,
-        "tags": ["belonging", "social_proof", "peer_pressure"],
-    },
-    {
-        "task_id": "task-injustice-meme-003",
-        "title": "They Don't Want You to See This",
-        "trigger": "injustice",
-        "technique": "cherry_picked_data",
-        "medium": "meme",
-        "difficulty": "advanced",
-        "time_minutes": 12,
-        "tags": ["injustice", "visual", "statistics"],
-    },
-]
 
-_STUB_TASK_DETAIL = {
-    **_STUB_TASKS[0],
-    "description": (
-        "A news article uses a fabricated deadline to pressure readers "
-        "into sharing before verifying. Students must identify the "
-        "urgency trigger and explain why the deadline is manufactured."
-    ),
-    "content_preview": (
-        "BREAKING: New regulation takes effect at midnight — "
-        "share this before it's too late..."
-    ),
-    "learning_objectives": [
-        "Recognise manufactured urgency in news headlines",
-        "Distinguish real deadlines from artificial pressure",
-        "Practice pausing before sharing time-sensitive content",
-    ],
-}
+def _derive_content_preview(cartridge: TaskCartridge) -> str:
+    """Derives a text preview from the first text-bearing presentation block.
+
+    Iterates blocks in order, extracts text from known text-bearing types.
+    Skips ImageBlock, AudioBlock, GenericBlock (no useful text content).
+    Truncates to 200 characters with "..." suffix when needed.
+
+    Returns:
+        Preview text, or empty string if no text-bearing block exists.
+    """
+    for block in cartridge.presentation_blocks:
+        text: str | None = None
+        if isinstance(block, (TextBlock, SocialPostBlock, ChatMessageBlock)):
+            text = block.text
+        elif isinstance(block, VideoTranscriptBlock):
+            text = block.transcript
+        elif isinstance(block, SearchResultBlock):
+            text = block.snippet
+        elif isinstance(block, MemeBlock):
+            parts = []
+            if block.top_text:
+                parts.append(block.top_text)
+            if block.bottom_text:
+                parts.append(block.bottom_text)
+            text = " ".join(parts) if parts else None
+
+        if text:
+            if len(text) > 200:
+                return text[:200] + "..."
+            return text
+    return ""
+
+
+def _cartridge_to_summary(cartridge: TaskCartridge) -> dict:
+    """Converts a cartridge to the summary dict for list responses."""
+    return {
+        "task_id": cartridge.task_id,
+        "title": cartridge.title,
+        "trigger": cartridge.trigger,
+        "technique": cartridge.technique,
+        "medium": cartridge.medium,
+        "difficulty": cartridge.difficulty,
+        "time_minutes": cartridge.time_minutes,
+        "tags": list(cartridge.tags),
+        "status": cartridge.status,
+        "task_type": cartridge.task_type,
+    }
+
+
+def _cartridge_to_detail(cartridge: TaskCartridge) -> dict:
+    """Converts a cartridge to the detail dict for single-task responses."""
+    detail = _cartridge_to_summary(cartridge)
+    detail.update({
+        "description": cartridge.description,
+        "content_preview": _derive_content_preview(cartridge),
+        "learning_objectives": list(cartridge.learning_objectives),
+        "is_clean": cartridge.is_clean,
+        "version": cartridge.version,
+        "phase_count": len(cartridge.phases),
+        "is_evergreen": cartridge.is_evergreen,
+    })
+    return detail
+
+
+# ---------------------------------------------------------------------------
+# Stub data (roadmaps only — V9 scope)
+# ---------------------------------------------------------------------------
 
 _STUB_ROADMAPS = [
     {
@@ -146,41 +175,109 @@ async def list_library(
     trigger: str | None = None,
     technique: str | None = None,
     medium: str | None = None,
-    difficulty: str | None = None,
+    difficulty: int | None = None,
     time_max: int | None = None,
     tags: str | None = None,
-    search: str | None = None,
+    search: str | None = None,  # Accepted but ignored — full-text search is V10 scope
+    status: str = "active",
+    limit: int = 50,
+    offset: int = 0,
     user: User = Depends(get_current_user),
+    registry: TaskRegistry = Depends(get_task_registry),
 ) -> dict:
-    """Browses the task library with optional filters (stub).
+    """Browses the task library with optional filters.
 
-    All query parameters are accepted and documented in OpenAPI but
-    currently ignored — the stub returns the same hardcoded list
-    regardless. Real filtering comes in V2/V10.
+    Returns real cartridge data from the registry. All query parameters
+    filter results using AND logic. ``difficulty`` is int (1-5), breaking
+    from V1 stub's string representation.
+
+    When ``time_max`` is specified, the page may contain fewer than
+    ``limit`` results because time_max is a post-filter applied after
+    the registry's indexed query.
     """
     _require_teacher(user)
 
+    # Draft access: explicit check documenting intent for future student endpoints
+    if status in ("draft", "all") and user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="FORBIDDEN",
+                    message="Draft access requires teacher or admin role.",
+                ),
+            ).model_dump(),
+        )
+
+    # Parse tags from comma-separated string
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+
+    # Build query — difficulty as exact match (both min and max)
+    query_kwargs: dict = {
+        "trigger": trigger,
+        "technique": technique,
+        "medium": medium,
+        "tags": tag_list,
+        "status": status,
+    }
+    if difficulty is not None:
+        query_kwargs["difficulty_min"] = difficulty
+        query_kwargs["difficulty_max"] = difficulty
+
+    # Fetch ALL matching results (no pagination) for total count + time_max
+    all_results = registry.query(**query_kwargs, limit=999_999, offset=0)
+
+    # Post-filter: time_max (not indexed by registry)
+    if time_max is not None:
+        all_results = [c for c in all_results if c.time_minutes <= time_max]
+
+    total = len(all_results)
+
+    # Apply pagination
+    page = all_results[offset:offset + limit]
+
     return ApiResponse(
         ok=True,
-        data={"tasks": _STUB_TASKS},
+        data={
+            "tasks": [_cartridge_to_summary(c) for c in page],
+            "total": total,
+        },
     ).model_dump()
 
 
 @router.get("/library/{task_id}")
 async def get_task_detail(
     task_id: str,
+    include_drafts: bool = False,
     user: User = Depends(get_current_user),
+    registry: TaskRegistry = Depends(get_task_registry),
 ) -> dict:
-    """Returns full detail for a single task (stub).
+    """Returns full detail for a single task from the registry.
 
-    Returns the same hardcoded task detail regardless of task_id.
-    Real task lookup comes in V2/V10.
+    Returns 404 for unknown tasks and for draft tasks when
+    ``include_drafts`` is False (does not leak draft existence).
     """
     _require_teacher(user)
 
+    cartridge = registry.get_task(task_id)
+
+    # 404 for missing tasks AND for draft tasks when include_drafts is False
+    if cartridge is None or (cartridge.status == "draft" and not include_drafts):
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Task '{task_id}' not found.",
+                ),
+            ).model_dump(),
+        )
+
     return ApiResponse(
         ok=True,
-        data=_STUB_TASK_DETAIL,
+        data=_cartridge_to_detail(cartridge),
     ).model_dump()
 
 
