@@ -9,24 +9,37 @@ All responses use the ApiResponse envelope. Streaming endpoints use the
 Phase 3b SSE infrastructure. Auth is enforced on every endpoint via
 get_current_user dependency.
 
-Tier 2 service module: imports from deps (Tier 2), schemas (Tier 1),
-streaming (Tier 2), config (Tier 2).
+Tier 3 orchestration module: imports from deps (Tier 2-3), schemas (Tier 1),
+streaming (Tier 2), config (Tier 2), tasks/registry (Tier 2), tasks/schemas (Tier 1).
 
 Created: Phase 4a
+Updated: Phase 4b — replaced next_task stub with registry-backed implementation,
+    evolved RespondRequest.action to open string
 """
 
+import logging
 from collections.abc import AsyncIterator
-from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from backend.api.deps import get_current_user, get_database, get_session_store
+from backend.api.deps import get_current_user, get_database, get_session_store, get_task_registry
 from backend.config import get_settings
 from backend.hooks.interfaces import DatabaseAdapter, SessionStore
 from backend.schemas import ApiError, ApiResponse, GameSession, User
 from backend.streaming import create_sse_response, stream_ai_response
+from backend.tasks.registry import TaskRegistry
+from backend.tasks.schemas import (
+    ButtonInteraction,
+    FreeformInteraction,
+    GenericInteraction,
+    InvestigationInteraction,
+    Phase,
+    TaskCartridge,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -46,7 +59,7 @@ class CreateSessionRequest(BaseModel):
 class RespondRequest(BaseModel):
     """Request body for POST /session/{session_id}/respond."""
 
-    action: Literal["button_click", "freeform", "investigate"]
+    action: str
     payload: str
 
 
@@ -111,6 +124,80 @@ def _check_profile_access(student_id: str, user: User) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Cartridge → student response helpers
+# ---------------------------------------------------------------------------
+
+
+def _find_initial_phase(cartridge: TaskCartridge) -> Phase:
+    """Finds the initial phase in the cartridge's phase list.
+
+    Returns:
+        The Phase object matching cartridge.initial_phase.
+
+    Raises:
+        ValueError: If initial_phase ID doesn't match any phase (should
+            never happen with validated cartridges, but defensive).
+    """
+    for phase in cartridge.phases:
+        if phase.id == cartridge.initial_phase:
+            return phase
+    raise ValueError(
+        f"initial_phase '{cartridge.initial_phase}' not found in phases"
+    )
+
+
+def _derive_content_blocks(cartridge: TaskCartridge, phase: Phase) -> list[dict]:
+    """Resolves visible_blocks IDs to serialized presentation block dicts.
+
+    Preserves the visible_blocks ordering (display order for the frontend).
+    Skips unresolved block IDs with a warning — a missing reference is a
+    loader validation gap, not a student-facing error.
+    """
+    block_lookup = {block.id: block for block in cartridge.presentation_blocks}
+    result = []
+    for block_id in phase.visible_blocks:
+        block = block_lookup.get(block_id)
+        if block is None:
+            logger.warning(
+                "Phase '%s' references block '%s' not found in cartridge '%s'",
+                phase.id,
+                block_id,
+                cartridge.task_id,
+            )
+            continue
+        result.append(block.model_dump())
+    return result
+
+
+def _derive_available_actions(phase: Phase) -> list[str]:
+    """Derives available action types from the phase's interaction config."""
+    interaction = phase.interaction
+    if interaction is None:
+        return []
+    if isinstance(interaction, ButtonInteraction):
+        return ["button_click"]
+    if isinstance(interaction, FreeformInteraction):
+        return ["freeform"]
+    if isinstance(interaction, InvestigationInteraction):
+        return ["investigate"]
+    if isinstance(interaction, GenericInteraction):
+        return [interaction.type]
+    return []
+
+
+def _derive_trickster_intro(phase: Phase) -> str | None:
+    """Derives the trickster intro from the initial phase.
+
+    Priority: phase.trickster_content > FreeformInteraction.trickster_opening > None.
+    """
+    if phase.trickster_content is not None:
+        return phase.trickster_content
+    if isinstance(phase.interaction, FreeformInteraction):
+        return phase.interaction.trickster_opening
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Stub token generators
 # ---------------------------------------------------------------------------
 
@@ -168,25 +255,86 @@ async def create_session(
 @router.get("/session/{session_id}/next")
 async def next_task(
     session_id: str,
+    task_id: str | None = None,
     user: User = Depends(get_current_user),
     session_store: SessionStore = Depends(get_session_store),
+    registry: TaskRegistry = Depends(get_task_registry),
 ) -> dict:
-    """Returns the next task content for the session (stub)."""
+    """Returns the next task content for the session.
+
+    Loads real cartridge data from the registry. The ``task_id`` query param
+    overrides the session's current_task — useful for demo flows before V9
+    (Roadmap Engine) provides automatic task assignment.
+    """
     session = await _get_session_or_404(session_id, session_store)
     _check_ownership(session, user)
+
+    # --- Task ID resolution ---
+    resolved_task_id = task_id or session.current_task
+    if resolved_task_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_TASK_ASSIGNED",
+                    message="No task assigned to this session. Provide task_id query param.",
+                ),
+            ).model_dump(),
+        )
+
+    # --- Load cartridge ---
+    cartridge = registry.get_task(resolved_task_id)
+    if cartridge is None or cartridge.status == "draft":
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Task '{resolved_task_id}' not found.",
+                ),
+            ).model_dump(),
+        )
+
+    # --- Stale phase detection (Framework P21) ---
+    # Only when returning to the SAME task with an existing phase
+    if (
+        resolved_task_id == session.current_task
+        and session.current_phase is not None
+        and not registry.is_phase_valid(resolved_task_id, session.current_phase)
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_CONTENT_UPDATED",
+                    message="Task content has been updated since your last interaction.",
+                ),
+                data={"initial_phase": cartridge.initial_phase},
+            ).model_dump(),
+        )
+
+    # --- Derive response from initial phase ---
+    initial_phase = _find_initial_phase(cartridge)
+
+    # --- Update session ---
+    session.current_task = resolved_task_id
+    session.current_phase = cartridge.initial_phase
+    await session_store.save_session(session)
 
     return ApiResponse(
         ok=True,
         data={
-            "task_id": "stub-task-001",
-            "task_type": "stub",
-            "medium": "article",
-            "content": {
-                "headline": "Scientists Confirm: Coffee Grants Immortality",
-                "body": "A groundbreaking study by the Institute of Wishful Thinking...",
-            },
-            "available_actions": ["freeform", "button_click", "investigate"],
-            "trickster_intro": "Interesting article, isn't it? What do you think?",
+            "task_id": cartridge.task_id,
+            "task_type": cartridge.task_type,
+            "medium": cartridge.medium,
+            "title": cartridge.title,
+            "content": _derive_content_blocks(cartridge, initial_phase),
+            "available_actions": _derive_available_actions(initial_phase),
+            "trickster_intro": _derive_trickster_intro(initial_phase),
+            "current_phase": cartridge.initial_phase,
         },
     ).model_dump()
 

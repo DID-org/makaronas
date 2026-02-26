@@ -1,14 +1,19 @@
-"""Tests for Phase 4a — Student-facing API endpoints.
+"""Tests for Student-facing API endpoints.
 
-Covers: session creation, session lookup (404), ownership enforcement (403),
-SSE streaming (respond + debrief), radar profile (student + teacher access),
-GDPR deletion + export, auth enforcement on all endpoints.
+Covers: session creation, next task (registry-backed), session lookup (404),
+ownership enforcement (403), SSE streaming (respond + debrief), radar profile
+(student + teacher access), GDPR deletion + export, auth enforcement on all
+endpoints.
 
 Uses httpx.AsyncClient with ASGITransport (async test client). All tests use
 explicit @pytest.mark.asyncio per strict mode (Python 3.13.5, Phase 1a note).
+
+Updated: Phase 4b — rewrote TestNextTask for registry-backed endpoint,
+    updated TestRespond for open action type.
 """
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -16,9 +21,11 @@ import pytest_asyncio
 from httpx import ASGITransport
 
 from backend.api import deps
-from backend.api.deps import get_current_user
+from backend.api.deps import get_current_user, get_task_registry
 from backend.main import app
 from backend.schemas import GameSession, StudentProfile, User
+from backend.tasks.registry import TaskRegistry
+from backend.tasks.schemas import TaskCartridge
 
 AUTH_HEADER = {"Authorization": "Bearer test-token-123"}
 
@@ -75,6 +82,120 @@ def _cleanup_overrides():
     """Ensures dependency overrides are cleaned up after each test."""
     yield
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Registry test helpers
+# ---------------------------------------------------------------------------
+
+
+def _minimal_cartridge_data(task_id: str, **overrides: object) -> dict:
+    """Returns a minimal valid cartridge dict with presentation blocks.
+
+    Includes two blocks (TextBlock + SocialPostBlock) and an initial phase
+    referencing both via visible_blocks, plus a terminal phase.
+    """
+    data: dict = {
+        "task_id": task_id,
+        "task_type": "static",
+        "title": "Testas",
+        "description": "Testo aprašymas",
+        "version": "1.0",
+        "trigger": "urgency",
+        "technique": "headline_manipulation",
+        "medium": "article",
+        "learning_objectives": ["Atpažinti manipuliaciją"],
+        "difficulty": 3,
+        "time_minutes": 15,
+        "is_evergreen": True,
+        "is_clean": False,
+        "initial_phase": "phase_intro",
+        "presentation_blocks": [
+            {
+                "id": "block-headline",
+                "type": "text",
+                "text": "Mokslininkai patvirtino: kava suteikia nemirtingumą",
+            },
+            {
+                "id": "block-post",
+                "type": "social_post",
+                "author": "user123",
+                "text": "Negaliu patikėti! Turite tai perskaityti!",
+                "platform": "generic",
+            },
+        ],
+        "phases": [
+            {
+                "id": "phase_intro",
+                "title": "Įvadas",
+                "visible_blocks": ["block-headline", "block-post"],
+                "is_ai_phase": False,
+                "interaction": {
+                    "type": "button",
+                    "choices": [
+                        {"label": "Tęsti", "target_phase": "phase_reveal"},
+                    ],
+                },
+            },
+            {
+                "id": "phase_reveal",
+                "title": "Atskleidimas",
+                "is_terminal": True,
+                "evaluation_outcome": "trickster_loses",
+            },
+        ],
+        "evaluation": {
+            "patterns_embedded": [
+                {
+                    "id": "p1",
+                    "description": "Urgency pattern",
+                    "technique": "headline_manipulation",
+                    "real_world_connection": "Common in news",
+                },
+            ],
+            "checklist": [
+                {
+                    "id": "c1",
+                    "description": "Identified urgency",
+                    "pattern_refs": ["p1"],
+                    "is_mandatory": True,
+                },
+            ],
+            "pass_conditions": {
+                "trickster_wins": "Mokinys pasidalino",
+                "partial": "Mokinys perskaitė, bet praleido",
+                "trickster_loses": "Mokinys atpažino technikas",
+            },
+        },
+        "reveal": {"key_lesson": "Antraštė buvo sukurta skubos jausmui sukelti"},
+        "safety": {
+            "content_boundaries": ["no_real_harm"],
+            "intensity_ceiling": 3,
+            "cold_start_safe": True,
+        },
+    }
+    data.update(overrides)
+    return data
+
+
+def _build_cartridge(task_id: str, **overrides: object) -> TaskCartridge:
+    """Builds a validated TaskCartridge from minimal data with overrides."""
+    data = _minimal_cartridge_data(task_id, **overrides)
+    return TaskCartridge.model_validate(data)
+
+
+def _use_registry_with(cartridges: list[TaskCartridge]) -> None:
+    """Injects a pre-loaded registry into app dependency overrides."""
+    registry = TaskRegistry(Path("/tmp"), Path("/tmp"))
+    for c in cartridges:
+        registry._by_id[c.task_id] = c
+        registry._by_status.setdefault(c.status, set()).add(c.task_id)
+        registry._by_trigger[c.trigger].add(c.task_id)
+        registry._by_technique[c.technique].add(c.task_id)
+        registry._by_medium[c.medium].add(c.task_id)
+        for tag in c.tags:
+            registry._by_tag[tag].add(c.task_id)
+    app.dependency_overrides[get_task_registry] = lambda: registry
 
 
 # ---------------------------------------------------------------------------
@@ -175,23 +296,409 @@ class TestCreateSession:
 
 
 class TestNextTask:
-    """GET /api/v1/student/session/{id}/next — stub task content."""
+    """GET /api/v1/student/session/{id}/next — registry-backed task content."""
+
+    # --- Core response tests ---
 
     @pytest.mark.asyncio
-    async def test_returns_stub_task(
+    async def test_returns_real_task_data(
         self, client: httpx.AsyncClient, session_id: str
     ) -> None:
+        cartridge = _build_cartridge("task-test-001")
+        _use_registry_with([cartridge])
+
         async with client:
             resp = await client.get(
-                f"/api/v1/student/session/{session_id}/next",
+                f"/api/v1/student/session/{session_id}/next?task_id=task-test-001",
                 headers=AUTH_HEADER,
             )
         assert resp.status_code == 200
         body = resp.json()
         assert body["ok"] is True
-        assert "task_id" in body["data"]
-        assert "content" in body["data"]
-        assert "available_actions" in body["data"]
+        data = body["data"]
+        assert data["task_id"] == "task-test-001"
+        assert data["task_type"] == "static"
+        assert data["medium"] == "article"
+        assert data["title"] == "Testas"
+        assert data["current_phase"] == "phase_intro"
+        assert isinstance(data["content"], list)
+        assert len(data["content"]) > 0
+        assert isinstance(data["available_actions"], list)
+
+    @pytest.mark.asyncio
+    async def test_content_blocks_resolved_correctly(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        cartridge = _build_cartridge("task-blocks-001")
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-blocks-001",
+                headers=AUTH_HEADER,
+            )
+        data = resp.json()["data"]
+        blocks = data["content"]
+        assert len(blocks) == 2
+        # First block: TextBlock
+        assert blocks[0]["id"] == "block-headline"
+        assert blocks[0]["type"] == "text"
+        assert "text" in blocks[0]
+        # Second block: SocialPostBlock
+        assert blocks[1]["id"] == "block-post"
+        assert blocks[1]["type"] == "social_post"
+        assert "author" in blocks[1]
+
+    # --- Available actions tests ---
+
+    @pytest.mark.asyncio
+    async def test_available_actions_button(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Button interaction → ["button_click"]."""
+        cartridge = _build_cartridge("task-btn-001")
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-btn-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["available_actions"] == ["button_click"]
+
+    @pytest.mark.asyncio
+    async def test_available_actions_freeform(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Freeform interaction → ["freeform"]."""
+        cartridge = _build_cartridge(
+            "task-ff-001",
+            task_type="hybrid",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Pokalbis",
+                    "is_ai_phase": True,
+                    "interaction": {
+                        "type": "freeform",
+                        "trickster_opening": "Na, ką manai?",
+                        "min_exchanges": 1,
+                        "max_exchanges": 3,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_reveal",
+                        "on_max_exchanges": "phase_reveal",
+                        "on_partial": "phase_reveal",
+                    },
+                },
+                {
+                    "id": "phase_reveal",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "tasks/task-ff-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-ff-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["available_actions"] == ["freeform"]
+
+    @pytest.mark.asyncio
+    async def test_available_actions_investigation(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Investigation interaction → ["investigate"]."""
+        cartridge = _build_cartridge(
+            "task-inv-001",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Tyrimas",
+                    "interaction": {
+                        "type": "investigation",
+                        "starting_queries": ["kas nutiko?"],
+                        "submit_target": "phase_reveal",
+                    },
+                },
+                {
+                    "id": "phase_reveal",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+        )
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-inv-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["available_actions"] == ["investigate"]
+
+    @pytest.mark.asyncio
+    async def test_available_actions_no_interaction(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Phase with no interaction → []."""
+        cartridge = _build_cartridge(
+            "task-noint-001",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Įvadas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_wins",
+                },
+            ],
+        )
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-noint-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["available_actions"] == []
+
+    # --- Trickster intro tests ---
+
+    @pytest.mark.asyncio
+    async def test_trickster_intro_from_trickster_content(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Static phase with trickster_content → uses it as intro."""
+        cartridge = _build_cartridge(
+            "task-tc-001",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Įvadas",
+                    "trickster_content": "Sveiki, aš esu Triukšmadarys!",
+                    "interaction": {
+                        "type": "button",
+                        "choices": [
+                            {"label": "Tęsti", "target_phase": "phase_reveal"},
+                        ],
+                    },
+                },
+                {
+                    "id": "phase_reveal",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+        )
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-tc-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["trickster_intro"] == "Sveiki, aš esu Triukšmadarys!"
+
+    @pytest.mark.asyncio
+    async def test_trickster_intro_from_freeform_opening(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Freeform phase → trickster_opening as intro."""
+        cartridge = _build_cartridge(
+            "task-fo-001",
+            task_type="hybrid",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Pokalbis",
+                    "is_ai_phase": True,
+                    "interaction": {
+                        "type": "freeform",
+                        "trickster_opening": "Na, ką manai apie šį straipsnį?",
+                        "min_exchanges": 1,
+                        "max_exchanges": 3,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_reveal",
+                        "on_max_exchanges": "phase_reveal",
+                        "on_partial": "phase_reveal",
+                    },
+                },
+                {
+                    "id": "phase_reveal",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "tasks/task-fo-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-fo-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["trickster_intro"] == "Na, ką manai apie šį straipsnį?"
+
+    @pytest.mark.asyncio
+    async def test_trickster_intro_absent(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Button-only phase with no trickster_content → null."""
+        cartridge = _build_cartridge("task-noti-001")
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-noti-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.json()["data"]["trickster_intro"] is None
+
+    # --- Error cases ---
+
+    @pytest.mark.asyncio
+    async def test_task_not_found_returns_404(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        _use_registry_with([])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=nonexistent",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 404
+        body = resp.json()
+        assert body["error"]["code"] == "TASK_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_draft_task_hidden_returns_404(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Draft tasks return 404 — no leaking draft existence."""
+        cartridge = _build_cartridge("task-draft-001", status="draft")
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-draft-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "TASK_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_no_task_assigned_returns_422(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """No task_id param and session.current_task is None → 422."""
+        _use_registry_with([])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "NO_TASK_ASSIGNED"
+
+    # --- Session state tests ---
+
+    @pytest.mark.asyncio
+    async def test_session_current_task_used_when_no_query_param(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Pre-populated session.current_task serves the correct task."""
+        cartridge = _build_cartridge("task-session-001")
+        _use_registry_with([cartridge])
+
+        # Create session with current_task pre-set
+        session = GameSession(
+            session_id="test-session-pre",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-session-001",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-session-pre/next",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+        assert resp.json()["data"]["task_id"] == "task-session-001"
+
+    @pytest.mark.asyncio
+    async def test_session_updated_after_serving(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Session current_task and current_phase are persisted."""
+        cartridge = _build_cartridge("task-upd-001")
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-upd-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+        session = await deps._session_store.get_session(session_id)
+        assert session.current_task == "task-upd-001"
+        assert session.current_phase == "phase_intro"
+
+    # --- Stale phase detection (Framework P21) ---
+
+    @pytest.mark.asyncio
+    async def test_stale_phase_returns_409(self, client: httpx.AsyncClient) -> None:
+        """Stale phase → TASK_CONTENT_UPDATED (409)."""
+        cartridge = _build_cartridge("task-stale-001")
+        _use_registry_with([cartridge])
+
+        # Session with a phase that doesn't exist in the cartridge
+        session = GameSession(
+            session_id="test-session-stale",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-stale-001",
+            current_phase="phase_that_was_removed",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-session-stale/next?task_id=task-stale-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 409
+        body = resp.json()
+        assert body["error"]["code"] == "TASK_CONTENT_UPDATED"
+        assert body["data"]["initial_phase"] == "phase_intro"
+
+    # --- Existing auth/session/ownership tests ---
 
     @pytest.mark.asyncio
     async def test_nonexistent_session_returns_404(
@@ -270,13 +777,27 @@ class TestRespond:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_invalid_action_returns_422(
+    async def test_open_action_type_accepted(
         self, client: httpx.AsyncClient, session_id: str
     ) -> None:
+        """Open action type — previously invalid strings now pass validation."""
         async with client:
             resp = await client.post(
                 f"/api/v1/student/session/{session_id}/respond",
-                json={"action": "invalid_action", "payload": "test"},
+                json={"action": "timeline_scrub", "payload": "test"},
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_wrong_action_type_returns_422(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Non-string action type → 422 from Pydantic validation."""
+        async with client:
+            resp = await client.post(
+                f"/api/v1/student/session/{session_id}/respond",
+                json={"action": 123, "payload": "test"},
                 headers=AUTH_HEADER,
             )
         assert resp.status_code == 422

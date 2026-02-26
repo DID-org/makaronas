@@ -101,6 +101,7 @@ class GameSession(BaseModel):
     language: str = "lt"
     roadmap_id: str | None = None
     current_task: str | None = None
+    current_phase: str | None = None
     exchanges: list[Exchange] = Field(default_factory=list)
     choices: list[dict[str, Any]] = Field(default_factory=list)
     checklist_progress: dict[str, Any] = Field(default_factory=dict)
