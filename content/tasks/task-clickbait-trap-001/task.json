@@ -1,0 +1,211 @@
+{
+  "task_id": "task-clickbait-trap-001",
+  "task_type": "hybrid",
+  "title": "Paspęsti spąstai",
+  "description": "Mokinys susiduria su emocine antrašte ir trumpu fragmentu. Trys pasirinkimai veda skirtingais keliais: du atskleidžia, kaip lengva pasikliauti pirmu įspūdžiu, o trečias atveria visą straipsnį ir pokalbį su Sukčiumi apie tai, kas iš tikrųjų parašyta.",
+  "version": "1.0.0",
+  "trigger": "urgency",
+  "technique": "headline_manipulation",
+  "medium": "article",
+  "learning_objectives": [
+    "Atpažinti emocinę kalbą antraštėse ir suprasti, kaip ji skatina dalintis, o ne skaityti",
+    "Suprasti skirtumą tarp antraštės pažado ir straipsnio turinio",
+    "Suvokti, kaip fragmentai ir santraukos sustiprina klaidinančią žinutę"
+  ],
+  "difficulty": 2,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": ["antraštė", "straipsnis", "emocinis_rėminimas"],
+  "status": "active",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": ["lt"],
+  "presentation_blocks": [
+    {
+      "id": "headline",
+      "type": "text",
+      "text": "Proveržis: universiteto studentai sukūrė „nulinės emisijos“ bateriją iš perdirbto plastiko — telefono baterija trunka 40 % ilgiau",
+      "style": "headline"
+    },
+    {
+      "id": "snippet",
+      "type": "text",
+      "text": "Universiteto mokslininkai paskelbė apie proveržį tvarios baterijų technologijos srityje, kuris gali iš esmės pakeisti, kaip studentai krauna savo įrenginius. Naujasis „EkoĮkrovos“ prototipas naudoja revoliucinį anglies išgavimo iš plastiko atliekų metodą, stabilizuojantį ličio jonų srautą. Tyrėjai teigia, kad tai gali būti pirmas žingsnis link visiškai žalios elektronikos ateities."
+    },
+    {
+      "id": "full-article",
+      "type": "text",
+      "text": "„EkoĮkrovos“ prototipas, sukurtas universiteto studentų komandos, sėkmingai panaudojo naują anglies išgavimo iš plastiko atliekų metodą ličio jonų srauto stabilizavimui. Nors pats išgavimo procesas yra anglies atžvilgiu neutralus, dabartiniam gamybos etapui reikia 1200 °C temperatūros, kurią šiuo metu užtikrina vietinės anglimi kūrenamos elektrinės.\n\n„Rezultatai laboratorijoje tikrai džiugina, tačiau reikia suprasti kontekstą“, — sako projekto vadovė dr. Eglė Kazlauskienė. — „40 procentų efektyvumo padidėjimas buvo išmatuotas idealaus laboratorinio vakuumo sąlygomis. Standartiniuose vartotojų įrenginiuose tokio rezultato galime tikėtis ne anksčiau kaip po dešimtmečio.“\n\nTyrimas taip pat atskleidė, kad perdirbto plastiko paruošimas baterijų gamybai reikalauja cheminių tirpiklių, kurių poveikis aplinkai dar nėra iki galo ištirtas. „Mes niekada nesakėme, kad tai jau yra žalia technologija“, — priduria dr. Kazlauskienė. — „Tai yra perspektyvus laboratorinis prototipas, ne gatavos rinkos produktas.“\n\nUniversitetas planuoja tęsti tyrimus, ieškodamas alternatyvių šildymo šaltinių ir tirpdamas cheminių tirpiklių poveikio klausimą."
+    },
+    {
+      "id": "biased-summary",
+      "type": "text",
+      "text": "Santrauka: Universiteto mokslininkai sukūrė revoliucinę bateriją iš perdirbto plastiko, kuri pagerina telefono baterijos veikimą 40 %. Ši nulinės emisijos technologija žada visiškai žalią elektronikos ateitį. Prototipas jau veikia ir demonstruoja, kad tvarūs sprendimai gali būti ir efektyvūs.",
+      "style": "ai-summary"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intro",
+      "title": "Antraštė ir fragmentas",
+      "visible_blocks": ["headline", "snippet"],
+      "trickster_content": "Štai tau naujiena. Perskaityk antraštę ir fragmentą — tada pasakyk, ką nori daryti toliau.",
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Sugeneruok santrauką",
+            "target_phase": "bitten_summary",
+            "context_label": "Mokinys pasirinko 'Sugeneruok santrauką' — pasikliovė automatine apžvalga vietoj pilno teksto skaitymo"
+          },
+          {
+            "label": "Suprantu, apie ką čia",
+            "target_phase": "bitten_assumption",
+            "context_label": "Mokinys pasirinko 'Suprantu, apie ką čia' — padarė išvadą tik iš antraštės ir fragmento"
+          },
+          {
+            "label": "Skaityti visą straipsnį",
+            "target_phase": "evaluate",
+            "context_label": "Mokinys pasirinko 'Skaityti visą straipsnį' — nusprendė perskaityti originalų tekstą prieš vertindamas"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "bitten_summary",
+      "title": "Santraukos spąstai",
+      "visible_blocks": ["headline", "snippet", "biased-summary"],
+      "trickster_content": "Paprašei santraukos — ir gavai būtent tai, ko norėjau. Mano santrauka pakartojo antraštės pažadą: „revoliucinė“, „nulinės emisijos“, „40 % geresnis veikimas“. Bet žinai, ko joje nėra? Kad gamyba vyksta anglimi kūrenamose elektrinėse. Kad 40 % veikia tik laboratoriniame vakuume. Kad tyrėjai patys sako: „Tai ne žalia technologija.“ Santrauka paveldi šališkumą to, ką ji apibendrina. Tu leidai man galvoti už tave.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_wins"
+    },
+    {
+      "id": "bitten_assumption",
+      "title": "Prielaidos spąstai",
+      "visible_blocks": ["headline", "snippet"],
+      "trickster_content": "Perskaitei tris sakinius ir nusprendei, kad viską supranti. Būtent to ir tikėjausi. Antraštė sako „nulinės emisijos“ — bet gamyba vyksta anglimi kūrenamose jėgainėse. Sako „40 % ilgiau“ — bet tik laboratoriniame vakuume, ne tavo telefone. Sako „perdirbtas plastikas“ — bet pats perdirbimo procesas naudoja chemines medžiagas, kurių poveikis dar neištirtas. Nieko antraštėje nėra melagingo. Viskas antraštėje yra klaidinančia.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_wins"
+    },
+    {
+      "id": "evaluate",
+      "title": "Straipsnio analizė",
+      "visible_blocks": ["headline", "snippet", "full-article"],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Na — perskaitei visą straipsnį. Tai pasakyk: kuo skiriasi tai, ką žadėjo antraštė, nuo to, kas iš tikrųjų parašyta straipsnyje?",
+        "min_exchanges": 2,
+        "max_exchanges": 6
+      },
+      "ai_transitions": {
+        "on_success": "reveal_win",
+        "on_partial": "reveal_partial",
+        "on_max_exchanges": "reveal_timeout"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal_win",
+      "title": "Atskleidimas — Sukčius pralaimi",
+      "visible_blocks": ["headline", "snippet", "full-article"],
+      "trickster_content": "Gerai, gerai. Tu iš tikrųjų perskaitei. Ir ne tik perskaitei — supratai, kur prasideda ir baigiasi antraštės pažadas. Dauguma žmonių niekada nepasiekia šio taško. Antraštė pardavė tau emociją. Straipsnis papasakojo visai kitą istoriją. Ir tu tai pamatei.\n\nŠtai keturi triukai, kuriuos panaudojau:\n• Emocinė kalba antraštėje — „proveržis“, „revoliucinis“ — kad norėtum dalintis, o ne skaityti\n• Dirbtinis skubumas — „nulinės emisijos“ skamba taip, lyg tai jau vyksta\n• Antraštės-straipsnio prieštaravimas — antraštė žada žalią technologiją, straipsnis kalba apie angliakasybę\n• Fragmento rėminimas — trumpas aprašymas pasirinko patį klaidžiausią kampą",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    },
+    {
+      "id": "reveal_partial",
+      "title": "Atskleidimas — dalinai",
+      "visible_blocks": ["headline", "snippet", "full-article"],
+      "trickster_content": "Tu kažką pagavai — bet ne viską. Perskaitei straipsnį, ir tai jau daugiau nei daro dauguma. Bet kai kurie triukai prasprūdo pro tave.\n\nŠtai visi keturi:\n• Emocinė kalba antraštėje — „proveržis“, „revoliucinis“ — sukurta, kad dalintumeis, ne skaitytum\n• Dirbtinis skubumas — „nulinės emisijos“ skamba kaip jau įvykęs faktas\n• Antraštės-straipsnio prieštaravimas — antraštė žada žalią technologiją, bet straipsnis kalba apie anglimi kūrenamas elektrines\n• Fragmento rėminimas — trumpas aprašymas pasirinko patį klaidžiausią kampą ir jį sustiprino\n\nKitą kartą — ne tik skaityk, bet lygink: ką žada antraštė ir ką iš tikrųjų sako tekstas.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    },
+    {
+      "id": "reveal_timeout",
+      "title": "Atskleidimas — laikas baigėsi",
+      "visible_blocks": ["headline", "snippet", "full-article"],
+      "trickster_content": "Mūsų pokalbis baigėsi, bet tu dar nesuradai visko. Pabandysiu padėti.\n\nŠtai keturi triukai, kuriuos paslėpiau:\n• Emocinė kalba antraštėje — „proveržis“, „revoliucinis“ — žodžiai, kurie skatina dalintis, ne tikrinti\n• Dirbtinis skubumas — „nulinės emisijos“ sukuria įspūdį, kad tai jau tikrovė\n• Antraštės-straipsnio prieštaravimas — antraštė pažada ekologiją, straipsnis kalba apie anglimi kūrenamas jėgaines ir laboratorinį vakuumą\n• Fragmento rėminimas — trumpas aprašymas pasirinkto patį klaidžiausią kampą\n\nSvarbiausias klausimas visada tas pats: ar antraštė ir straipsnis pasakoja tą pačią istoriją?",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "partial"
+    }
+  ],
+  "initial_phase": "intro",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-emotional-lang",
+        "description": "Emocinė kalba antraštėje — „proveržis“, „revoliucinis“, „nulinės emisijos“ — sukurta sukelti entuziazmą ir paskatinti dalintis, o ne skaityti",
+        "technique": "emotional_framing",
+        "real_world_connection": "Naujienų antraštės naudoja emocinius žodžius, kad skaitytojas dalintųsi straipsniu net jo neperskaitęs"
+      },
+      {
+        "id": "p-urgency",
+        "description": "Dirbtinis skubumas — „proveržis“ ir „nulinės emisijos“ sukuria įspūdį, kad technologija jau veikia ir keičia pasaulį",
+        "technique": "manufactured_deadline",
+        "real_world_connection": "Žodis „proveržis“ verčia galvoti, kad kažkas jau įvyko — nors iš tikrųjų tai tik laboratorinis prototipas"
+      },
+      {
+        "id": "p-headline-contradiction",
+        "description": "Antraštės-straipsnio prieštaravimas — antraštė žada žalią technologiją, bet straipsnis atskleidžia, kad gamyba naudoja anglį ir rezultatai galioja tik laboratoriniame vakuume",
+        "technique": "headline_manipulation",
+        "real_world_connection": "Dauguma žmonių perskaito tik antraštę. Atotrūkis tarp antraštės pažado ir straipsnio tikrovės yra pagrindinė klaidinimo priemonė"
+      },
+      {
+        "id": "p-snippet-framing",
+        "description": "Fragmento rėminimas — trumpas aprašymas pasirenka patį klaidžiausią kampą ir sustiprina antraštės spin",
+        "technique": "cherry_picking",
+        "real_world_connection": "Anonsai ir fragmentai atrenka informaciją, kuri geriausiai atitinka antraštės žinutę, ignoruodami tai, kas ją paneigtų"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-headline-contradiction",
+        "description": "Mokinys identifikuoja antraštės ir straipsnio prieštaravimą — antraštė žada ekologiją, straipsnis atskleidžia anglimi kūrenamas elektrines ir laboratorinio vakuumo sąlygas",
+        "pattern_refs": ["p-headline-contradiction"],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-emotional-language",
+        "description": "Mokinys atpažįsta emocinės kalbos šablonus antraštėje — „proveržis“, „revoliucinis“, „nulinės emisijos“",
+        "pattern_refs": ["p-emotional-lang", "p-urgency"],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-snippet-framing",
+        "description": "Mokinys paaiškina, kaip fragmentas sustiprina klaidinantį rėminimą — pasirinktas pats optimistiškiausias kampas",
+        "pattern_refs": ["p-snippet-framing"],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys neperžiūrėjo viso straipsnio — pasirinko santrauką arba padarė prielaidą tik iš antraštės ir fragmento",
+      "partial": "Mokinys perskaitė straipsnį ir aptiko dalį manipuliacijos šablonų, bet nesugebėjo pilnai artikuliuoti antraštės-straipsnio prieštaravimo",
+      "trickster_loses": "Mokinys perskaitė visą straipsnį, identifikavo antraštės-straipsnio prieštaravimą ir paaiškino, kaip emocinė kalba bei fragmento rėminimas sustiprina klaidinančią žinutę"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-clickbait-trap-001",
+    "persona_mode": "presenting",
+    "has_static_fallback": true,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Antraštės — tai reklama, ne žurnalistika. Santraukos paveldi šališkumą to, ką apibendrina. Vienintelis kelias, kuris įveikia manipuliaciją — pačiam perskaityti ir pagalvoti.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": ["no_real_harm", "no_real_institutions"],
+    "intensity_ceiling": 2,
+    "cold_start_safe": true
+  }
+}
