@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import logging
 import time
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -149,20 +148,150 @@ def _unhandled_exception_response(request: Request, exc: Exception) -> JSONRespo
 def _init_task_registry() -> None:
     """Initializes the task registry singleton during app startup.
 
-    Derives content_dir and taxonomy_path from the project structure,
-    loads all cartridges, and sets the singleton in deps.py. Logs but
-    does not crash on empty or missing content directories.
+    Uses PROJECT_ROOT from config (Framework P17 — single source of truth
+    for derived paths). Loads all cartridges, sets the singleton in deps.py.
+    Logs but does not crash on empty or missing content directories.
     """
     from backend.api import deps
+    from backend.config import PROJECT_ROOT
     from backend.tasks.registry import TaskRegistry
 
-    project_root = Path(__file__).resolve().parent.parent
-    content_dir = project_root / "content"
+    content_dir = PROJECT_ROOT / "content"
     taxonomy_path = content_dir / "taxonomy.json"
 
     registry = TaskRegistry(content_dir, taxonomy_path)
     registry.load()
     deps._task_registry = registry
+
+
+def _init_ai_services() -> None:
+    """Initializes AI service singletons during app startup.
+
+    Creates the prompt loader, provider, context manager, and trickster
+    engine. Runs startup checks for API keys and prompt existence.
+    Logs warnings/errors but never prevents startup — static tasks
+    still work without AI.
+
+    Must be called AFTER _init_task_registry() (prompt enforcement
+    needs loaded cartridges).
+
+    Uses local imports to match _init_task_registry() pattern and
+    avoid circular imports during module loading.
+    """
+    from backend.api import deps
+    from backend.config import PROJECT_ROOT
+    from backend.models import TIER_MAP
+
+    settings = get_settings()
+
+    # 1. Create PromptLoader
+    from backend.ai.prompts import PromptLoader
+
+    prompt_loader = PromptLoader(PROJECT_ROOT / "prompts")
+    deps._prompt_loader = prompt_loader
+    # TODO: Wire prompt_loader.invalidate() to registry reload so prompt
+    # changes take effect on hot-reload (Vision §4.4).
+
+    # 2. Resolve "standard" tier and create the default provider
+    from backend.ai.context import ContextManager
+
+    standard_config = TIER_MAP["standard"]
+    try:
+        provider = deps.create_provider(standard_config, settings)
+    except Exception:
+        logger.warning(
+            "Failed to create AI provider for 'standard' tier (%s). "
+            "AI features will be unavailable.",
+            standard_config.provider,
+        )
+        # Still set prompt_loader (useful for validation), but engine stays None
+        _run_startup_checks(settings, deps)
+        return
+
+    # 3. Create ContextManager and TricksterEngine
+    from backend.ai.trickster import TricksterEngine
+
+    context_manager = ContextManager(prompt_loader)
+    engine = TricksterEngine(provider, context_manager)
+    deps._trickster_engine = engine
+
+    # 4. Run startup checks
+    _run_startup_checks(settings, deps)
+
+    logger.info(
+        "AI services initialized: provider=%s, model=%s",
+        standard_config.provider,
+        standard_config.model_id,
+    )
+
+
+def _run_startup_checks(settings: object, deps: object) -> None:
+    """Runs API key and prompt enforcement checks at startup.
+
+    Logs warnings/errors but never raises — the system starts regardless.
+    Static tasks still work without AI services.
+
+    Args:
+        settings: The application Settings instance.
+        deps: The deps module (for accessing _task_registry and _prompt_loader).
+    """
+    from backend.models import TIER_MAP
+
+    _check_api_keys(settings, TIER_MAP)
+    _check_prompt_enforcement(deps)
+
+
+def _check_api_keys(settings: object, tier_map: dict) -> None:
+    """Verifies API keys are configured for all providers in TIER_MAP.
+
+    Args:
+        settings: The application Settings instance.
+        tier_map: The TIER_MAP dict mapping tiers to ModelConfig.
+    """
+    # Collect unique providers referenced by TIER_MAP
+    providers_seen: set[str] = set()
+    for config in tier_map.values():
+        providers_seen.add(config.provider)
+
+    key_map = {
+        "gemini": ("GOOGLE_API_KEY", getattr(settings, "google_api_key", "")),
+        "anthropic": ("ANTHROPIC_API_KEY", getattr(settings, "anthropic_api_key", "")),
+    }
+
+    for provider_name in sorted(providers_seen):
+        if provider_name in key_map:
+            env_var, key_value = key_map[provider_name]
+            if not key_value:
+                logger.warning(
+                    "Missing %s for provider '%s'. "
+                    "AI features using this provider will fail at runtime.",
+                    env_var,
+                    provider_name,
+                )
+
+
+def _check_prompt_enforcement(deps: object) -> None:
+    """Validates prompt files exist for all active cartridges with AI phases.
+
+    Args:
+        deps: The deps module (for accessing _task_registry and _prompt_loader).
+    """
+    registry = getattr(deps, "_task_registry", None)
+    prompt_loader = getattr(deps, "_prompt_loader", None)
+
+    if registry is None or prompt_loader is None:
+        return
+
+    task_ids = registry.get_all_task_ids(status="active")
+    for task_id in task_ids:
+        cartridge = registry.get_task(task_id)
+        if cartridge is None:
+            logger.debug("Task %s disappeared during startup check, skipping.", task_id)
+            continue
+
+        errors = prompt_loader.validate_task_prompts(cartridge)
+        for error in errors:
+            logger.error("Prompt enforcement [%s]: %s", task_id, error)
 
 
 def create_app() -> FastAPI:
@@ -202,6 +331,9 @@ def create_app() -> FastAPI:
 
     # -- Task registry --
     _init_task_registry()
+
+    # -- AI services (must come after task registry) --
+    _init_ai_services()
 
     return application
 
