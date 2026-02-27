@@ -10,18 +10,22 @@ explicit @pytest.mark.asyncio per strict mode (Python 3.13.5, Phase 1a note).
 
 Updated: Phase 4b — rewrote TestNextTask for registry-backed endpoint,
     updated TestRespond for open action type.
+Updated: Phase 6b — updated TestRespond and TestDebrief for real AI integration,
+    injecting mock engine instead of relying on removed stubs.
 """
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport
 
+from backend.ai.trickster import DebriefResult, TricksterResult
 from backend.api import deps
-from backend.api.deps import get_current_user, get_task_registry
+from backend.api.deps import get_current_user, get_task_registry, get_trickster_engine
 from backend.main import app
 from backend.schemas import GameSession, StudentProfile, User
 from backend.tasks.registry import TaskRegistry
@@ -220,6 +224,167 @@ def _parse_sse_events(body: str) -> list[dict]:
         if event_type and data_json:
             events.append({"type": event_type, "data": json.loads(data_json)})
     return events
+
+
+# ---------------------------------------------------------------------------
+# Mock engine for respond/debrief tests (replaces stubs)
+# ---------------------------------------------------------------------------
+
+
+class _StubEngine:
+    """Minimal mock TricksterEngine for existing endpoint tests.
+
+    Returns canned tokens and post-completion data. Keeps existing tests
+    focused on auth, ownership, and SSE format verification.
+    """
+
+    async def respond(self, session, cartridge, phase, student_input):
+        """Returns a TricksterResult with canned tokens."""
+        async def _tokens():
+            for t in ["Mock ", "response. "]:
+                yield t
+            result.done_data = {
+                "phase_transition": None,
+                "next_phase": None,
+                "exchanges_count": 1,
+            }
+        result = TricksterResult(token_iterator=_tokens())
+        return result
+
+    async def debrief(self, session, cartridge):
+        """Returns a DebriefResult with canned tokens."""
+        async def _tokens():
+            for t in ["Mock ", "debrief. "]:
+                yield t
+            result.done_data = {"debrief_complete": True}
+        result = DebriefResult(token_iterator=_tokens())
+        return result
+
+
+def _ai_cartridge_data(task_id: str) -> dict:
+    """Returns a minimal AI-capable cartridge dict for respond/debrief tests."""
+    return {
+        "task_id": task_id,
+        "task_type": "hybrid",
+        "title": "AI testas",
+        "description": "Testo aprasymas",
+        "version": "1.0",
+        "trigger": "urgency",
+        "technique": "headline_manipulation",
+        "medium": "article",
+        "learning_objectives": ["Atpazinti"],
+        "difficulty": 3,
+        "time_minutes": 15,
+        "is_evergreen": True,
+        "is_clean": False,
+        "initial_phase": "phase_intro",
+        "ai_config": {
+            "model_preference": "standard",
+            "prompt_directory": "tasks/" + task_id,
+            "persona_mode": "presenting",
+            "has_static_fallback": False,
+            "context_requirements": "session_only",
+        },
+        "phases": [
+            {
+                "id": "phase_intro",
+                "title": "Ivadas",
+                "is_ai_phase": False,
+                "interaction": {
+                    "type": "button",
+                    "choices": [
+                        {"label": "Testi", "target_phase": "phase_ai"},
+                    ],
+                },
+            },
+            {
+                "id": "phase_ai",
+                "title": "Pokalbis",
+                "is_ai_phase": True,
+                "interaction": {
+                    "type": "freeform",
+                    "trickster_opening": "Sveiki!",
+                    "min_exchanges": 1,
+                    "max_exchanges": 5,
+                },
+                "ai_transitions": {
+                    "on_success": "phase_reveal",
+                    "on_max_exchanges": "phase_reveal",
+                    "on_partial": "phase_reveal",
+                },
+            },
+            {
+                "id": "phase_reveal",
+                "title": "Atskleidimas",
+                "is_terminal": True,
+                "evaluation_outcome": "trickster_loses",
+            },
+        ],
+        "evaluation": {
+            "patterns_embedded": [
+                {
+                    "id": "p1",
+                    "description": "Pattern",
+                    "technique": "headline_manipulation",
+                    "real_world_connection": "Common",
+                },
+            ],
+            "checklist": [
+                {
+                    "id": "c1",
+                    "description": "Found it",
+                    "pattern_refs": ["p1"],
+                    "is_mandatory": True,
+                },
+            ],
+            "pass_conditions": {
+                "trickster_wins": "Lost",
+                "partial": "Partial",
+                "trickster_loses": "Won",
+            },
+        },
+        "reveal": {"key_lesson": "Test lesson"},
+        "safety": {
+            "content_boundaries": ["self_harm"],
+            "intensity_ceiling": 3,
+            "cold_start_safe": True,
+        },
+    }
+
+
+async def _setup_ai_session(task_id: str = "task-ai-test-001") -> str:
+    """Creates an AI-ready session with matching cartridge in registry.
+
+    Returns the session_id. Sets up:
+    - AI cartridge in registry override
+    - Session with current_task and current_phase pointing to AI phase
+    - Stub engine in DI overrides
+    - Patches check_ai_readiness to return no issues
+    """
+    cartridge = TaskCartridge.model_validate(_ai_cartridge_data(task_id))
+
+    # Registry
+    registry = TaskRegistry(Path("/tmp"), Path("/tmp"))
+    registry._by_id[task_id] = cartridge
+    registry._by_status.setdefault(cartridge.status, set()).add(task_id)
+    registry._by_trigger[cartridge.trigger].add(task_id)
+    registry._by_technique[cartridge.technique].add(task_id)
+    registry._by_medium[cartridge.medium].add(task_id)
+    app.dependency_overrides[get_task_registry] = lambda: registry
+
+    # Engine
+    app.dependency_overrides[get_trickster_engine] = lambda: _StubEngine()
+
+    # Session
+    session = GameSession(
+        session_id="test-ai-session",
+        student_id=FAKE_USER_ID,
+        school_id=FAKE_SCHOOL_ID,
+        current_task=task_id,
+        current_phase="phase_ai",
+    )
+    await deps._session_store.save_session(session)
+    return session.session_id
 
 
 # ---------------------------------------------------------------------------
@@ -743,10 +908,21 @@ class TestNextTask:
 class TestRespond:
     """POST /api/v1/student/session/{id}/respond — SSE stream."""
 
+    @pytest.fixture(autouse=True)
+    def _inject_ai_deps(self):
+        """Injects AI deps so endpoint Depends() resolve without 503."""
+        app.dependency_overrides[get_trickster_engine] = lambda: _StubEngine()
+        if get_task_registry not in app.dependency_overrides:
+            app.dependency_overrides[get_task_registry] = lambda: TaskRegistry(
+                Path("/tmp"), Path("/tmp")
+            )
+
     @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_returns_sse_stream(
-        self, client: httpx.AsyncClient, session_id: str
+        self, _mock_readiness, client: httpx.AsyncClient
     ) -> None:
+        session_id = await _setup_ai_session()
         async with client:
             resp = await client.post(
                 f"/api/v1/student/session/{session_id}/respond",
@@ -762,7 +938,8 @@ class TestRespond:
 
         assert len(token_events) >= 1
         assert len(done_events) == 1
-        assert done_events[0]["data"]["data"]["action_received"] == "freeform"
+        # Engine returns mock done_data, not the old "action_received" stub
+        assert done_events[0]["data"]["data"]["phase_transition"] is None
 
     @pytest.mark.asyncio
     async def test_nonexistent_session_returns_404(
@@ -777,10 +954,12 @@ class TestRespond:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_open_action_type_accepted(
-        self, client: httpx.AsyncClient, session_id: str
+        self, _mock_readiness, client: httpx.AsyncClient
     ) -> None:
-        """Open action type — previously invalid strings now pass validation."""
+        """Open action type — non-standard action strings pass validation."""
+        session_id = await _setup_ai_session()
         async with client:
             resp = await client.post(
                 f"/api/v1/student/session/{session_id}/respond",
@@ -844,10 +1023,21 @@ class TestRespond:
 class TestDebrief:
     """GET /api/v1/student/session/{id}/debrief — SSE stream."""
 
+    @pytest.fixture(autouse=True)
+    def _inject_ai_deps(self):
+        """Injects AI deps so endpoint Depends() resolve without 503."""
+        app.dependency_overrides[get_trickster_engine] = lambda: _StubEngine()
+        if get_task_registry not in app.dependency_overrides:
+            app.dependency_overrides[get_task_registry] = lambda: TaskRegistry(
+                Path("/tmp"), Path("/tmp")
+            )
+
     @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_returns_sse_stream(
-        self, client: httpx.AsyncClient, session_id: str
+        self, _mock_readiness, client: httpx.AsyncClient
     ) -> None:
+        session_id = await _setup_ai_session()
         async with client:
             resp = await client.get(
                 f"/api/v1/student/session/{session_id}/debrief",
@@ -862,7 +1052,8 @@ class TestDebrief:
 
         assert len(token_events) >= 1
         assert len(done_events) == 1
-        assert "You did well today. " == done_events[0]["data"]["full_text"]
+        assert done_events[0]["data"]["full_text"] == "Mock debrief. "
+        assert done_events[0]["data"]["data"]["debrief_complete"] is True
 
     @pytest.mark.asyncio
     async def test_nonexistent_session_returns_404(

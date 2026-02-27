@@ -15,20 +15,43 @@ streaming (Tier 2), config (Tier 2), tasks/registry (Tier 2), tasks/schemas (Tie
 Created: Phase 4a
 Updated: Phase 4b — replaced next_task stub with registry-backed implementation,
     evolved RespondRequest.action to open string
+Updated: Phase 6b — replaced stub token generators with real TricksterEngine
+    calls, added custom SSE generator for post-completion safety/transition handling
 """
 
+import asyncio
 import logging
-from collections.abc import AsyncIterator
+import time
+from collections.abc import AsyncGenerator
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from backend.api.deps import get_current_user, get_database, get_session_store, get_task_registry
+from backend.ai.trickster import DebriefResult, TricksterEngine, TricksterResult
+from backend.ai.usage import log_ai_call
+from backend.api.deps import (
+    check_ai_readiness,
+    get_current_user,
+    get_database,
+    get_session_store,
+    get_task_registry,
+    get_trickster_engine,
+)
 from backend.config import get_settings
 from backend.hooks.interfaces import DatabaseAdapter, SessionStore
-from backend.schemas import ApiError, ApiResponse, GameSession, User
-from backend.streaming import create_sse_response, stream_ai_response
+from backend.models import resolve_tier
+from backend.schemas import (
+    ApiError,
+    ApiResponse,
+    DoneEvent,
+    ErrorEvent,
+    GameSession,
+    RedactEvent,
+    TokenEvent,
+    User,
+)
+from backend.streaming import create_sse_response, format_sse_event
 from backend.tasks.registry import TaskRegistry
 from backend.tasks.schemas import (
     ButtonInteraction,
@@ -198,20 +221,207 @@ def _derive_trickster_intro(phase: Phase) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Stub token generators
+# AI integration helpers
 # ---------------------------------------------------------------------------
 
 
-async def _trickster_tokens() -> AsyncIterator[str]:
-    """Stub token generator simulating a Trickster response."""
-    for token in ["The ", "Trickster ", "is ", "watching... "]:
-        yield token
+def _resolve_ai_phase(
+    session: GameSession,
+    cartridge: TaskCartridge,
+) -> Phase:
+    """Resolves the current phase from session state and validates for AI use.
+
+    Args:
+        session: Active game session with current_phase set.
+        cartridge: Task cartridge loaded from the registry.
+
+    Returns:
+        The validated Phase object, ready for TricksterEngine.respond().
+
+    Raises:
+        HTTPException: 422 if no active phase, 409 if phase is stale,
+            422 if phase is not an AI phase with FreeformInteraction.
+    """
+    if session.current_phase is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_ACTIVE_PHASE",
+                    message="No active phase in this session.",
+                ),
+            ).model_dump(),
+        )
+
+    # Find the phase in the cartridge
+    phase: Phase | None = None
+    for p in cartridge.phases:
+        if p.id == session.current_phase:
+            phase = p
+            break
+
+    if phase is None:
+        raise HTTPException(
+            status_code=409,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_CONTENT_UPDATED",
+                    message="Task content has been updated since your last interaction.",
+                ),
+                data={"initial_phase": cartridge.initial_phase},
+            ).model_dump(),
+        )
+
+    if not phase.is_ai_phase or not isinstance(phase.interaction, FreeformInteraction):
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NOT_AI_PHASE",
+                    message="Current phase does not support freeform AI interaction.",
+                ),
+            ).model_dump(),
+        )
+
+    if phase.ai_transitions is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NOT_AI_PHASE",
+                    message="Current phase has no AI transition configuration.",
+                ),
+            ).model_dump(),
+        )
+
+    return phase
 
 
-async def _debrief_tokens() -> AsyncIterator[str]:
-    """Stub token generator simulating a debrief response."""
-    for token in ["You ", "did ", "well ", "today. "]:
-        yield token
+async def _stream_trickster_response(
+    result: TricksterResult | DebriefResult,
+    session: GameSession,
+    session_store: SessionStore,
+    cartridge: TaskCartridge,
+    call_type: str,
+    timeout_seconds: float = 30.0,
+) -> AsyncGenerator[str, None]:
+    """Turns a TricksterResult/DebriefResult into a full SSE event stream.
+
+    Mirrors stream_ai_response() but adds post-completion result inspection:
+    checks redaction_data and done_data after iterator exhaustion, emits
+    the appropriate final event, logs usage, and saves the session.
+
+    Args:
+        result: Engine result with token_iterator and post-completion fields.
+        session: Game session to save after stream completion.
+        session_store: Session persistence interface.
+        cartridge: Task cartridge for usage logging (model tier resolution).
+        call_type: "trickster" or "debrief" for usage logging.
+        timeout_seconds: Maximum wall-clock time for the stream.
+
+    Yields:
+        SSE-formatted strings (token events, then one done/redact/error event).
+    """
+    accumulated: list[str] = []
+    start_time = time.monotonic()
+
+    try:
+        async with asyncio.timeout(timeout_seconds):
+            async for token in result.token_iterator:
+                accumulated.append(token)
+                yield format_sse_event("token", TokenEvent(text=token))
+
+    except TimeoutError:
+        partial = "".join(accumulated)
+        logger.warning(
+            "AI stream timed out after %.1fs, partial_text length=%d",
+            timeout_seconds,
+            len(partial),
+        )
+        yield format_sse_event(
+            "error",
+            ErrorEvent(
+                code="AI_TIMEOUT",
+                message="AI atsakymas u\u017etruko per ilgai. Bandykite dar kart\u0105.",
+                partial_text=partial,
+            ),
+        )
+        return
+
+    except Exception as exc:
+        partial = "".join(accumulated)
+        logger.warning(
+            "AI stream error: %s, partial_text length=%d",
+            exc,
+            len(partial),
+        )
+        yield format_sse_event(
+            "error",
+            ErrorEvent(
+                code="STREAM_ERROR",
+                message="AI atsakyme \u012fvyko klaida. Bandykite dar kart\u0105.",
+                partial_text=partial,
+            ),
+        )
+        return
+
+    # --- Post-completion: result fields now populated ---
+    elapsed_ms = (time.monotonic() - start_time) * 1000
+    full_text = "".join(accumulated)
+
+    # Check for redaction (safety violation takes priority)
+    if result.redaction_data is not None:
+        yield format_sse_event(
+            "redact",
+            RedactEvent(fallback_text=result.redaction_data["fallback_text"]),
+        )
+    else:
+        # Update session phase on transition (respond only)
+        done_data = result.done_data or {}
+        if done_data.get("next_phase") is not None:
+            session.current_phase = done_data["next_phase"]
+
+        yield format_sse_event(
+            "done",
+            DoneEvent(full_text=full_text, data=done_data),
+        )
+
+    # --- Usage logging ---
+    if result.usage is not None and cartridge.ai_config is not None:
+        try:
+            model_config = resolve_tier(cartridge.ai_config.model_preference)
+            log_ai_call(
+                model_id=model_config.model_id,
+                prompt_tokens=result.usage.prompt_tokens,
+                completion_tokens=result.usage.completion_tokens,
+                latency_ms=elapsed_ms,
+                task_id=cartridge.task_id,
+                session_id=session.session_id,
+                call_type=call_type,
+            )
+        except Exception:
+            logger.warning("Failed to log AI usage", exc_info=True)
+
+    # --- Session persistence (last step) ---
+    try:
+        await session_store.save_session(session)
+    except Exception:
+        logger.error("Failed to save session after AI stream", exc_info=True)
+
+
+async def _static_fallback_stream() -> AsyncGenerator[str, None]:
+    """Emits a single DoneEvent with fallback data when AI is unavailable."""
+    yield format_sse_event(
+        "done",
+        DoneEvent(
+            full_text="",
+            data={"fallback": True, "reason": "AI temporarily unavailable"},
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -345,18 +555,74 @@ async def respond(
     body: RespondRequest,
     user: User = Depends(get_current_user),
     session_store: SessionStore = Depends(get_session_store),
+    registry: TaskRegistry = Depends(get_task_registry),
+    engine: TricksterEngine = Depends(get_trickster_engine),
 ):
     """Accepts a student response and streams a Trickster reply via SSE.
 
     Validation and ownership checks happen before streaming begins —
-    once SSE starts, HTTP status is locked at 200.
+    once SSE starts, HTTP status is locked at 200. The response is
+    powered by real TricksterEngine calls with post-completion safety
+    checking, transition signal extraction, and usage logging.
     """
     session = await _get_session_or_404(session_id, session_store)
     _check_ownership(session, user)
 
-    generator = stream_ai_response(
-        _trickster_tokens(),
-        done_data={"action_received": body.action},
+    # Load cartridge for this session's current task
+    if session.current_task is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_TASK_ASSIGNED",
+                    message="No task assigned to this session.",
+                ),
+            ).model_dump(),
+        )
+
+    cartridge = registry.get_task(session.current_task)
+    if cartridge is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Task '{session.current_task}' not found.",
+                ),
+            ).model_dump(),
+        )
+
+    # Resolve and validate AI phase
+    phase = _resolve_ai_phase(session, cartridge)
+
+    # Check AI readiness (pre-stream validation)
+    settings = get_settings()
+    issues = check_ai_readiness(cartridge, settings)
+    if issues:
+        if cartridge.ai_config and cartridge.ai_config.has_static_fallback:
+            # Serve static fallback as a single DoneEvent
+            generator = _static_fallback_stream()
+            return create_sse_response(generator)
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=ApiResponse(
+                    ok=False,
+                    error=ApiError(
+                        code="AI_UNAVAILABLE",
+                        message="AI paslauga laikinai neprieinama.",
+                    ),
+                ).model_dump(),
+            )
+
+    # Call engine
+    result = await engine.respond(session, cartridge, phase, body.payload)
+
+    # Build SSE stream from result
+    generator = _stream_trickster_response(
+        result, session, session_store, cartridge, call_type="trickster",
     )
     return create_sse_response(generator)
 
@@ -366,17 +632,77 @@ async def debrief(
     session_id: str,
     user: User = Depends(get_current_user),
     session_store: SessionStore = Depends(get_session_store),
+    registry: TaskRegistry = Depends(get_task_registry),
+    engine: TricksterEngine = Depends(get_trickster_engine),
 ):
-    """Streams a debrief summary via SSE (stub).
+    """Streams a debrief summary via SSE powered by TricksterEngine.
 
     Validation and ownership checks happen before streaming begins.
+    Debrief requires AI — there is no meaningful static fallback.
     """
     session = await _get_session_or_404(session_id, session_store)
     _check_ownership(session, user)
 
-    generator = stream_ai_response(
-        _debrief_tokens(),
-        done_data={"tasks_completed": 1},
+    # Load cartridge
+    if session.current_task is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_TASK_ASSIGNED",
+                    message="No task assigned to this session.",
+                ),
+            ).model_dump(),
+        )
+
+    cartridge = registry.get_task(session.current_task)
+    if cartridge is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Task '{session.current_task}' not found.",
+                ),
+            ).model_dump(),
+        )
+
+    # Debrief requires ai_config
+    if cartridge.ai_config is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NOT_AI_TASK",
+                    message="This task does not support AI debrief.",
+                ),
+            ).model_dump(),
+        )
+
+    # Check AI readiness
+    settings = get_settings()
+    issues = check_ai_readiness(cartridge, settings)
+    if issues:
+        raise HTTPException(
+            status_code=503,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="AI_UNAVAILABLE",
+                    message="AI paslauga laikinai neprieinama.",
+                ),
+            ).model_dump(),
+        )
+
+    # Call engine
+    result = await engine.debrief(session, cartridge)
+
+    # Build SSE stream from result
+    generator = _stream_trickster_response(
+        result, session, session_store, cartridge, call_type="debrief",
     )
     return create_sse_response(generator)
 
