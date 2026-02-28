@@ -11,8 +11,6 @@ Uses httpx.AsyncClient with ASGITransport (async test client). All tests
 use explicit @pytest.mark.asyncio per strict mode.
 """
 
-from pathlib import Path
-
 import httpx
 import pytest
 import pytest_asyncio
@@ -20,6 +18,7 @@ from httpx import ASGITransport
 
 from backend.api import deps
 from backend.api.deps import get_current_user, get_task_registry
+from backend.config import PROJECT_ROOT
 from backend.main import app
 from backend.schemas import GameSession, User
 from backend.tasks.loader import TaskLoader
@@ -52,9 +51,6 @@ AUTH_HEADER = {"Authorization": "Bearer test-token-123"}
 FAKE_USER_ID = "fake-user-1"
 FAKE_SCHOOL_ID = "school-test-1"
 
-# Resolve the project content directory relative to this test file
-# backend/tests/test_cartridge_integration.py -> backend/tests -> backend -> project root
-PROJECT_ROOT = Path(__file__).parent.parent.parent
 CONTENT_DIR = PROJECT_ROOT / "content"
 TAXONOMY_PATH = CONTENT_DIR / "taxonomy.json"
 
@@ -127,7 +123,7 @@ class TestLoaderValidation:
         """Task 1 loads with no errors and no demotion-triggering warnings."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / "task-clickbait-trap-001"
-        result = loader.load_task(task_dir, taxonomy)
+        result = loader.load_task(task_dir, taxonomy, CONTENT_DIR)
 
         assert result.cartridge.task_id == "task-clickbait-trap-001"
         assert result.cartridge.status == "active"
@@ -143,7 +139,7 @@ class TestLoaderValidation:
         """Task 4 loads with no errors and no demotion-triggering warnings."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / "task-follow-money-001"
-        result = loader.load_task(task_dir, taxonomy)
+        result = loader.load_task(task_dir, taxonomy, CONTENT_DIR)
 
         assert result.cartridge.task_id == "task-follow-money-001"
         assert result.cartridge.status == "active"
@@ -158,7 +154,7 @@ class TestLoaderValidation:
         """Task 1 has expected classification fields."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / "task-clickbait-trap-001"
-        result = loader.load_task(task_dir, taxonomy)
+        result = loader.load_task(task_dir, taxonomy, CONTENT_DIR)
         c = result.cartridge
 
         assert c.trigger == "urgency"
@@ -174,7 +170,7 @@ class TestLoaderValidation:
         """Task 4 has expected classification fields."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / "task-follow-money-001"
-        result = loader.load_task(task_dir, taxonomy)
+        result = loader.load_task(task_dir, taxonomy, CONTENT_DIR)
         c = result.cartridge
 
         assert c.trigger == "cynicism"
@@ -199,7 +195,7 @@ class TestGraphIntegrity:
         """Loads a single cartridge by task_id."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / task_id
-        return loader.load_task(task_dir, taxonomy).cartridge
+        return loader.load_task(task_dir, taxonomy, CONTENT_DIR).cartridge
 
     def test_clickbait_all_phases_reachable(self, taxonomy: dict) -> None:
         """All 7 phases are reachable from initial_phase via BFS."""
@@ -534,7 +530,7 @@ class TestInvestigationTree:
         """Loads the Follow the Money cartridge."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / "task-follow-money-001"
-        return loader.load_task(task_dir, taxonomy).cartridge
+        return loader.load_task(task_dir, taxonomy, CONTENT_DIR).cartridge
 
     def test_all_child_queries_resolve(self, taxonomy: dict) -> None:
         """Every child_queries string matches some SearchResultBlock's query."""
@@ -649,7 +645,7 @@ class TestSkeletonLoaderValidation:
         """Loads a skeleton cartridge and returns (cartridge, warnings)."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / task_id
-        result = loader.load_task(task_dir, taxonomy)
+        result = loader.load_task(task_dir, taxonomy, CONTENT_DIR)
         return result.cartridge, result.warnings
 
     def test_cherry_pick_loads_as_draft(self, taxonomy: dict) -> None:
@@ -728,7 +724,7 @@ class TestSkeletonGraphIntegrity:
         """Loads a single cartridge by task_id."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / task_id
-        return loader.load_task(task_dir, taxonomy).cartridge
+        return loader.load_task(task_dir, taxonomy, CONTENT_DIR).cartridge
 
     def _bfs_reachable(self, cartridge: TaskCartridge) -> set[str]:
         """Returns the set of phase IDs reachable from initial_phase via BFS."""
@@ -813,7 +809,7 @@ class TestSkeletonBlockTypes:
         """Loads a single cartridge by task_id."""
         loader = TaskLoader()
         task_dir = CONTENT_DIR / "tasks" / task_id
-        return loader.load_task(task_dir, taxonomy).cartridge
+        return loader.load_task(task_dir, taxonomy, CONTENT_DIR).cartridge
 
     def test_cherry_pick_has_social_post_block(self, taxonomy: dict) -> None:
         """Task 2 contains a SocialPostBlock with expected fields."""

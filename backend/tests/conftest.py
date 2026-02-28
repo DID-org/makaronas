@@ -1,4 +1,4 @@
-"""Shared AI test fixtures for all V3 test phases.
+"""Shared AI test fixtures and helpers for all V3 test phases.
 
 Factory-pattern fixtures that return callables accepting **overrides.
 Every V3 phase imports from here — no reinventing test scaffolding.
@@ -8,6 +8,10 @@ Fixtures:
     make_session: Factory for valid GameSession instances
     make_cartridge: Factory for valid AI-capable TaskCartridge instances
     mock_registry: Pre-populated TaskRegistry with one default cartridge
+
+Helpers (imported directly by test modules):
+    write_prompt_file: Creates a prompt file at the given path
+    setup_base_prompts: Creates the three mandatory base prompt files
 """
 
 from pathlib import Path
@@ -19,6 +23,25 @@ from backend.ai.providers.mock import MockProvider
 from backend.schemas import GameSession
 from backend.tasks.registry import TaskRegistry
 from backend.tasks.schemas import TaskCartridge
+
+
+# ---------------------------------------------------------------------------
+# Shared prompt helpers (plain functions, not fixtures)
+# ---------------------------------------------------------------------------
+
+
+def write_prompt_file(path: Path, content: str = "Test prompt content.") -> None:
+    """Creates parent dirs and writes UTF-8 content to a prompt file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def setup_base_prompts(prompts_dir: Path) -> None:
+    """Creates the three mandatory base Trickster prompt files."""
+    trickster = prompts_dir / "trickster"
+    write_prompt_file(trickster / "persona_base.md", "Test persona content.")
+    write_prompt_file(trickster / "behaviour_base.md", "Test behaviour content.")
+    write_prompt_file(trickster / "safety_base.md", "Test safety content.")
 
 
 # ---------------------------------------------------------------------------

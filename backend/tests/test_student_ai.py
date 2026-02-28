@@ -43,28 +43,11 @@ from backend.main import app
 from backend.schemas import GameSession
 from backend.tasks.registry import TaskRegistry
 from backend.tasks.schemas import TaskCartridge
+from backend.tests.conftest import setup_base_prompts, write_prompt_file
 
 AUTH_HEADER = {"Authorization": "Bearer test-token-123"}
 FAKE_USER_ID = "fake-user-1"
 FAKE_SCHOOL_ID = "school-test-1"
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _write(path: Path, content: str) -> None:
-    """Creates parent dirs and writes UTF-8 content."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _setup_base_prompts(prompts_dir: Path) -> None:
-    """Creates minimal base Trickster prompts for testing."""
-    _write(prompts_dir / "trickster" / "persona_base.md", "Tu esi Triksteris.")
-    _write(prompts_dir / "trickster" / "behaviour_base.md", "Elgesis.")
-    _write(prompts_dir / "trickster" / "safety_base.md", "Saugumas.")
 
 
 def _parse_sse_events(body: str) -> list[dict]:
@@ -235,7 +218,7 @@ def _cleanup_overrides():
 @pytest.fixture
 def prompts_dir(tmp_path) -> Path:
     """Creates a temp directory with base Trickster prompts."""
-    _setup_base_prompts(tmp_path)
+    setup_base_prompts(tmp_path)
     return tmp_path
 
 

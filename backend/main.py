@@ -189,8 +189,14 @@ def _init_ai_services() -> None:
 
     prompt_loader = PromptLoader(PROJECT_ROOT / "prompts")
     deps._prompt_loader = prompt_loader
-    # TODO: Wire prompt_loader.invalidate() to registry reload so prompt
-    # changes take effect on hot-reload (Vision §4.4).
+
+    # Wire prompt cache invalidation to registry reload (Vision SS4.4).
+    # Single entry point for any future reload trigger.
+    def reload_all() -> None:
+        deps._task_registry.reload()
+        prompt_loader.invalidate()
+
+    deps._reload_all = reload_all
 
     # 2. Resolve "standard" tier and create the default provider
     from backend.ai.context import ContextManager

@@ -610,7 +610,9 @@ class TaskLoader:
         with open(taxonomy_path, encoding="utf-8") as f:
             return json.load(f)
 
-    def load_task(self, task_dir: Path, taxonomy: dict) -> LoadResult:
+    def load_task(
+        self, task_dir: Path, taxonomy: dict, content_dir: Path,
+    ) -> LoadResult:
         """Loads and validates a single task cartridge from disk.
 
         Sequence:
@@ -624,6 +626,9 @@ class TaskLoader:
         Args:
             task_dir: Directory containing ``task.json``.
             taxonomy: Parsed taxonomy dict for context injection.
+            content_dir: The content root directory (e.g. ``content/``).
+                Used to derive ``project_root`` for business validation
+                (Framework P17 — no .parent chain derivation).
 
         Returns:
             ``LoadResult`` with the frozen cartridge and any warnings.
@@ -704,9 +709,7 @@ class TaskLoader:
                 )
 
         # Step 5: Business validation (graph, assets, type, evergreen, injection)
-        # Derives project_root from directory structure:
-        # task_dir = content/tasks/{task_id} → .parent.parent.parent = project root
-        project_root = task_dir.parent.parent.parent
+        project_root = content_dir.parent
         cartridge, biz_warnings = validate_business_rules(
             cartridge, task_dir, project_root,
         )
@@ -744,7 +747,7 @@ class TaskLoader:
             if not (child / "task.json").exists():
                 continue
             try:
-                result = self.load_task(child, taxonomy)
+                result = self.load_task(child, taxonomy, content_dir)
                 successes.append(result)
             except LoadError as exc:
                 errors.append(exc)

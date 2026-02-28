@@ -12,25 +12,7 @@ from backend.ai.context import (
 )
 from backend.ai.prompts import PromptLoader, TricksterPrompts
 from backend.schemas import Exchange, GameSession
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _write(path: Path, content: str) -> None:
-    """Creates parent dirs and writes content to a file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _setup_base_prompts(prompts_dir: Path) -> None:
-    """Creates all three mandatory base prompt files."""
-    trickster = prompts_dir / "trickster"
-    _write(trickster / "persona_base.md", "Persona layer content")
-    _write(trickster / "behaviour_base.md", "Behaviour layer content")
-    _write(trickster / "safety_base.md", "Safety layer content")
+from backend.tests.conftest import setup_base_prompts, write_prompt_file
 
 
 def _make_exchange(role: str, content: str) -> Exchange:
@@ -89,8 +71,8 @@ class TestFullAssembly:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """System prompt contains all 8 layers when all data is present."""
-        _setup_base_prompts(tmp_path)
-        _write(
+        setup_base_prompts(tmp_path)
+        write_prompt_file(
             tmp_path / "tasks" / "test-ai-task-001" / "trickster_base.md",
             "Task override content",
         )
@@ -113,11 +95,11 @@ class TestFullAssembly:
         )
 
         # Layer 1: Persona
-        assert "Persona layer content" in result.system_prompt
+        assert "Test persona content." in result.system_prompt
         # Layer 2: Behaviour
-        assert "Behaviour layer content" in result.system_prompt
+        assert "Test behaviour content." in result.system_prompt
         # Layer 3: Safety
-        assert "Safety layer content" in result.system_prompt
+        assert "Test safety content." in result.system_prompt
         # Layer 4: Task override
         assert "Task override content" in result.system_prompt
         # Layer 5: Task context
@@ -139,7 +121,7 @@ class TestFullAssembly:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Messages are chronological with correct role mapping."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -175,7 +157,7 @@ class TestMissingLayers:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Assembly works without task override (no None text in prompt)."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -188,13 +170,13 @@ class TestMissingLayers:
         )
 
         assert "None" not in result.system_prompt
-        assert "Persona layer content" in result.system_prompt
+        assert "Test persona content." in result.system_prompt
 
     def test_no_context_labels(
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Assembly works when no choices have context_label."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -212,7 +194,7 @@ class TestMissingLayers:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """No context label section when choices list is empty."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -230,7 +212,7 @@ class TestMissingLayers:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """No redaction section when last_redaction_reason is None."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -248,7 +230,7 @@ class TestMissingLayers:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Assembly works with empty exchange history."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -274,7 +256,7 @@ class TestTokenBudgeting:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """5 exchanges stay intact with default budget."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -296,7 +278,7 @@ class TestTokenBudgeting:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """15 exchanges stay intact with default budget."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -318,7 +300,7 @@ class TestTokenBudgeting:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Oldest exchanges are trimmed when budget is exceeded."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         # Very small budget to force trimming.
         cm = ContextManager(loader, token_budget=200)
@@ -344,7 +326,7 @@ class TestTokenBudgeting:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Trimming removes oldest pairs, preserving newest."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader, token_budget=200)
 
@@ -370,7 +352,7 @@ class TestTokenBudgeting:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """System prompt is never trimmed, only messages."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader, token_budget=200)
 
@@ -387,9 +369,9 @@ class TestTokenBudgeting:
         )
 
         # System prompt always present with all layers.
-        assert "Persona layer content" in result.system_prompt
-        assert "Behaviour layer content" in result.system_prompt
-        assert "Safety layer content" in result.system_prompt
+        assert "Test persona content." in result.system_prompt
+        assert "Test behaviour content." in result.system_prompt
+        assert "Test safety content." in result.system_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -479,7 +461,7 @@ class TestPromptSnapshotting:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Assembly uses snapshotted prompts, not fresh loader content."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -504,13 +486,13 @@ class TestPromptSnapshotting:
         assert "SNAPSHOT persona" in result.system_prompt
         assert "SNAPSHOT behaviour" in result.system_prompt
         assert "SNAPSHOT safety" in result.system_prompt
-        assert "Persona layer content" not in result.system_prompt
+        assert "Test persona content." not in result.system_prompt
 
     def test_assembly_falls_back_to_loader(
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Assembly uses loader when no snapshot exists."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -522,7 +504,7 @@ class TestPromptSnapshotting:
             exchange_count=1, min_exchanges=2,
         )
 
-        assert "Persona layer content" in result.system_prompt
+        assert "Test persona content." in result.system_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -535,7 +517,7 @@ class TestContextLabels:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Choices with context_label appear in system prompt."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -560,7 +542,7 @@ class TestContextLabels:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Choices without context_label are not included."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -591,7 +573,7 @@ class TestRedactionContext:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Redaction note appears when last_redaction_reason is set."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -610,7 +592,7 @@ class TestRedactionContext:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Flag is cleared after being injected into the system prompt."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -628,7 +610,7 @@ class TestRedactionContext:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """No redaction section when flag is None."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -653,7 +635,7 @@ class TestDebriefAssembly:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Debrief system prompt includes EvaluationContract data."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -682,7 +664,7 @@ class TestDebriefAssembly:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Debrief includes all exchanges (no trimming)."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -701,7 +683,7 @@ class TestDebriefAssembly:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Debrief has no tools."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -716,7 +698,7 @@ class TestDebriefAssembly:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Debrief uses prompt snapshot when available."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -734,7 +716,7 @@ class TestDebriefAssembly:
         result = cm.assemble_debrief_call(session, cartridge, "gemini")
 
         assert "DEBRIEF SNAPSHOT persona" in result.system_prompt
-        assert "Persona layer content" not in result.system_prompt
+        assert "Test persona content." not in result.system_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -747,7 +729,7 @@ class TestTransitionTool:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Tools include transition tool when exchange_count >= min_exchanges."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -767,7 +749,7 @@ class TestTransitionTool:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Tools include transition tool when exchange_count > min_exchanges."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -785,7 +767,7 @@ class TestTransitionTool:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Tools is None when exchange_count < min_exchanges."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -821,7 +803,7 @@ class TestContextLevels:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """session_only context requirement works normally."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -839,7 +821,7 @@ class TestContextLevels:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """learning_profile context resolves without error."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -865,7 +847,7 @@ class TestContextLevels:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """full_history context resolves without error."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -898,7 +880,7 @@ class TestLayer5Content:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """EmbeddedPattern fields appear in the system prompt."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -918,7 +900,7 @@ class TestLayer5Content:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """ChecklistItem fields appear, with mandatory marker."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -937,7 +919,7 @@ class TestLayer5Content:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """PassConditions appear in the system prompt."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
 
@@ -963,7 +945,7 @@ class TestExchangePairCoherence:
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
         """Trimming always removes complete student+trickster pairs."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader, token_budget=100)
 

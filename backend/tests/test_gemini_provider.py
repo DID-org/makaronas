@@ -8,8 +8,10 @@ import inspect
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from google.genai import errors as genai_errors
-from google.genai import types
+
+genai = pytest.importorskip("google.genai")
+genai_errors = genai.errors
+types = genai.types
 
 from backend.ai.providers.base import (
     AIProvider,

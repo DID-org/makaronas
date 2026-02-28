@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-import anthropic
+anthropic = pytest.importorskip("anthropic")
 
 from backend.ai.providers.base import (
     AIProvider,

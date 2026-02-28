@@ -61,6 +61,7 @@ _task_registry: TaskRegistry | None = None
 # AI singletons — set by _init_ai_services() in main.py at startup
 _prompt_loader: PromptLoader | None = None
 _trickster_engine: TricksterEngine | None = None
+_reload_all = None  # Set to a callable by _init_ai_services()
 
 
 # ---------------------------------------------------------------------------

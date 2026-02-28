@@ -18,25 +18,7 @@ from fastapi import HTTPException
 
 from backend.ai.providers.base import AIProvider
 from backend.models import ModelConfig
-
-
-# ---------------------------------------------------------------------------
-# Helper: write prompt file
-# ---------------------------------------------------------------------------
-
-
-def _write(path: Path, content: str = "Test prompt content.") -> None:
-    """Creates a file at path with the given content."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _setup_base_prompts(prompts_dir: Path) -> None:
-    """Creates the three mandatory base prompt files."""
-    trickster = prompts_dir / "trickster"
-    _write(trickster / "persona_base.md")
-    _write(trickster / "behaviour_base.md")
-    _write(trickster / "safety_base.md")
+from backend.tests.conftest import setup_base_prompts, write_prompt_file
 
 
 # ---------------------------------------------------------------------------
@@ -130,14 +112,13 @@ class TestCreateProvider:
             create_provider(config, settings_with_keys)
 
     @pytest.mark.skipif(not _has_genai, reason="google-genai SDK not installed")
-    def test_empty_api_key_still_constructs(self, settings_no_google):
-        """Empty API key doesn't crash at construction (lazy client)."""
-        from backend.ai.providers.gemini import GeminiProvider
+    def test_empty_api_key_raises_at_construction(self, settings_no_google):
+        """Empty API key fails at construction — SDK validates eagerly."""
         from backend.api.deps import create_provider
 
         config = ModelConfig(provider="gemini", model_id="test-model")
-        provider = create_provider(config, settings_no_google)
-        assert isinstance(provider, GeminiProvider)
+        with pytest.raises(ValueError, match="API key"):
+            create_provider(config, settings_no_google)
 
     def test_gemini_routing_without_sdk(self, settings_with_keys):
         """create_provider routes 'gemini' correctly (may fail on import)."""
@@ -218,6 +199,98 @@ class TestDIWiring:
             assert isinstance(result, TricksterEngine)
         finally:
             deps._trickster_engine = original
+
+
+# ---------------------------------------------------------------------------
+# Reload All Wiring Tests
+# ---------------------------------------------------------------------------
+
+
+class TestReloadAll:
+    """Tests for reload_all() wiring — registry reload + prompt cache invalidation."""
+
+    def test_reload_all_wires_prompt_invalidation(self, tmp_path):
+        """Calling deps._reload_all() invalidates prompt cache."""
+        from backend.ai.prompts import PromptLoader
+        from backend.api import deps
+        from backend.tasks.registry import TaskRegistry
+
+        orig_registry = deps._task_registry
+        orig_loader = deps._prompt_loader
+        orig_reload = deps._reload_all
+
+        try:
+            # Set up a registry and prompt loader with temp dirs
+            registry = TaskRegistry(tmp_path, tmp_path)
+            deps._task_registry = registry
+
+            prompts_dir = tmp_path / "prompts"
+            setup_base_prompts(prompts_dir)
+            loader = PromptLoader(prompts_dir)
+            deps._prompt_loader = loader
+
+            # Prime the cache with a load call
+            loader.load_trickster_prompts("gemini")
+            assert len(loader._cache) > 0
+
+            # Wire reload_all the same way _init_ai_services() does
+            def reload_all() -> None:
+                deps._task_registry.reload()
+                loader.invalidate()
+
+            deps._reload_all = reload_all
+
+            # Call it
+            deps._reload_all()
+
+            # Cache should be cleared
+            assert len(loader._cache) == 0
+        finally:
+            deps._task_registry = orig_registry
+            deps._prompt_loader = orig_loader
+            deps._reload_all = orig_reload
+
+    def test_reload_all_set_by_init_ai_services(self, tmp_path, monkeypatch):
+        """_init_ai_services() stores deps._reload_all."""
+        from backend.api import deps
+        from backend.main import _init_ai_services
+
+        orig_loader = deps._prompt_loader
+        orig_engine = deps._trickster_engine
+        orig_registry = deps._task_registry
+        orig_reload = deps._reload_all
+
+        try:
+            deps._prompt_loader = None
+            deps._trickster_engine = None
+            deps._reload_all = None
+
+            from backend.tasks.registry import TaskRegistry
+
+            deps._task_registry = TaskRegistry(Path("/tmp"), Path("/tmp"))
+
+            import backend.config as config_module
+
+            monkeypatch.setattr(config_module, "_settings", None)
+            monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
+            monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+            prompts_parent = tmp_path
+            actual_prompts = prompts_parent / "prompts"
+            actual_prompts.mkdir(exist_ok=True)
+            setup_base_prompts(actual_prompts)
+            monkeypatch.setattr("backend.config.PROJECT_ROOT", prompts_parent)
+
+            _init_ai_services()
+
+            assert deps._reload_all is not None
+            assert callable(deps._reload_all)
+        finally:
+            deps._prompt_loader = orig_loader
+            deps._trickster_engine = orig_engine
+            deps._task_registry = orig_registry
+            deps._reload_all = orig_reload
+            monkeypatch.setattr(config_module, "_settings", None)
 
 
 # ---------------------------------------------------------------------------
@@ -419,7 +492,7 @@ class TestInitAIServices:
             prompts_parent = tmp_path
             actual_prompts = prompts_parent / "prompts"
             actual_prompts.mkdir(exist_ok=True)
-            _setup_base_prompts(actual_prompts)
+            setup_base_prompts(actual_prompts)
             monkeypatch.setattr("backend.config.PROJECT_ROOT", prompts_parent)
 
             _init_ai_services()
@@ -462,7 +535,7 @@ class TestInitAIServices:
             prompts_parent = tmp_path
             actual_prompts = prompts_parent / "prompts"
             actual_prompts.mkdir(exist_ok=True)
-            _setup_base_prompts(actual_prompts)
+            setup_base_prompts(actual_prompts)
             monkeypatch.setattr("backend.config.PROJECT_ROOT", prompts_parent)
 
             _init_ai_services()
@@ -502,7 +575,7 @@ class TestInitAIServices:
             prompts_parent = tmp_path
             actual_prompts = prompts_parent / "prompts"
             actual_prompts.mkdir(exist_ok=True)
-            _setup_base_prompts(actual_prompts)
+            setup_base_prompts(actual_prompts)
             monkeypatch.setattr("backend.config.PROJECT_ROOT", prompts_parent)
 
             # Should not crash regardless of SDK availability
@@ -757,7 +830,7 @@ class TestCheckAIReadiness:
         from backend.api.deps import check_ai_readiness
 
         # Set up valid prompts
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
 
         original = deps._prompt_loader
         try:

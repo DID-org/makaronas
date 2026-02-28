@@ -12,16 +12,15 @@ from __future__ import annotations
 
 import copy
 import json
-from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
+from backend.config import PROJECT_ROOT
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 SCHEMA_PATH = PROJECT_ROOT / "content" / "tasks" / "task.schema.json"
 TEMPLATE_PATH = PROJECT_ROOT / "content" / "tasks" / "TEMPLATE" / "task.json"

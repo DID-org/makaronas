@@ -5,25 +5,7 @@ from pathlib import Path
 import pytest
 
 from backend.ai.prompts import PromptLoader, TricksterPrompts
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _write(path: Path, content: str) -> None:
-    """Creates parent dirs and writes content to a file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _setup_base_prompts(prompts_dir: Path) -> None:
-    """Creates all three mandatory base prompt files."""
-    trickster = prompts_dir / "trickster"
-    _write(trickster / "persona_base.md", "Persona base content")
-    _write(trickster / "behaviour_base.md", "Behaviour base content")
-    _write(trickster / "safety_base.md", "Safety base content")
+from backend.tests.conftest import setup_base_prompts, write_prompt_file
 
 
 # ---------------------------------------------------------------------------
@@ -60,10 +42,10 @@ class TestFallbackChain:
     def test_model_specific_preferred_over_base(self, tmp_path: Path) -> None:
         """When model-specific file exists, it's returned instead of base."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "base persona")
-        _write(trickster / "persona_gemini.md", "gemini persona")
-        _write(trickster / "behaviour_base.md", "base behaviour")
-        _write(trickster / "safety_base.md", "base safety")
+        write_prompt_file(trickster / "persona_base.md", "base persona")
+        write_prompt_file(trickster / "persona_gemini.md", "gemini persona")
+        write_prompt_file(trickster / "behaviour_base.md", "base behaviour")
+        write_prompt_file(trickster / "safety_base.md", "base safety")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -74,14 +56,14 @@ class TestFallbackChain:
 
     def test_base_used_when_no_model_specific(self, tmp_path: Path) -> None:
         """Falls back to base when model-specific file is absent."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
 
-        assert result.persona == "Persona base content"
-        assert result.behaviour == "Behaviour base content"
-        assert result.safety == "Safety base content"
+        assert result.persona == "Test persona content."
+        assert result.behaviour == "Test behaviour content."
+        assert result.safety == "Test safety content."
 
     def test_none_when_neither_exists(self, tmp_path: Path) -> None:
         """Returns None for a prompt type when no file exists at all."""
@@ -96,10 +78,10 @@ class TestFallbackChain:
     def test_empty_model_specific_falls_back_to_base(self, tmp_path: Path) -> None:
         """Empty model-specific file is treated as absent — falls back to base."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_gemini.md", "   ")  # whitespace only
-        _write(trickster / "persona_base.md", "base persona")
-        _write(trickster / "behaviour_base.md", "base behaviour")
-        _write(trickster / "safety_base.md", "base safety")
+        write_prompt_file(trickster / "persona_gemini.md", "   ")  # whitespace only
+        write_prompt_file(trickster / "persona_base.md", "base persona")
+        write_prompt_file(trickster / "behaviour_base.md", "base behaviour")
+        write_prompt_file(trickster / "safety_base.md", "base safety")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -109,7 +91,7 @@ class TestFallbackChain:
     def test_empty_base_returns_none(self, tmp_path: Path) -> None:
         """Empty base file (no model-specific) returns None."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "")
+        write_prompt_file(trickster / "persona_base.md", "")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -126,9 +108,9 @@ class TestProviderSuffix:
     def test_anthropic_uses_claude_suffix(self, tmp_path: Path) -> None:
         """Anthropic provider looks for _claude.md files."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_claude.md", "claude persona")
-        _write(trickster / "behaviour_base.md", "base behaviour")
-        _write(trickster / "safety_base.md", "base safety")
+        write_prompt_file(trickster / "persona_claude.md", "claude persona")
+        write_prompt_file(trickster / "behaviour_base.md", "base behaviour")
+        write_prompt_file(trickster / "safety_base.md", "base safety")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("anthropic")
@@ -138,9 +120,9 @@ class TestProviderSuffix:
     def test_gemini_uses_gemini_suffix(self, tmp_path: Path) -> None:
         """Gemini provider looks for _gemini.md files."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_gemini.md", "gemini persona")
-        _write(trickster / "behaviour_base.md", "base behaviour")
-        _write(trickster / "safety_base.md", "base safety")
+        write_prompt_file(trickster / "persona_gemini.md", "gemini persona")
+        write_prompt_file(trickster / "behaviour_base.md", "base behaviour")
+        write_prompt_file(trickster / "safety_base.md", "base safety")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -150,10 +132,10 @@ class TestProviderSuffix:
     def test_unknown_provider_uses_base_only(self, tmp_path: Path) -> None:
         """Unknown provider skips model-specific, loads base only."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "base persona")
-        _write(trickster / "persona_gemini.md", "gemini persona")
-        _write(trickster / "behaviour_base.md", "base behaviour")
-        _write(trickster / "safety_base.md", "base safety")
+        write_prompt_file(trickster / "persona_base.md", "base persona")
+        write_prompt_file(trickster / "persona_gemini.md", "gemini persona")
+        write_prompt_file(trickster / "behaviour_base.md", "base behaviour")
+        write_prompt_file(trickster / "safety_base.md", "base safety")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("openai")
@@ -169,9 +151,9 @@ class TestProviderSuffix:
 class TestTaskOverride:
     def test_task_override_loaded(self, tmp_path: Path) -> None:
         """Task-specific trickster override is loaded from tasks/{task_id}/."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         task_dir = tmp_path / "tasks" / "task-test-001"
-        _write(task_dir / "trickster_base.md", "task override content")
+        write_prompt_file(task_dir / "trickster_base.md", "task override content")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini", task_id="task-test-001")
@@ -180,10 +162,10 @@ class TestTaskOverride:
 
     def test_task_override_model_specific(self, tmp_path: Path) -> None:
         """Model-specific task override preferred over base."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         task_dir = tmp_path / "tasks" / "task-test-001"
-        _write(task_dir / "trickster_base.md", "base override")
-        _write(task_dir / "trickster_gemini.md", "gemini override")
+        write_prompt_file(task_dir / "trickster_base.md", "base override")
+        write_prompt_file(task_dir / "trickster_gemini.md", "gemini override")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini", task_id="task-test-001")
@@ -192,7 +174,7 @@ class TestTaskOverride:
 
     def test_no_task_override_returns_none(self, tmp_path: Path) -> None:
         """Missing task override directory results in task_override=None."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini", task_id="task-nonexistent")
@@ -201,9 +183,9 @@ class TestTaskOverride:
 
     def test_no_task_id_skips_override(self, tmp_path: Path) -> None:
         """When task_id is None, task_override is always None."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         task_dir = tmp_path / "tasks" / "task-test-001"
-        _write(task_dir / "trickster_base.md", "should not load")
+        write_prompt_file(task_dir / "trickster_base.md", "should not load")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -219,7 +201,7 @@ class TestTaskOverride:
 class TestCaching:
     def test_cache_hit_returns_same_object(self, tmp_path: Path) -> None:
         """Second call returns cached result (same object identity)."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
 
         loader = PromptLoader(tmp_path)
         first = loader.load_trickster_prompts("gemini")
@@ -229,27 +211,27 @@ class TestCaching:
 
     def test_cache_returns_stale_after_file_change(self, tmp_path: Path) -> None:
         """Cache returns stale content after file modification (no TTL)."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
 
         loader = PromptLoader(tmp_path)
         first = loader.load_trickster_prompts("gemini")
-        assert first.persona == "Persona base content"
+        assert first.persona == "Test persona content."
 
         # Modify the file — cached result should still be stale
-        _write(tmp_path / "trickster" / "persona_base.md", "Updated persona")
+        write_prompt_file(tmp_path / "trickster" / "persona_base.md", "Updated persona")
         second = loader.load_trickster_prompts("gemini")
 
-        assert second.persona == "Persona base content"  # stale
+        assert second.persona == "Test persona content."  # stale
 
     def test_invalidate_clears_cache(self, tmp_path: Path) -> None:
         """After invalidate(), next load reads from disk."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
 
         loader = PromptLoader(tmp_path)
         first = loader.load_trickster_prompts("gemini")
-        assert first.persona == "Persona base content"
+        assert first.persona == "Test persona content."
 
-        _write(tmp_path / "trickster" / "persona_base.md", "Updated persona")
+        write_prompt_file(tmp_path / "trickster" / "persona_base.md", "Updated persona")
         loader.invalidate()
         fresh = loader.load_trickster_prompts("gemini")
 
@@ -260,11 +242,11 @@ class TestCaching:
     ) -> None:
         """Different providers have separate cache entries."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "base persona")
-        _write(trickster / "persona_gemini.md", "gemini persona")
-        _write(trickster / "persona_claude.md", "claude persona")
-        _write(trickster / "behaviour_base.md", "base behaviour")
-        _write(trickster / "safety_base.md", "base safety")
+        write_prompt_file(trickster / "persona_base.md", "base persona")
+        write_prompt_file(trickster / "persona_gemini.md", "gemini persona")
+        write_prompt_file(trickster / "persona_claude.md", "claude persona")
+        write_prompt_file(trickster / "behaviour_base.md", "base behaviour")
+        write_prompt_file(trickster / "safety_base.md", "base safety")
 
         loader = PromptLoader(tmp_path)
         gemini_result = loader.load_trickster_prompts("gemini")
@@ -276,9 +258,9 @@ class TestCaching:
 
     def test_with_and_without_task_id_are_separate(self, tmp_path: Path) -> None:
         """(provider, None) and (provider, task_id) are distinct cache keys."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         task_dir = tmp_path / "tasks" / "task-001"
-        _write(task_dir / "trickster_base.md", "task override")
+        write_prompt_file(task_dir / "trickster_base.md", "task override")
 
         loader = PromptLoader(tmp_path)
         without_task = loader.load_trickster_prompts("gemini")
@@ -305,9 +287,9 @@ class TestUtf8Lithuanian:
             "\u201eSveiki, mokiniai!\u201c \u2013 taip prasideda kiekviena pamoka.\n"
             "Naudok \u0105\u010d\u0119\u0117\u012f\u0161\u0173\u016b\u017e simbolius laisvai."
         )
-        _write(trickster / "persona_base.md", lithuanian_text)
-        _write(trickster / "behaviour_base.md", "Elgesys")
-        _write(trickster / "safety_base.md", "Saugumas")
+        write_prompt_file(trickster / "persona_base.md", lithuanian_text)
+        write_prompt_file(trickster / "behaviour_base.md", "Elgesys")
+        write_prompt_file(trickster / "safety_base.md", "Saugumas")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -319,9 +301,9 @@ class TestUtf8Lithuanian:
     def test_lithuanian_quotes_preserved(self, tmp_path: Path) -> None:
         """Lithuanian opening and closing quotes are preserved."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "\u201eAr tikrai?\u201c \u2013 paklaus\u0117 Triksteris.")
-        _write(trickster / "behaviour_base.md", "b")
-        _write(trickster / "safety_base.md", "s")
+        write_prompt_file(trickster / "persona_base.md", "\u201eAr tikrai?\u201c \u2013 paklaus\u0117 Triksteris.")
+        write_prompt_file(trickster / "behaviour_base.md", "b")
+        write_prompt_file(trickster / "safety_base.md", "s")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -338,7 +320,7 @@ class TestEmptyFileDetection:
     def test_empty_file_returns_none(self, tmp_path: Path) -> None:
         """A completely empty file is treated as absent."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "")
+        write_prompt_file(trickster / "persona_base.md", "")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -348,7 +330,7 @@ class TestEmptyFileDetection:
     def test_whitespace_only_file_returns_none(self, tmp_path: Path) -> None:
         """A file with only whitespace is treated as absent."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "   \n\t\n  ")
+        write_prompt_file(trickster / "persona_base.md", "   \n\t\n  ")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -358,9 +340,9 @@ class TestEmptyFileDetection:
     def test_file_with_content_is_stripped(self, tmp_path: Path) -> None:
         """Content is stripped of leading/trailing whitespace."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "\n  Persona content  \n\n")
-        _write(trickster / "behaviour_base.md", "b")
-        _write(trickster / "safety_base.md", "s")
+        write_prompt_file(trickster / "persona_base.md", "\n  Persona content  \n\n")
+        write_prompt_file(trickster / "behaviour_base.md", "b")
+        write_prompt_file(trickster / "safety_base.md", "s")
 
         loader = PromptLoader(tmp_path)
         result = loader.load_trickster_prompts("gemini")
@@ -378,7 +360,7 @@ class TestValidationAiTasks:
         self, tmp_path: Path, make_cartridge
     ) -> None:
         """No errors when all mandatory base prompts exist and are non-empty."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         cartridge = make_cartridge()
 
         loader = PromptLoader(tmp_path)
@@ -391,8 +373,8 @@ class TestValidationAiTasks:
     ) -> None:
         """Missing persona_base.md produces an error."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "behaviour_base.md", "behaviour")
-        _write(trickster / "safety_base.md", "safety")
+        write_prompt_file(trickster / "behaviour_base.md", "behaviour")
+        write_prompt_file(trickster / "safety_base.md", "safety")
         cartridge = make_cartridge()
 
         loader = PromptLoader(tmp_path)
@@ -421,9 +403,9 @@ class TestValidationAiTasks:
     ) -> None:
         """Base prompt file that exists but is empty produces an error."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "")  # empty
-        _write(trickster / "behaviour_base.md", "behaviour")
-        _write(trickster / "safety_base.md", "safety")
+        write_prompt_file(trickster / "persona_base.md", "")  # empty
+        write_prompt_file(trickster / "behaviour_base.md", "behaviour")
+        write_prompt_file(trickster / "safety_base.md", "safety")
         cartridge = make_cartridge()
 
         loader = PromptLoader(tmp_path)
@@ -438,9 +420,9 @@ class TestValidationAiTasks:
     ) -> None:
         """Base prompt file with only whitespace produces an error."""
         trickster = tmp_path / "trickster"
-        _write(trickster / "persona_base.md", "   \n  ")
-        _write(trickster / "behaviour_base.md", "behaviour")
-        _write(trickster / "safety_base.md", "safety")
+        write_prompt_file(trickster / "persona_base.md", "   \n  ")
+        write_prompt_file(trickster / "behaviour_base.md", "behaviour")
+        write_prompt_file(trickster / "safety_base.md", "safety")
         cartridge = make_cartridge()
 
         loader = PromptLoader(tmp_path)
@@ -521,12 +503,12 @@ class TestCacheKeyCorrectness:
         self, tmp_path: Path
     ) -> None:
         """(gemini, "task-001") and (gemini, "task-002") are distinct entries."""
-        _setup_base_prompts(tmp_path)
-        _write(
+        setup_base_prompts(tmp_path)
+        write_prompt_file(
             tmp_path / "tasks" / "task-001" / "trickster_base.md",
             "override for task 001",
         )
-        _write(
+        write_prompt_file(
             tmp_path / "tasks" / "task-002" / "trickster_base.md",
             "override for task 002",
         )
@@ -543,10 +525,10 @@ class TestCacheKeyCorrectness:
         self, tmp_path: Path
     ) -> None:
         """(gemini, "task-001") and (anthropic, "task-001") are distinct entries."""
-        _setup_base_prompts(tmp_path)
+        setup_base_prompts(tmp_path)
         task_dir = tmp_path / "tasks" / "task-001"
-        _write(task_dir / "trickster_gemini.md", "gemini override")
-        _write(task_dir / "trickster_claude.md", "claude override")
+        write_prompt_file(task_dir / "trickster_gemini.md", "gemini override")
+        write_prompt_file(task_dir / "trickster_claude.md", "claude override")
 
         loader = PromptLoader(tmp_path)
         gemini = loader.load_trickster_prompts("gemini", task_id="task-001")
