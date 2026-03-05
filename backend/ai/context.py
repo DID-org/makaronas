@@ -531,13 +531,20 @@ class ContextManager:
 
         Branches on cartridge.is_clean: clean tasks get clean-specific
         framing with the clean task prompt; adversarial tasks get the
-        standard patterns/checklist framing.
+        standard patterns/checklist framing. Appends generated artifacts
+        context when the session has generation artifacts.
         """
         if cartridge.is_clean:
-            return self._build_clean_task_context(
+            base = self._build_clean_task_context(
                 session, cartridge, provider,
             )
-        return self._build_adversarial_task_context(session, cartridge)
+        else:
+            base = self._build_adversarial_task_context(session, cartridge)
+
+        artifacts = self._build_generation_artifacts_context(session)
+        if artifacts:
+            return base + "\n\n" + artifacts
+        return base
 
     def _build_clean_task_context(
         self,
@@ -621,6 +628,58 @@ class ContextManager:
         )
 
         return "\n".join(parts)
+
+    @staticmethod
+    def _build_generation_artifacts_context(
+        session: GameSession,
+    ) -> str | None:
+        """Builds generated artifacts context for Trickster evaluation.
+
+        Returns a Lithuanian-language context block when
+        session.generated_artifacts is non-empty, None otherwise.
+        Each artifact is shown chronologically so the Trickster can
+        reference the student's creative evolution. Includes context
+        fencing to prevent verbatim echo.
+        """
+        if not session.generated_artifacts:
+            return None
+
+        lines = [
+            "### Mokinio sukurtas turinys",
+            "",
+        ]
+
+        for i, artifact in enumerate(session.generated_artifacts, 1):
+            lines.append(f"**Bandymas {i}:**")
+            lines.append(
+                f"Mokinio nurodymas: \u201e"
+                f"{artifact.get('student_prompt', '')}\u201c"
+            )
+
+            if artifact.get("safety_redacted"):
+                lines.append(
+                    "Sugeneruotas turinys: "
+                    "(saugumo sistema pakeit\u0117 turin\u012f)"
+                )
+            else:
+                lines.append(
+                    f"Sugeneruotas turinys: \u201e"
+                    f"{artifact.get('generated_text', '')}\u201c"
+                )
+
+            lines.append("")
+
+        lines.append(
+            "INSTRUKCIJA: Vertink mokinio k\u016brin\u012f remdamasis "
+            "auk\u0161\u010diau pateiktais bandymais. "
+            "Gali komentuoti mokinio nurodymus ir sugeneruot\u0105 "
+            "turin\u012f (pvz., \u201eTavo antras bandymas buvo daug "
+            "konkretesnis\u201c). NIEKADA necituok sugeneruoto turinio "
+            "pa\u017eod\u017eiui \u2014 referuok j\u012f savo "
+            "\u017eod\u017eiais."
+        )
+
+        return "\n".join(lines)
 
     @staticmethod
     def _build_debrief_context(cartridge: TaskCartridge) -> str:
