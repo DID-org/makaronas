@@ -170,6 +170,21 @@ class PromptLoader:
         trickster_dir = self._prompts_dir / "trickster"
         return self._load_with_fallback(trickster_dir, "clean_task", suffix)
 
+    def load_creation_eval_prompt(self, provider: str) -> str | None:
+        """Loads the creation evaluation coaching prompt with provider-specific fallback.
+
+        Tries creation_eval_{suffix}.md first, then creation_eval_base.md.
+
+        Args:
+            provider: Provider name (e.g. "gemini", "anthropic").
+
+        Returns:
+            Prompt content, or None if not found.
+        """
+        suffix = _PROVIDER_SUFFIX.get(provider)
+        trickster_dir = self._prompts_dir / "trickster"
+        return self._load_with_fallback(trickster_dir, "creation_eval", suffix)
+
     def load_fourth_wall_prompt(self, provider: str) -> str | None:
         """Loads the fourth wall AI literacy prompt with provider-specific fallback.
 
