@@ -543,7 +543,16 @@ class ContextManager:
 
         artifacts = self._build_generation_artifacts_context(session)
         if artifacts:
-            return base + "\n\n" + artifacts
+            base = base + "\n\n" + artifacts
+            creation_eval = self._loader.load_creation_eval_prompt(provider)
+            if creation_eval:
+                base = base + "\n\n" + creation_eval
+            else:
+                logger.warning(
+                    "Creation eval prompt not found for provider '%s'; "
+                    "creation evaluation context will lack coaching framework.",
+                    provider,
+                )
         return base
 
     def _build_clean_task_context(
