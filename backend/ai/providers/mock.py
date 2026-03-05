@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator
 
 from backend.ai.providers.base import (
     AIProvider,
+    Message,
     ModelConfig,
     StreamEvent,
     TextChunk,
@@ -54,7 +55,7 @@ class MockProvider(AIProvider):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> AsyncIterator[StreamEvent]:
@@ -75,7 +76,7 @@ class MockProvider(AIProvider):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> tuple[str, UsageInfo]:

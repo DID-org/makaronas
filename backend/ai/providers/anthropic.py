@@ -21,6 +21,7 @@ import anthropic
 
 from backend.ai.providers.base import (
     AIProvider,
+    Message,
     ModelConfig,
     StreamEvent,
     TextChunk,
@@ -92,7 +93,7 @@ class AnthropicProvider(AIProvider):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> AsyncIterator[StreamEvent]:
@@ -188,7 +189,7 @@ class AnthropicProvider(AIProvider):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> tuple[str, UsageInfo]:
@@ -198,7 +199,7 @@ class AnthropicProvider(AIProvider):
 
         Args:
             system_prompt: The assembled system instruction.
-            messages: Conversation history as {"role": ..., "content": ...} dicts.
+            messages: Conversation history as Message dicts (text-only or multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget).
             tools: Optional tool definitions for function calling.
 

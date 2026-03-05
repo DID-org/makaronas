@@ -77,7 +77,7 @@ class AssembledContext:
     """
 
     system_prompt: str
-    messages: list[dict[str, str]]
+    messages: list[dict[str, Any]]
     tools: list[dict] | None
 
 
