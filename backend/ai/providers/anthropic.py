@@ -71,6 +71,48 @@ def _build_tools(tools: list[dict] | None) -> list[dict] | None:
     ]
 
 
+def _prepare_messages(messages: list[Message]) -> list[dict]:
+    """Converts provider-neutral messages to Anthropic's content block format.
+
+    Text-only messages (content is str) pass through unchanged. Multimodal
+    messages (content is list) have their image parts wrapped in Anthropic's
+    source envelope. Unknown content part types are skipped with a warning.
+    """
+    prepared = []
+    for msg in messages:
+        content = msg["content"]
+        if isinstance(content, str):
+            prepared.append(msg)
+        else:
+            blocks = []
+            for part in content:
+                part_type = part.get("type")
+                if part_type == "text":
+                    blocks.append(part)
+                elif part_type == "image":
+                    media_type = part.get("media_type")
+                    data = part.get("data")
+                    if media_type and data:
+                        blocks.append({
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": data,
+                            },
+                        })
+                    else:
+                        logger.warning(
+                            "Skipping image part with missing media_type or data"
+                        )
+                else:
+                    logger.warning(
+                        "Skipping unknown content part type: %s", part_type
+                    )
+            prepared.append({"role": msg["role"], "content": blocks})
+    return prepared
+
+
 class AnthropicProvider(AIProvider):
     """Anthropic Claude provider using the anthropic SDK.
 
@@ -125,10 +167,12 @@ class AnthropicProvider(AIProvider):
                 model_config.thinking_budget,
             )
 
+        prepared = _prepare_messages(messages)
+
         kwargs: dict = {
             "model": model_config.model_id,
             "system": system_prompt,
-            "messages": messages,
+            "messages": prepared,
             "max_tokens": _DEFAULT_MAX_TOKENS,
             "temperature": _DEFAULT_TEMPERATURE,
         }
@@ -214,10 +258,12 @@ class AnthropicProvider(AIProvider):
                 model_config.thinking_budget,
             )
 
+        prepared = _prepare_messages(messages)
+
         kwargs: dict = {
             "model": model_config.model_id,
             "system": system_prompt,
-            "messages": messages,
+            "messages": prepared,
             "max_tokens": _DEFAULT_MAX_TOKENS,
             "temperature": _DEFAULT_TEMPERATURE,
         }

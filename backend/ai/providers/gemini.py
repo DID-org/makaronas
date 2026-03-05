@@ -8,6 +8,7 @@ Tier 2 service — imports from base.py (Tier 1) + google-genai SDK.
 """
 
 import asyncio
+import base64
 import logging
 from collections.abc import AsyncIterator
 from google import genai
@@ -50,21 +51,49 @@ def _is_retryable(exc: Exception) -> bool:
 def _build_contents(messages: list[Message]) -> list[types.Content]:
     """Converts provider-neutral message dicts to Gemini Content objects.
 
-    Currently handles text-only content. Multimodal content mapping
-    (images as Gemini Parts) is implemented in Phase 2b.
+    Handles both text-only content (str) and multimodal content (list of
+    type-discriminated parts). Images are decoded from base64 to raw bytes
+    for the Gemini SDK's inline_data format.
 
-    Role mapping: "user" → "user", "assistant" → "model".
+    Role mapping: "user" -> "user", "assistant" -> "model".
+    Unknown content part types are skipped with a warning log.
     """
     role_map = {"user": "user", "assistant": "model"}
     contents = []
     for msg in messages:
         role = role_map.get(msg["role"], msg["role"])
-        contents.append(
-            types.Content(
-                parts=[types.Part(text=msg["content"])],
-                role=role,
-            )
-        )
+        content = msg["content"]
+
+        if isinstance(content, str):
+            parts = [types.Part(text=content)]
+        else:
+            parts = []
+            for part_data in content:
+                part_type = part_data.get("type")
+                if part_type == "text":
+                    parts.append(types.Part(text=part_data["text"]))
+                elif part_type == "image":
+                    media_type = part_data.get("media_type")
+                    data = part_data.get("data")
+                    if media_type and data:
+                        parts.append(
+                            types.Part(
+                                inline_data=types.Blob(
+                                    mime_type=media_type,
+                                    data=base64.b64decode(data),
+                                )
+                            )
+                        )
+                    else:
+                        logger.warning(
+                            "Skipping image part with missing media_type or data"
+                        )
+                else:
+                    logger.warning(
+                        "Skipping unknown content part type: %s", part_type
+                    )
+
+        contents.append(types.Content(parts=parts, role=role))
     return contents
 
 
