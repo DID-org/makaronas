@@ -1965,3 +1965,150 @@ class TestMultimodalTokenBudgeting:
         }
         tokens = ContextManager._estimate_message_tokens(msg)
         assert tokens == 2.0 + 2 * _TOKENS_PER_IMAGE
+
+
+# ---------------------------------------------------------------------------
+# De-escalation context injection
+# ---------------------------------------------------------------------------
+
+
+class TestDeescalationContext:
+    """Tests for _build_deescalation_context and its wiring."""
+
+    def test_no_intensities_returns_none(
+        self, make_session, make_cartridge,
+    ) -> None:
+        """Fresh session with empty turn_intensities produces no de-escalation."""
+        session = make_session()
+        cartridge = make_cartridge()
+        assert session.turn_intensities == []
+        result = ContextManager._build_deescalation_context(session, cartridge)
+        assert result is None
+
+    def test_last_score_below_ceiling_returns_none(
+        self, make_session, make_cartridge,
+    ) -> None:
+        """Last intensity below ceiling produces no de-escalation."""
+        session = make_session()
+        session.turn_intensities = [2.5]
+        cartridge = make_cartridge()  # intensity_ceiling=3
+        result = ContextManager._build_deescalation_context(session, cartridge)
+        assert result is None
+
+    def test_last_score_equal_ceiling_returns_none(
+        self, make_session, make_cartridge,
+    ) -> None:
+        """Last intensity exactly at ceiling produces no de-escalation."""
+        session = make_session()
+        session.turn_intensities = [3.0]
+        cartridge = make_cartridge()  # intensity_ceiling=3
+        result = ContextManager._build_deescalation_context(session, cartridge)
+        assert result is None
+
+    def test_last_score_above_ceiling_returns_text(
+        self, make_session, make_cartridge,
+    ) -> None:
+        """Last intensity above ceiling produces de-escalation instructions."""
+        session = make_session()
+        session.turn_intensities = [3.5]
+        cartridge = make_cartridge()  # intensity_ceiling=3
+        result = ContextManager._build_deescalation_context(session, cartridge)
+        assert result is not None
+        assert "De-eskalacijos instrukcija" in result
+
+    def test_only_last_score_matters(
+        self, make_session, make_cartridge,
+    ) -> None:
+        """Earlier hot turns don't trigger de-escalation if last is cool."""
+        session = make_session()
+        session.turn_intensities = [3.5, 2.0]
+        cartridge = make_cartridge()  # intensity_ceiling=3
+        result = ContextManager._build_deescalation_context(session, cartridge)
+        assert result is None
+
+    def test_ceiling_value_in_text(
+        self, make_session, make_cartridge,
+    ) -> None:
+        """De-escalation text includes the ceiling value."""
+        session = make_session()
+        session.turn_intensities = [4.0]
+        cartridge = make_cartridge()  # intensity_ceiling=3
+        result = ContextManager._build_deescalation_context(session, cartridge)
+        assert result is not None
+        assert "3/5" in result
+
+    def test_deescalation_in_assembled_prompt(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """De-escalation appears in assembled system prompt when active."""
+        setup_base_prompts(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session(
+            current_phase="phase_ai",
+            exchanges=[
+                _make_exchange("student", "Test"),
+                _make_exchange("trickster", "Response"),
+            ],
+        )
+        session.turn_intensities = [4.0]
+        cartridge = make_cartridge()
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=2, min_exchanges=2,
+        )
+        assert "De-eskalacijos instrukcija" in result.system_prompt
+
+    def test_no_deescalation_when_below_ceiling(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """No de-escalation in assembled prompt when score is within bounds."""
+        setup_base_prompts(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session(
+            current_phase="phase_ai",
+            exchanges=[
+                _make_exchange("student", "Test"),
+                _make_exchange("trickster", "Response"),
+            ],
+        )
+        session.turn_intensities = [2.0]
+        cartridge = make_cartridge()
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=2, min_exchanges=2,
+        )
+        assert "De-eskalacijos instrukcija" not in result.system_prompt
+
+    def test_deescalation_position_between_task_and_safety(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """De-escalation text appears after task context, before safety config."""
+        setup_base_prompts(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session(
+            current_phase="phase_ai",
+            exchanges=[
+                _make_exchange("student", "Test"),
+                _make_exchange("trickster", "Response"),
+            ],
+        )
+        session.turn_intensities = [4.5]
+        cartridge = make_cartridge()
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=2, min_exchanges=2,
+        )
+        prompt = result.system_prompt
+        task_pos = prompt.index("Uzduoties kontekstas")
+        deesc_pos = prompt.index("De-eskalacijos instrukcija")
+        safety_pos = prompt.index("Saugumo nustatymai")
+        assert task_pos < deesc_pos < safety_pos

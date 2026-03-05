@@ -51,6 +51,7 @@ class MockProvider(AIProvider):
         self.usage = usage or _DEFAULT_USAGE
         self.error = error
         self.last_messages: list[Message] | None = None
+        self.last_system_prompt: str | None = None
 
     async def stream(
         self,
@@ -65,6 +66,7 @@ class MockProvider(AIProvider):
         Raises configured error before yielding anything if error is set.
         """
         self.last_messages = messages
+        self.last_system_prompt = system_prompt
         if self.error is not None:
             raise self.error
 
@@ -87,6 +89,7 @@ class MockProvider(AIProvider):
         Raises configured error immediately if error is set.
         """
         self.last_messages = messages
+        self.last_system_prompt = system_prompt
         if self.error is not None:
             raise self.error
 

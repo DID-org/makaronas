@@ -329,6 +329,11 @@ class ContextManager:
         if layer5:
             layers.append(layer5)
 
+        # De-escalation context (between task and safety, conditional)
+        deesc = self._build_deescalation_context(session, cartridge)
+        if deesc:
+            layers.append(deesc)
+
         # Layer 6: Safety config
         layer6 = self._build_safety_config(cartridge)
         if layer6:
@@ -630,6 +635,39 @@ class ContextManager:
             "Mokinys mate bendra pakaitini pranesima. Laikykis personazo — "
             "jei mokinys klausia apie cenzura, pripazink tai naturaliai ir "
             "koreguok savo pozuri."
+        )
+
+    @staticmethod
+    def _build_deescalation_context(
+        session: GameSession,
+        cartridge: TaskCartridge,
+    ) -> str | None:
+        """Builds de-escalation instruction when prior turn was too intense.
+
+        Checks the last entry in session.turn_intensities against the
+        cartridge's intensity ceiling. Returns Lithuanian de-escalation
+        text when exceeded, None otherwise. Pure read — does not modify
+        session state.
+        """
+        if not session.turn_intensities:
+            return None
+
+        last_score = session.turn_intensities[-1]
+        ceiling = cartridge.safety.intensity_ceiling
+
+        if last_score <= ceiling:
+            return None
+
+        return (
+            "## De-eskalacijos instrukcija\n\n"
+            f"Tavo ankstesnis atsakymas buvo per intensyvus "
+            f"(vir\u0161ijo {ceiling}/5 rib\u0105). "
+            "I\u0161laikyk savo persona\u017e\u0105 ir adversarin\u012f "
+            "vaidmen\u012f, bet suma\u017eink konfrontacin\u0119 kalb\u0105. "
+            "Vietoj tiesioginiu puolimu naudok subtilesnius metodus \u2014 "
+            "retorinius klausimus, netiesiogin\u012f spaudim\u0105, "
+            "nutyl\u0117jimus. Tikslas \u2014 mokyti mokin\u012f m\u0105styti "
+            "kriti\u0161kai, ne j\u012f u\u017ego\u017eti."
         )
 
     # -------------------------------------------------------------------
