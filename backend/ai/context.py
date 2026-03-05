@@ -215,6 +215,8 @@ class ContextManager:
             snapshot["safety"] = trickster_prompts.safety
         if trickster_prompts.task_override is not None:
             snapshot["task_override"] = trickster_prompts.task_override
+        if trickster_prompts.mode_behaviour is not None:
+            snapshot["mode_behaviour"] = trickster_prompts.mode_behaviour
 
         session.prompt_snapshots = snapshot
 
@@ -239,6 +241,7 @@ class ContextManager:
             behaviour=session.prompt_snapshots.get("behaviour"),
             safety=session.prompt_snapshots.get("safety"),
             task_override=session.prompt_snapshots.get("task_override"),
+            mode_behaviour=session.prompt_snapshots.get("mode_behaviour"),
         )
 
     # -------------------------------------------------------------------
@@ -266,7 +269,10 @@ class ContextManager:
             return snapshot
 
         task_id = cartridge.task_id if cartridge.ai_config else None
-        return self._loader.load_trickster_prompts(provider, task_id)
+        persona_mode = cartridge.ai_config.persona_mode if cartridge.ai_config else None
+        return self._loader.load_trickster_prompts(
+            provider, task_id, persona_mode=persona_mode,
+        )
 
     # -------------------------------------------------------------------
     # System prompt assembly — Dialogue
@@ -362,6 +368,8 @@ class ContextManager:
         """Appends non-None prompt layers 1-4 to the layers list."""
         if prompts.persona is not None:
             layers.append(prompts.persona)
+        if prompts.mode_behaviour is not None:
+            layers.append(prompts.mode_behaviour)
         if prompts.behaviour is not None:
             layers.append(prompts.behaviour)
         if prompts.safety is not None:

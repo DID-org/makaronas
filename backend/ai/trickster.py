@@ -161,6 +161,7 @@ class TricksterEngine:
             snap_config = resolve_tier(cartridge.ai_config.model_preference)
             prompts = self._context_manager._loader.load_trickster_prompts(
                 snap_config.provider, cartridge.task_id,
+                persona_mode=cartridge.ai_config.persona_mode,
             )
             self._context_manager.snapshot_prompts(session, prompts)
 

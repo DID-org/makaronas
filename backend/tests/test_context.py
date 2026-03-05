@@ -966,3 +966,347 @@ class TestExchangePairCoherence:
         # First remaining message should be a user message.
         if result.messages:
             assert result.messages[0]["role"] == "user"
+
+
+# ---------------------------------------------------------------------------
+# Mode layer assembly (Phase 1b)
+# ---------------------------------------------------------------------------
+
+
+class TestModeLayerAssembly:
+    def test_mode_layer_between_persona_and_behaviour(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Mode behaviour content appears between persona and behaviour."""
+        setup_base_prompts(tmp_path)
+        write_prompt_file(
+            tmp_path / "trickster" / "persona_presenting_base.md",
+            "PRESENTING MODE CONTENT",
+        )
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge(
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "test-ai-task-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        prompt = result.system_prompt
+        assert "PRESENTING MODE CONTENT" in prompt
+        # Verify ordering: persona < mode < behaviour
+        persona_pos = prompt.index("Test persona content.")
+        mode_pos = prompt.index("PRESENTING MODE CONTENT")
+        behaviour_pos = prompt.index("Test behaviour content.")
+        assert persona_pos < mode_pos < behaviour_pos
+
+    def test_each_mode_produces_distinct_output(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Each of the 4 modes produces its own content in the prompt."""
+        setup_base_prompts(tmp_path)
+        modes = ["presenting", "chat_participant", "narrator", "commenter"]
+        for mode in modes:
+            write_prompt_file(
+                tmp_path / "trickster" / f"persona_{mode}_base.md",
+                f"MODE_{mode.upper()}_CONTENT",
+            )
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        for mode in modes:
+            session = make_session()
+            cartridge = make_cartridge(
+                ai_config={
+                    "model_preference": "standard",
+                    "prompt_directory": "test-ai-task-001",
+                    "persona_mode": mode,
+                    "has_static_fallback": False,
+                    "context_requirements": "session_only",
+                },
+            )
+            result = cm.assemble_trickster_call(
+                session, cartridge, "gemini",
+                exchange_count=1, min_exchanges=2,
+            )
+            assert f"MODE_{mode.upper()}_CONTENT" in result.system_prompt
+
+    def test_mode_layer_absent_when_no_file(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """No mode layer when mode file does not exist on disk."""
+        setup_base_prompts(tmp_path)
+        # No mode file written
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge(
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "test-ai-task-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        # Persona and behaviour present, no error
+        assert "Test persona content." in result.system_prompt
+        assert "Test behaviour content." in result.system_prompt
+
+    def test_mode_layer_absent_when_no_ai_config(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """No mode layer and no error for static cartridges (ai_config=None)."""
+        setup_base_prompts(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge(ai_config=None)
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        assert "Test persona content." in result.system_prompt
+
+    def test_debrief_includes_mode_layer(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Mode behaviour also appears in the debrief system prompt."""
+        setup_base_prompts(tmp_path)
+        write_prompt_file(
+            tmp_path / "trickster" / "persona_presenting_base.md",
+            "DEBRIEF MODE CONTENT",
+        )
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge(
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "test-ai-task-001",
+                "persona_mode": "presenting",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+
+        result = cm.assemble_debrief_call(session, cartridge, "gemini")
+
+        assert "DEBRIEF MODE CONTENT" in result.system_prompt
+
+
+# ---------------------------------------------------------------------------
+# Mode snapshotting (Phase 1b)
+# ---------------------------------------------------------------------------
+
+
+class TestModeSnapshotting:
+    def test_snapshot_includes_mode_behaviour(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """snapshot_prompts() stores mode_behaviour when non-None."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        prompts = TricksterPrompts(
+            persona="persona",
+            behaviour="behaviour",
+            safety="safety",
+            task_override=None,
+            mode_behaviour="mode content",
+        )
+        session = make_session()
+        cm.snapshot_prompts(session, prompts)
+
+        assert session.prompt_snapshots is not None
+        assert session.prompt_snapshots["mode_behaviour"] == "mode content"
+
+    def test_snapshot_skips_mode_behaviour_when_none(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """snapshot_prompts() does not store mode_behaviour when None."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        prompts = TricksterPrompts(
+            persona="persona",
+            behaviour="behaviour",
+            safety="safety",
+            task_override=None,
+        )
+        session = make_session()
+        cm.snapshot_prompts(session, prompts)
+
+        assert "mode_behaviour" not in session.prompt_snapshots
+
+    def test_snapshot_roundtrip_preserves_mode(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """Snapshot + get_prompt_snapshot roundtrip preserves mode_behaviour."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        original = TricksterPrompts(
+            persona="persona",
+            behaviour="behaviour",
+            safety="safety",
+            task_override=None,
+            mode_behaviour="roundtrip mode",
+        )
+        session = make_session()
+        cm.snapshot_prompts(session, original)
+
+        recovered = cm.get_prompt_snapshot(session)
+        assert recovered is not None
+        assert recovered.mode_behaviour == "roundtrip mode"
+
+    def test_old_snapshot_without_mode_reconstructs_none(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """Old snapshots (no mode_behaviour key) reconstruct with None."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        # Simulate an old snapshot dict without mode_behaviour
+        session.prompt_snapshots = {
+            "persona": "old persona",
+            "behaviour": "old behaviour",
+            "safety": "old safety",
+        }
+
+        recovered = cm.get_prompt_snapshot(session)
+        assert recovered is not None
+        assert recovered.mode_behaviour is None
+        assert recovered.persona == "old persona"
+
+    def test_assembly_uses_snapshotted_mode(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Assembly uses mode_behaviour from snapshot, not loader."""
+        setup_base_prompts(tmp_path)
+        # Write a mode file that should NOT be used (snapshot takes priority)
+        write_prompt_file(
+            tmp_path / "trickster" / "persona_chat_participant_base.md",
+            "DISK MODE CONTENT",
+        )
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge()
+
+        snapshot = TricksterPrompts(
+            persona="SNAPSHOT persona",
+            behaviour="SNAPSHOT behaviour",
+            safety="SNAPSHOT safety",
+            task_override=None,
+            mode_behaviour="SNAPSHOT MODE",
+        )
+        cm.snapshot_prompts(session, snapshot)
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        assert "SNAPSHOT MODE" in result.system_prompt
+        assert "DISK MODE CONTENT" not in result.system_prompt
+
+
+# ---------------------------------------------------------------------------
+# Mode resolution (Phase 1b)
+# ---------------------------------------------------------------------------
+
+
+class TestModeResolution:
+    def test_resolve_prompts_passes_mode_to_loader(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """_resolve_prompts passes persona_mode to loader (indirect test)."""
+        setup_base_prompts(tmp_path)
+        write_prompt_file(
+            tmp_path / "trickster" / "persona_narrator_base.md",
+            "NARRATOR LOADED",
+        )
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge(
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "test-ai-task-001",
+                "persona_mode": "narrator",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        assert "NARRATOR LOADED" in result.system_prompt
+
+    def test_resolve_uses_snapshot_mode_over_loader(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Snapshot mode takes priority over loader mode."""
+        setup_base_prompts(tmp_path)
+        write_prompt_file(
+            tmp_path / "trickster" / "persona_narrator_base.md",
+            "LOADER NARRATOR",
+        )
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge(
+            ai_config={
+                "model_preference": "standard",
+                "prompt_directory": "test-ai-task-001",
+                "persona_mode": "narrator",
+                "has_static_fallback": False,
+                "context_requirements": "session_only",
+            },
+        )
+
+        snapshot = TricksterPrompts(
+            persona="SNAP persona",
+            behaviour="SNAP behaviour",
+            safety="SNAP safety",
+            task_override=None,
+            mode_behaviour="SNAP NARRATOR",
+        )
+        cm.snapshot_prompts(session, snapshot)
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        assert "SNAP NARRATOR" in result.system_prompt
+        assert "LOADER NARRATOR" not in result.system_prompt
