@@ -96,6 +96,18 @@ _ROLE_MAP: dict[str, str] = {
     "trickster": "assistant",
 }
 
+# ---------------------------------------------------------------------------
+# Neutral system prompt for context-isolated generation (Cluster H).
+# The tool AI is a plain helpful assistant — no Trickster persona, no teaching
+# context, no evaluation rubric. Lithuanian only.
+# ---------------------------------------------------------------------------
+_GENERATION_SYSTEM_PROMPT = (
+    "Tu esi pagalbinis AI asistentas. "
+    "Atlik tiksliai tai, ko pra\u0161o vartotojas. "
+    "Nekomentuok u\u017eduoties, neprid\u0117k papildom\u0173 paaiškinim\u0173. "
+    "Atsakyk lietuvi\u0173 kalba."
+)
+
 
 @dataclass(frozen=True)
 class AssembledContext:
@@ -238,6 +250,37 @@ class ContextManager:
 
         return AssembledContext(
             system_prompt=system_prompt,
+            messages=messages,
+            tools=None,
+        )
+
+    def assemble_generation_call(
+        self,
+        source_content: str,
+        student_prompt: str,
+    ) -> AssembledContext:
+        """Assembles a context-isolated generation call payload.
+
+        Builds a minimal context for the tool AI: neutral system prompt,
+        source content as a user message, and the student's generation
+        prompt as a second user message. No Trickster persona, no
+        evaluation rubric, no teaching context, no transition tools.
+
+        Args:
+            source_content: The source material the student is working with
+                (e.g., a counter-article for the empathy flip).
+            student_prompt: The student's instruction for what to generate.
+
+        Returns:
+            AssembledContext with neutral system_prompt, messages, and
+            tools=None.
+        """
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": source_content},
+            {"role": "user", "content": student_prompt},
+        ]
+        return AssembledContext(
+            system_prompt=_GENERATION_SYSTEM_PROMPT,
             messages=messages,
             tools=None,
         )

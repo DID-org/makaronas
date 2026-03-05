@@ -111,6 +111,7 @@ class GameSession(BaseModel):
     last_redaction_reason: str | None = None
     turn_intensities: list[float] = Field(default_factory=list)
     task_history: list[dict[str, Any]] = Field(default_factory=list)
+    generated_artifacts: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=24),
