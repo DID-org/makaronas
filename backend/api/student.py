@@ -385,6 +385,16 @@ async def _stream_trickster_response(
         if done_data.get("next_phase") is not None:
             session.current_phase = done_data["next_phase"]
 
+        # Record task history on terminal transition
+        if done_data.get("phase_transition") is not None:
+            session.task_history.append({
+                "task_id": cartridge.task_id,
+                "evaluation_outcome": done_data["phase_transition"],
+                "exchange_count": done_data["exchanges_count"],
+                "intensity_score": done_data.get("intensity_score"),
+                "is_clean": cartridge.is_clean,
+            })
+
         yield format_sse_event(
             "done",
             DoneEvent(full_text=full_text, data=done_data),
