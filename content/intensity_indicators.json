@@ -1,0 +1,106 @@
+{
+  "categories": {
+    "challenge": {
+      "weight": 1.0,
+      "keywords": [
+        "ar tikrai",
+        "ar tikrai taip manai",
+        "ar esi tikras",
+        "ar esi tikra",
+        "pagalvok dar kart\u0105",
+        "pagalvok geriau",
+        "i\u0161 kur \u017einai",
+        "kod\u0117l taip manai",
+        "ar gali paai\u0161kinti",
+        "ar turi \u012frodymu",
+        "ar \u012fsitikin\u0119s",
+        "ar \u012fsitikinusi",
+        "gal perskaityk dar kart\u0105",
+        "ar tikrai \u012fsigilinai",
+        "ar atid\u017eiai skaitei",
+        "pala\u016bk minut\u0117l\u0119",
+        "ar pagalvojai",
+        "pam\u0105styk",
+        "ar tik\u0117jaisi",
+        "gal ne vis\u0105 informacij\u0105 matei"
+      ]
+    },
+    "dismissal": {
+      "weight": 2.0,
+      "keywords": [
+        "tai nes\u0105mon\u0117",
+        "koks naivumas",
+        "kokia naivyb\u0117",
+        "nesupranti",
+        "nesupranti esm\u0117s",
+        "tai juokinga",
+        "per daug supaprastini",
+        "per daug supaprastinate",
+        "manai per paprastai",
+        "tai pavirš\u0117utini\u0161ka",
+        "ne\u012fsigilinai",
+        "perskaityk atid\u017eiau",
+        "nelabai supranti",
+        "nevisai supranti",
+        "tai ne taip veikia",
+        "taip negalvoja rimti \u017emon\u0117s",
+        "akivaizdu kad neskaitei",
+        "ar bent skaitei",
+        "nepakankamas supratimas",
+        "menkas supratimas"
+      ]
+    },
+    "confrontation": {
+      "weight": 3.0,
+      "keywords": [
+        "tu klysti",
+        "tu visi\u0161kai klysti",
+        "neteisus",
+        "visi\u0161kai neteisus",
+        "tai absurdas",
+        "tai visi\u0161kas absurdas",
+        "tai melaginga",
+        "meluoji",
+        "\u012frodyk",
+        "\u012frodyk man",
+        "kur tavo \u012frodymai",
+        "tai prie\u0161tarauja faktams",
+        "faktai rodo kitaip",
+        "tai netiesa",
+        "tai ni\u0117ko ne\u012frodo",
+        "tai neparemia tavo pozicijos",
+        "tai akivaizdus klaidinimas",
+        "nesugeba atskirti",
+        "negali atskirti",
+        "tai propagandinis m\u0105stymas"
+      ]
+    },
+    "aggression": {
+      "weight": 4.0,
+      "keywords": [
+        "tai kvailyst\u0117",
+        "neturi supratimo",
+        "beviltis atvejis",
+        "beviltis",
+        "bevilti\u0161ka",
+        "g\u0117da ne\u017einoti",
+        "tur\u0117tum g\u0117dytis",
+        "tai visi\u0161ka kvailyst\u0117",
+        "tai juokingas teiginys",
+        "tai absurdi\u0161kai kvaila",
+        "neturi jokio supratimo",
+        "visi\u0161kai nieko nesupranti",
+        "tai toks \u017eemas lygis",
+        "ar tau rimtai",
+        "ne\u012ftik\u0117tinas naivumas",
+        "tai apgail\u0117tina",
+        "apgail\u0117tinas atsakymas",
+        "tai verta pa\u0161aipos",
+        "nesugeba elementariai m\u0105styti",
+        "tai begal\u0117 kvaila"
+      ]
+    }
+  },
+  "position_weight": 0.5,
+  "max_position_bonus": 1.0
+}
