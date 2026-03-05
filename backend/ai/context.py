@@ -212,8 +212,14 @@ class ContextManager:
             AssembledContext for the debrief call (tools=None).
         """
         prompts = self._resolve_prompts(session, cartridge, provider)
+
+        # Load fourth wall prompt: snapshot first, then fresh load.
+        fourth_wall = self.get_fourth_wall_snapshot(session)
+        if fourth_wall is None:
+            fourth_wall = self._loader.load_fourth_wall_prompt(provider)
+
         system_prompt = self._build_debrief_system_prompt(
-            prompts, session, cartridge,
+            prompts, session, cartridge, fourth_wall_prompt=fourth_wall,
         )
 
         # Debrief includes full history — no trimming.
@@ -229,6 +235,7 @@ class ContextManager:
         self,
         session: GameSession,
         trickster_prompts: TricksterPrompts,
+        fourth_wall: str | None = None,
     ) -> None:
         """Saves prompt layers 1-4 into the session for live session integrity.
 
@@ -238,6 +245,7 @@ class ContextManager:
         Args:
             session: Mutable game session to update.
             trickster_prompts: Loaded prompt layers to snapshot.
+            fourth_wall: Optional fourth wall prompt content to freeze.
         """
         snapshot: dict[str, str] = {}
         if trickster_prompts.persona is not None:
@@ -250,6 +258,8 @@ class ContextManager:
             snapshot["task_override"] = trickster_prompts.task_override
         if trickster_prompts.mode_behaviour is not None:
             snapshot["mode_behaviour"] = trickster_prompts.mode_behaviour
+        if fourth_wall is not None:
+            snapshot["fourth_wall"] = fourth_wall
 
         session.prompt_snapshots = snapshot
 
@@ -276,6 +286,22 @@ class ContextManager:
             task_override=session.prompt_snapshots.get("task_override"),
             mode_behaviour=session.prompt_snapshots.get("mode_behaviour"),
         )
+
+    def get_fourth_wall_snapshot(
+        self,
+        session: GameSession,
+    ) -> str | None:
+        """Retrieves the snapshotted fourth wall prompt from the session.
+
+        Args:
+            session: Game session that may contain prompt snapshots.
+
+        Returns:
+            Fourth wall prompt content from snapshot, or None.
+        """
+        if session.prompt_snapshots is None:
+            return None
+        return session.prompt_snapshots.get("fourth_wall")
 
     # -------------------------------------------------------------------
     # Prompt resolution
@@ -363,22 +389,42 @@ class ContextManager:
         prompts: TricksterPrompts,
         session: GameSession,
         cartridge: TaskCartridge,
+        fourth_wall_prompt: str | None = None,
     ) -> str:
         """Builds the system prompt for the debrief (reveal) call.
 
         Same layers 1-4 as dialogue, but layer 5 is debrief-specific:
         full EvaluationContract data plus a Lithuanian instruction to drop
         the adversarial stance and reveal manipulation techniques.
+
+        When fourth_wall_prompt is provided, inserts a persona override
+        (after prompt layers) and the fourth wall content (after debrief
+        context) for the AI literacy moment.
         """
         layers: list[str] = []
 
         # Layer 1-4: Prompt files (same sources as dialogue)
         self._append_prompt_layers(layers, prompts)
 
+        # Persona override for fourth wall (after persona layers, before
+        # debrief context). Only injected when fourth wall is active.
+        if fourth_wall_prompt is not None:
+            layers.append(
+                "## Persona per\u0117jimas\n\n"
+                "Atskleidimo pabaigoje tu nustoji b\u016bti Makaronas. "
+                "Tu esi dirbtinio intelekto sistema. Kalb\u0117k tiesiogiai "
+                "kaip AI \u2014 ne kaip persona\u017eas."
+            )
+
         # Layer 5: Debrief-specific context
         layer5 = self._build_debrief_context(cartridge)
         if layer5:
             layers.append(layer5)
+
+        # Fourth wall AI literacy content (after debrief context,
+        # before safety config — the culminating moment).
+        if fourth_wall_prompt is not None:
+            layers.append(fourth_wall_prompt)
 
         # Layer 6: Safety config
         layer6 = self._build_safety_config(cartridge)

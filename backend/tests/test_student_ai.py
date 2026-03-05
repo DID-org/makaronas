@@ -435,6 +435,42 @@ class TestDebriefJourney:
         assert done_events[0]["data"]["data"]["debrief_complete"] is True
         assert "padirbėjai!" in done_events[0]["data"]["full_text"]
 
+    @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
+    async def test_debrief_fourth_wall_in_system_prompt(
+        self, _mock_readiness, client, prompts_dir, tmp_path,
+    ):
+        """Debrief system prompt includes fourth wall content (constraint #15)."""
+        write_prompt_file(
+            prompts_dir / "trickster" / "fourth_wall_base.md",
+            "FOURTH WALL API TEST CONTENT",
+        )
+        loader = PromptLoader(prompts_dir)
+        ctx_manager = ContextManager(loader)
+        provider = MockProvider(
+            responses=["Atskleidimas."],
+            usage=UsageInfo(prompt_tokens=200, completion_tokens=10),
+        )
+        engine = _make_engine(provider, ctx_manager)
+        _inject_engine(engine)
+
+        cartridge = TaskCartridge.model_validate(_build_ai_cartridge_data())
+        _use_registry_with([cartridge])
+        await _create_ai_session(exchanges=3)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/session-test-ai-task-001/debrief",
+                headers=AUTH_HEADER,
+            )
+
+        assert resp.status_code == 200
+
+        # Verify fourth wall content reached the provider.
+        assert provider.last_system_prompt is not None
+        assert "FOURTH WALL API TEST CONTENT" in provider.last_system_prompt
+        assert "Persona per\u0117jimas" in provider.last_system_prompt
+
 
 # ---------------------------------------------------------------------------
 # Test: Provider timeout

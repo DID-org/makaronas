@@ -2112,3 +2112,210 @@ class TestDeescalationContext:
         deesc_pos = prompt.index("De-eskalacijos instrukcija")
         safety_pos = prompt.index("Saugumo nustatymai")
         assert task_pos < deesc_pos < safety_pos
+
+
+# ---------------------------------------------------------------------------
+# Fourth wall break (Phase 5a)
+# ---------------------------------------------------------------------------
+
+
+_FOURTH_WALL_CONTENT = (
+    "Ketvirtosios sienos momentas — "
+    "kreipkis \u012f mokin\u012f tiesiogiai kaip dirbtinis intelektas."
+)
+
+
+def _setup_fourth_wall_prompt(prompts_dir: Path) -> None:
+    """Creates the fourth_wall_base.md prompt file."""
+    write_prompt_file(
+        prompts_dir / "trickster" / "fourth_wall_base.md",
+        _FOURTH_WALL_CONTENT,
+    )
+
+
+class TestFourthWallDebrief:
+    """Tests for fourth wall break in debrief context assembly."""
+
+    def test_debrief_includes_fourth_wall(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Debrief system prompt includes fourth wall content when file exists."""
+        setup_base_prompts(tmp_path)
+        _setup_fourth_wall_prompt(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session(
+            exchanges=[
+                _make_exchange("student", "Ar tai tikra?"),
+                _make_exchange("trickster", "Taip."),
+            ],
+        )
+        cartridge = make_cartridge()
+
+        result = cm.assemble_debrief_call(session, cartridge, "gemini")
+
+        assert _FOURTH_WALL_CONTENT in result.system_prompt
+
+    def test_debrief_includes_persona_override(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Debrief system prompt includes persona override when fourth wall active."""
+        setup_base_prompts(tmp_path)
+        _setup_fourth_wall_prompt(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge()
+
+        result = cm.assemble_debrief_call(session, cartridge, "gemini")
+
+        assert "Persona per\u0117jimas" in result.system_prompt
+        assert "dirbtinio intelekto sistema" in result.system_prompt
+
+    def test_layer_order_override_before_debrief_fourth_wall_after(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Persona override appears after persona layer, fourth wall after debrief context."""
+        setup_base_prompts(tmp_path)
+        _setup_fourth_wall_prompt(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge()
+
+        result = cm.assemble_debrief_call(session, cartridge, "gemini")
+        prompt = result.system_prompt
+
+        persona_pos = prompt.index("Test persona content.")
+        override_pos = prompt.index("Persona per\u0117jimas")
+        debrief_pos = prompt.index("Atskleidimo kontekstas")
+        fourth_wall_pos = prompt.index("Ketvirtosios sienos")
+        safety_pos = prompt.index("Saugumo nustatymai")
+
+        assert persona_pos < override_pos < debrief_pos < fourth_wall_pos < safety_pos
+
+    def test_debrief_without_fourth_wall_file(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Debrief works normally when fourth_wall_base.md doesn't exist."""
+        setup_base_prompts(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge()
+
+        result = cm.assemble_debrief_call(session, cartridge, "gemini")
+
+        # Debrief still works — no fourth wall, no persona override.
+        assert "Atskleidimo kontekstas" in result.system_prompt
+        assert "Persona per\u0117jimas" not in result.system_prompt
+        assert "Ketvirtosios sienos" not in result.system_prompt
+
+    def test_fourth_wall_from_snapshot(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Debrief uses frozen fourth wall from snapshot, not fresh load."""
+        setup_base_prompts(tmp_path)
+        # Write a file that should NOT be used (snapshot takes priority).
+        _setup_fourth_wall_prompt(tmp_path)
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        cartridge = make_cartridge()
+
+        # Set snapshot with distinct fourth wall content.
+        snapshot = TricksterPrompts(
+            persona="SNAP persona",
+            behaviour="SNAP behaviour",
+            safety="SNAP safety",
+            task_override=None,
+        )
+        cm.snapshot_prompts(session, snapshot, fourth_wall="FROZEN FOURTH WALL")
+
+        result = cm.assemble_debrief_call(session, cartridge, "gemini")
+
+        assert "FROZEN FOURTH WALL" in result.system_prompt
+        assert _FOURTH_WALL_CONTENT not in result.system_prompt
+
+
+class TestFourthWallSnapshotting:
+    """Tests for fourth wall prompt snapshotting."""
+
+    def test_snapshot_includes_fourth_wall(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """snapshot_prompts() stores fourth_wall when provided."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        prompts = TricksterPrompts(
+            persona="persona",
+            behaviour="behaviour",
+            safety="safety",
+            task_override=None,
+        )
+        session = make_session()
+        cm.snapshot_prompts(session, prompts, fourth_wall="fw content")
+
+        assert session.prompt_snapshots is not None
+        assert session.prompt_snapshots["fourth_wall"] == "fw content"
+
+    def test_snapshot_skips_fourth_wall_when_none(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """snapshot_prompts() does not store fourth_wall key when None."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        prompts = TricksterPrompts(
+            persona="persona",
+            behaviour="behaviour",
+            safety="safety",
+            task_override=None,
+        )
+        session = make_session()
+        cm.snapshot_prompts(session, prompts)
+
+        assert "fourth_wall" not in session.prompt_snapshots
+
+    def test_get_fourth_wall_snapshot(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """get_fourth_wall_snapshot() retrieves stored value."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        session.prompt_snapshots = {
+            "persona": "p",
+            "fourth_wall": "stored fw",
+        }
+
+        assert cm.get_fourth_wall_snapshot(session) == "stored fw"
+
+    def test_get_fourth_wall_snapshot_missing_key(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """get_fourth_wall_snapshot() returns None for old snapshots without key."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        session.prompt_snapshots = {"persona": "p", "behaviour": "b"}
+
+        assert cm.get_fourth_wall_snapshot(session) is None
+
+    def test_get_fourth_wall_snapshot_no_snapshot(
+        self, tmp_path: Path, make_session,
+    ) -> None:
+        """get_fourth_wall_snapshot() returns None when no snapshot exists."""
+        loader = PromptLoader(tmp_path)
+        cm = ContextManager(loader)
+
+        session = make_session()
+        assert cm.get_fourth_wall_snapshot(session) is None

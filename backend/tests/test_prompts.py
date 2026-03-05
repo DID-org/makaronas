@@ -725,3 +725,58 @@ class TestCacheKeyCorrectness:
         assert gemini.task_override == "gemini override"
         assert anthropic.task_override == "claude override"
         assert gemini is not anthropic
+
+
+# ---------------------------------------------------------------------------
+# Fourth wall prompt loading (Phase 5a)
+# ---------------------------------------------------------------------------
+
+
+class TestFourthWallPrompt:
+    def test_fourth_wall_base_loaded(self, tmp_path: Path) -> None:
+        """load_fourth_wall_prompt() loads fourth_wall_base.md content."""
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "fourth_wall_base.md", "FW content here")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_fourth_wall_prompt("gemini")
+
+        assert result == "FW content here"
+
+    def test_fourth_wall_provider_specific(self, tmp_path: Path) -> None:
+        """Provider-specific file is preferred over base."""
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "fourth_wall_base.md", "base FW")
+        write_prompt_file(trickster / "fourth_wall_gemini.md", "gemini FW")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_fourth_wall_prompt("gemini")
+
+        assert result == "gemini FW"
+
+    def test_fourth_wall_fallback_to_base(self, tmp_path: Path) -> None:
+        """Falls back to base when no provider-specific file exists."""
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "fourth_wall_base.md", "base FW")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_fourth_wall_prompt("anthropic")
+
+        assert result == "base FW"
+
+    def test_fourth_wall_missing_returns_none(self, tmp_path: Path) -> None:
+        """Returns None when no fourth wall file exists."""
+        loader = PromptLoader(tmp_path)
+        result = loader.load_fourth_wall_prompt("gemini")
+
+        assert result is None
+
+    def test_fourth_wall_empty_file_returns_none(self, tmp_path: Path) -> None:
+        """Returns None for whitespace-only file."""
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "fourth_wall_base.md", "   \n  ")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_fourth_wall_prompt("gemini")
+
+        assert result is None

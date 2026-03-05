@@ -169,7 +169,12 @@ class TricksterEngine:
                 snap_config.provider, cartridge.task_id,
                 persona_mode=cartridge.ai_config.persona_mode,
             )
-            self._context_manager.snapshot_prompts(session, prompts)
+            fourth_wall = self._context_manager._loader.load_fourth_wall_prompt(
+                snap_config.provider,
+            )
+            self._context_manager.snapshot_prompts(
+                session, prompts, fourth_wall=fourth_wall,
+            )
 
         # 3. Save student exchange (before AI call \u2014 never lose student input)
         session.exchanges.append(

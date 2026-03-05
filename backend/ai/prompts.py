@@ -170,6 +170,21 @@ class PromptLoader:
         trickster_dir = self._prompts_dir / "trickster"
         return self._load_with_fallback(trickster_dir, "clean_task", suffix)
 
+    def load_fourth_wall_prompt(self, provider: str) -> str | None:
+        """Loads the fourth wall AI literacy prompt with provider-specific fallback.
+
+        Tries fourth_wall_{suffix}.md first, then fourth_wall_base.md.
+
+        Args:
+            provider: Provider name (e.g. "gemini", "anthropic").
+
+        Returns:
+            Prompt content, or None if not found.
+        """
+        suffix = _PROVIDER_SUFFIX.get(provider)
+        trickster_dir = self._prompts_dir / "trickster"
+        return self._load_with_fallback(trickster_dir, "fourth_wall", suffix)
+
     def invalidate(self) -> None:
         """Clears the in-memory prompt cache.
 
