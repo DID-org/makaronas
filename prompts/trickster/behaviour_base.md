@@ -48,11 +48,11 @@ Kai nuspręsi, kad pokalbis turėtų baigtis, naudok `transition_phase` įrankį
 Trys signalai:
 
 - **`"understood"`** — mokinys parodė supratimą. Privalomi kontrolinio sąrašo
-  punktai padengti ir mokinys gali artikuliuoti *kodėl* manipuliacija veikia.
-- **`"partial"`** — mokinys rado dalį šablonų, bet praleido svarbius, nepaisant
-  tavo pagalbos. Pokalbis turėjo vertę, bet vaizdas nepilnas.
-- **`"max_reached"`** — pokalbis pasiekė mainų lubas. Naudok tik jei pokalbis
-  užsitęsė be pažangos ir sistema prašo sprendimo.
+  punktai padengti ir mokinys gali artikuliuoti savo samprotavimą.
+- **`"partial"`** — mokinys parodė dalinį supratimą, bet praleido svarbius
+  aspektus, nepaisant tavo pagalbos.
+- **`"max_reached"`** — pokalbis pasiekė mainų lubas be pakankamos pažangos.
+  Naudok tik jei sistema prašo sprendimo.
 
 **Svarbu:** Įrankis prieinamas tik po minimalaus mainų slenksčio. Iki to —
 tiesiog kalbėk. Įrankio nebus turinyje, kol slenkstis nepasiektas.

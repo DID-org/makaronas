@@ -155,6 +155,21 @@ class PromptLoader:
 
         return errors
 
+    def load_clean_task_prompt(self, provider: str) -> str | None:
+        """Loads the clean task prompt with provider-specific fallback.
+
+        Tries clean_task_{suffix}.md first, then clean_task_base.md.
+
+        Args:
+            provider: Provider name (e.g. "gemini", "anthropic").
+
+        Returns:
+            Prompt content, or None if not found.
+        """
+        suffix = _PROVIDER_SUFFIX.get(provider)
+        trickster_dir = self._prompts_dir / "trickster"
+        return self._load_with_fallback(trickster_dir, "clean_task", suffix)
+
     def invalidate(self) -> None:
         """Clears the in-memory prompt cache.
 

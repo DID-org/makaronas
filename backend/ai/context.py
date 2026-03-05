@@ -164,7 +164,7 @@ class ContextManager:
 
         prompts = self._resolve_prompts(session, cartridge, provider)
         system_prompt = self._build_dialogue_system_prompt(
-            prompts, session, cartridge,
+            prompts, session, cartridge, provider,
         )
 
         messages: list[dict[str, Any]] = self._format_exchanges(session.exchanges)
@@ -316,6 +316,7 @@ class ContextManager:
         prompts: TricksterPrompts,
         session: GameSession,
         cartridge: TaskCartridge,
+        provider: str,
     ) -> str:
         """Builds the 8-layer system prompt for Trickster dialogue."""
         layers: list[str] = []
@@ -324,7 +325,7 @@ class ContextManager:
         self._append_prompt_layers(layers, prompts)
 
         # Layer 5: Task context (persona mode, phase, evaluation contract)
-        layer5 = self._build_task_context(session, cartridge)
+        layer5 = self._build_task_context(session, cartridge, provider)
         if layer5:
             layers.append(layer5)
 
@@ -410,16 +411,68 @@ class ContextManager:
         if prompts.task_override is not None:
             layers.append(prompts.task_override)
 
-    @staticmethod
     def _build_task_context(
+        self,
         session: GameSession,
         cartridge: TaskCartridge,
+        provider: str,
     ) -> str:
         """Builds layer 5: task context with evaluation contract.
 
-        Serializes persona mode, current phase, embedded patterns, checklist
-        items, and pass conditions as readable Lithuanian-labeled text.
+        Branches on cartridge.is_clean: clean tasks get clean-specific
+        framing with the clean task prompt; adversarial tasks get the
+        standard patterns/checklist framing.
         """
+        if cartridge.is_clean:
+            return self._build_clean_task_context(
+                session, cartridge, provider,
+            )
+        return self._build_adversarial_task_context(session, cartridge)
+
+    def _build_clean_task_context(
+        self,
+        session: GameSession,
+        cartridge: TaskCartridge,
+        provider: str,
+    ) -> str:
+        """Builds layer 5 for clean tasks: legitimacy defense framing."""
+        parts: list[str] = []
+        parts.append("## Svaraus turinio kontekstas")
+
+        if cartridge.ai_config is not None:
+            parts.append(f"\nPersona: {cartridge.ai_config.persona_mode}")
+
+        if session.current_phase is not None:
+            parts.append(f"Faz\u0117: {session.current_phase}")
+
+        # Load clean task prompt content.
+        clean_prompt = self._loader.load_clean_task_prompt(provider)
+        if clean_prompt:
+            parts.append(f"\n{clean_prompt}")
+        else:
+            logger.warning(
+                "Clean task prompt file not found for provider '%s'; "
+                "clean task context will lack specific instructions.",
+                provider,
+            )
+
+        # Pass conditions (inverted semantics for clean tasks).
+        parts.append("\n### Vertinimo s\u0105lygos")
+        pc = cartridge.evaluation.pass_conditions
+        parts.append(
+            f"- Triksteris laimi: {pc.trickster_wins}\n"
+            f"- I\u0161 dalies: {pc.partial}\n"
+            f"- Triksteris pralaimi: {pc.trickster_loses}"
+        )
+
+        return "\n".join(parts)
+
+    @staticmethod
+    def _build_adversarial_task_context(
+        session: GameSession,
+        cartridge: TaskCartridge,
+    ) -> str:
+        """Builds layer 5 for adversarial tasks: patterns/checklist framing."""
         parts: list[str] = []
         parts.append("## Uzduoties kontekstas")
 
@@ -438,7 +491,7 @@ class ContextManager:
                 parts.append(
                     f"{i}. **{pattern.description}**\n"
                     f"   Technika: {pattern.technique}\n"
-                    f"   Ryšys su realybe: {pattern.real_world_connection}"
+                    f"   Ry\u0161ys su realybe: {pattern.real_world_connection}"
                 )
 
         # Checklist
