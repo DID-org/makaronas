@@ -217,7 +217,8 @@ def _init_ai_services() -> None:
     # 3. Create ContextManager and TricksterEngine
     from backend.ai.trickster import TricksterEngine
 
-    context_manager = ContextManager(prompt_loader)
+    content_dir = PROJECT_ROOT / "content"
+    context_manager = ContextManager(prompt_loader, content_dir=content_dir)
     engine = TricksterEngine(provider, context_manager)
     deps._trickster_engine = engine
 

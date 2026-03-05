@@ -15,13 +15,15 @@ schemas (Tier 1), and tasks/schemas (Tier 1).
 
 from __future__ import annotations
 
+import base64
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from backend.ai.prompts import PromptLoader, TricksterPrompts
 from backend.schemas import Exchange, GameSession
-from backend.tasks.schemas import TaskCartridge
+from backend.tasks.schemas import ImageBlock, MemeBlock, TaskCartridge
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,24 @@ _CHARS_PER_TOKEN = 3
 # Default token budget — well under any model's context window.
 # ---------------------------------------------------------------------------
 _DEFAULT_TOKEN_BUDGET = 100_000
+
+# ---------------------------------------------------------------------------
+# Fixed token cost per image for budget estimation.
+# Gemini charges ~258 tokens minimum per image. Anthropic charges more but
+# scales with resolution. Using 258 as a conservative floor for budgeting.
+# ---------------------------------------------------------------------------
+_TOKENS_PER_IMAGE = 258
+
+# ---------------------------------------------------------------------------
+# File extension -> MIME type mapping for image assets.
+# ---------------------------------------------------------------------------
+_IMAGE_MEDIA_TYPES: dict[str, str] = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
 
 # ---------------------------------------------------------------------------
 # Transition tool definition (JSON Schema format for AIProvider).
@@ -97,9 +117,11 @@ class ContextManager:
         self,
         prompt_loader: PromptLoader,
         token_budget: int = _DEFAULT_TOKEN_BUDGET,
+        content_dir: Path | None = None,
     ) -> None:
         self._loader = prompt_loader
         self._token_budget = token_budget
+        self._content_dir = content_dir
 
     # -------------------------------------------------------------------
     # Public API
@@ -145,8 +167,19 @@ class ContextManager:
             prompts, session, cartridge,
         )
 
-        messages = self._format_exchanges(session.exchanges)
-        messages = self._trim_if_needed(system_prompt, messages)
+        messages: list[dict[str, Any]] = self._format_exchanges(session.exchanges)
+
+        # Inject multimodal image context if the current phase has images.
+        image_parts = self._extract_visible_images(cartridge, session)
+        context_prefix_count = 0
+        if image_parts:
+            image_msg = self._build_image_context_message(image_parts)
+            messages = [image_msg] + messages
+            context_prefix_count = 1
+
+        messages = self._trim_if_needed(
+            system_prompt, messages, context_prefix_count,
+        )
 
         tools: list[dict] | None = None
         if exchange_count >= min_exchanges:
@@ -547,6 +580,146 @@ class ContextManager:
         )
 
     # -------------------------------------------------------------------
+    # Multimodal image extraction
+    # -------------------------------------------------------------------
+
+    def _extract_visible_images(
+        self,
+        cartridge: TaskCartridge,
+        session: GameSession,
+    ) -> list[tuple[str, str, str]]:
+        """Extracts base64-encoded images from the current phase's visible_blocks.
+
+        Resolves image files from disk, base64-encodes them, and returns
+        tuples of (block_id, media_type, base64_data). Skips non-image
+        blocks and images that can't be read from disk.
+
+        Args:
+            cartridge: Task cartridge with presentation_blocks.
+            session: Current session (for current_phase).
+
+        Returns:
+            List of (block_id, media_type, base64_data) tuples.
+        """
+        if self._content_dir is None or session.current_phase is None:
+            return []
+
+        # Find the current phase object.
+        current_phase = None
+        for phase in cartridge.phases:
+            if phase.id == session.current_phase:
+                current_phase = phase
+                break
+        if current_phase is None or not current_phase.visible_blocks:
+            return []
+
+        # Build block lookup.
+        block_map = {b.id: b for b in cartridge.presentation_blocks}
+
+        results: list[tuple[str, str, str]] = []
+        for block_id in current_phase.visible_blocks:
+            block = block_map.get(block_id)
+            if block is None:
+                continue
+
+            # Determine file path and optional text overlay.
+            if isinstance(block, ImageBlock):
+                src = block.src
+                text_parts: list[dict[str, Any]] = []
+            elif isinstance(block, MemeBlock):
+                src = block.image_src
+                text_parts = []
+                overlay_parts = []
+                if block.top_text:
+                    overlay_parts.append(block.top_text)
+                if block.bottom_text:
+                    overlay_parts.append(block.bottom_text)
+                if overlay_parts:
+                    text_parts.append({
+                        "type": "text",
+                        "text": f"Meme tekstas: {' / '.join(overlay_parts)}",
+                    })
+            else:
+                continue
+
+            # Resolve file path with defense-in-depth.
+            asset_path = (
+                self._content_dir / "tasks" / cartridge.task_id / "assets" / src
+            )
+            resolved = asset_path.resolve()
+            assets_base = (
+                self._content_dir / "tasks" / cartridge.task_id / "assets"
+            ).resolve()
+            if not resolved.is_relative_to(assets_base):
+                logger.warning(
+                    "Image path traversal blocked: %s (task %s)",
+                    src, cartridge.task_id,
+                )
+                continue
+
+            # Read and encode.
+            try:
+                raw_bytes = asset_path.read_bytes()
+            except OSError:
+                logger.warning(
+                    "Image file not found or unreadable: %s (task %s, block %s)",
+                    asset_path, cartridge.task_id, block_id,
+                )
+                continue
+
+            suffix = asset_path.suffix.lower()
+            media_type = _IMAGE_MEDIA_TYPES.get(suffix)
+            if media_type is None:
+                logger.warning(
+                    "Unknown image extension '%s' for block %s (task %s)",
+                    suffix, block_id, cartridge.task_id,
+                )
+                continue
+
+            b64_data = base64.b64encode(raw_bytes).decode()
+
+            # For MemeBlock, store text_parts as extra data on the tuple.
+            # We'll handle it in _build_image_context_message.
+            results.append((block_id, media_type, b64_data))
+
+            # If MemeBlock had text overlay, add a text marker.
+            if isinstance(block, MemeBlock) and text_parts:
+                # Store text parts by appending a special text-only entry.
+                # Convention: media_type="" signals a text-only part.
+                for tp in text_parts:
+                    results.append((block_id, "", tp["text"]))
+
+        return results
+
+    @staticmethod
+    def _build_image_context_message(
+        image_parts: list[tuple[str, str, str]],
+    ) -> dict[str, Any]:
+        """Builds a multimodal user message with image content parts.
+
+        Args:
+            image_parts: List of (block_id, media_type, data) tuples.
+                media_type="" signals a text-only part (e.g., meme overlay).
+
+        Returns:
+            Provider-neutral multimodal message dict.
+        """
+        content: list[dict[str, Any]] = [
+            {"type": "text", "text": "U\u017eduoties vaizdin\u0117 med\u017eiaga:"},
+        ]
+        for _block_id, media_type, data in image_parts:
+            if media_type == "":
+                # Text-only part (meme overlay text).
+                content.append({"type": "text", "text": data})
+            else:
+                content.append({
+                    "type": "image",
+                    "media_type": media_type,
+                    "data": data,
+                })
+        return {"role": "user", "content": content}
+
+    # -------------------------------------------------------------------
     # Exchange formatting
     # -------------------------------------------------------------------
 
@@ -569,19 +742,27 @@ class ContextManager:
     def _trim_if_needed(
         self,
         system_prompt: str,
-        messages: list[dict[str, str]],
-    ) -> list[dict[str, str]]:
+        messages: list[dict[str, Any]],
+        context_prefix_count: int = 0,
+    ) -> list[dict[str, Any]]:
         """Trims oldest exchange pairs if total exceeds token budget.
 
         Uses character-based heuristic (~3 chars/token for Lithuanian).
         Removes complete exchange pairs (user + assistant together) from
-        the front to maintain conversation coherence.
+        the exchange history to maintain conversation coherence.
 
-        The system prompt is NEVER trimmed.
+        The system prompt and context prefix messages (e.g., image context)
+        are NEVER trimmed.
+
+        Args:
+            system_prompt: System prompt text.
+            messages: Full message list (may include context prefix + exchanges).
+            context_prefix_count: Number of leading messages to protect from
+                trimming (e.g., 1 for image context message).
         """
         system_tokens = len(system_prompt) / _CHARS_PER_TOKEN
         message_tokens = sum(
-            len(m["content"]) / _CHARS_PER_TOKEN for m in messages
+            self._estimate_message_tokens(m) for m in messages
         )
         total = system_tokens + message_tokens
 
@@ -589,17 +770,21 @@ class ContextManager:
             return messages
 
         overage = total - self._token_budget
-        trimmed = list(messages)
 
-        while overage > 0 and len(trimmed) >= 2:
+        # Split into protected prefix and trimmable exchange history.
+        prefix = messages[:context_prefix_count]
+        exchange_msgs = list(messages[context_prefix_count:])
+
+        while overage > 0 and len(exchange_msgs) >= 2:
             # Remove the oldest pair (user + assistant).
             pair_tokens = (
-                len(trimmed[0]["content"]) / _CHARS_PER_TOKEN
-                + len(trimmed[1]["content"]) / _CHARS_PER_TOKEN
+                self._estimate_message_tokens(exchange_msgs[0])
+                + self._estimate_message_tokens(exchange_msgs[1])
             )
-            trimmed = trimmed[2:]
+            exchange_msgs = exchange_msgs[2:]
             overage -= pair_tokens
 
+        trimmed = prefix + exchange_msgs
         logger.debug(
             "Trimmed %d messages from exchange history (budget=%d tokens)",
             len(messages) - len(trimmed),
@@ -607,3 +792,23 @@ class ContextManager:
         )
 
         return trimmed
+
+    @staticmethod
+    def _estimate_message_tokens(message: dict[str, Any]) -> float:
+        """Estimates token count for a single message.
+
+        Handles both text-only messages (content is str) and multimodal
+        messages (content is list of parts).
+        """
+        content = message["content"]
+        if isinstance(content, str):
+            return len(content) / _CHARS_PER_TOKEN
+
+        # Multimodal: sum text chars + fixed cost per image.
+        tokens = 0.0
+        for part in content:
+            if part.get("type") == "text":
+                tokens += len(part.get("text", "")) / _CHARS_PER_TOKEN
+            elif part.get("type") == "image":
+                tokens += _TOKENS_PER_IMAGE
+        return tokens

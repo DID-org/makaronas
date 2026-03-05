@@ -1,5 +1,6 @@
 """Tests for the context manager — assembly, budgeting, snapshotting."""
 
+import base64
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from backend.ai.context import (
     TRANSITION_TOOL,
     AssembledContext,
     ContextManager,
+    _TOKENS_PER_IMAGE,
 )
 from backend.ai.prompts import PromptLoader, TricksterPrompts
 from backend.schemas import Exchange, GameSession
@@ -1310,3 +1312,656 @@ class TestModeResolution:
 
         assert "SNAP NARRATOR" in result.system_prompt
         assert "LOADER NARRATOR" not in result.system_prompt
+
+
+# ---------------------------------------------------------------------------
+# Multimodal image assembly (Phase 2c)
+# ---------------------------------------------------------------------------
+
+
+def _setup_image_content(
+    content_dir: Path,
+    task_id: str,
+    filename: str,
+    data: bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 50,
+) -> Path:
+    """Creates a dummy image file in the content/tasks/{task_id}/assets/ dir."""
+    assets_dir = content_dir / "tasks" / task_id / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    img_path = assets_dir / filename
+    img_path.write_bytes(data)
+    return img_path
+
+
+def _make_image_cartridge(make_cartridge, **overrides):
+    """Creates a cartridge with ImageBlock in visible_blocks on the AI phase."""
+    defaults = {
+        "presentation_blocks": [
+            {
+                "id": "img1",
+                "type": "image",
+                "src": "photo1.png",
+                "alt_text": "Nuotrauka 1",
+            },
+            {
+                "id": "img2",
+                "type": "image",
+                "src": "photo2.png",
+                "alt_text": "Nuotrauka 2",
+            },
+        ],
+        "phases": [
+            {
+                "id": "phase_intro",
+                "title": "\u012evadas",
+                "is_ai_phase": False,
+                "interaction": {
+                    "type": "button",
+                    "choices": [
+                        {
+                            "label": "Prad\u0117ti",
+                            "target_phase": "phase_ai",
+                            "context_label": "Mokinys pasirinko prad\u0117ti",
+                        },
+                    ],
+                },
+            },
+            {
+                "id": "phase_ai",
+                "title": "Pokalbis",
+                "is_ai_phase": True,
+                "visible_blocks": ["img1", "img2"],
+                "interaction": {
+                    "type": "freeform",
+                    "trickster_opening": "Pažiūrėkime į nuotraukas...",
+                    "min_exchanges": 2,
+                    "max_exchanges": 10,
+                },
+                "ai_transitions": {
+                    "on_success": "phase_reveal",
+                    "on_max_exchanges": "phase_reveal",
+                    "on_partial": "phase_reveal",
+                },
+            },
+            {
+                "id": "phase_reveal",
+                "title": "Atskleidimas",
+                "is_terminal": True,
+                "evaluation_outcome": "trickster_loses",
+            },
+        ],
+    }
+    defaults.update(overrides)
+    return make_cartridge(**defaults)
+
+
+class TestMultimodalAssembly:
+    """Tests for ContextManager multimodal image extraction and assembly."""
+
+    def test_image_blocks_produce_multimodal_message(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Cartridge with ImageBlocks in visible_blocks produces multimodal first message."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        img_data = b"\x89PNG_test_image_data"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png", img_data)
+        _setup_image_content(content_dir, "test-ai-task-001", "photo2.png", img_data)
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        # First message should be multimodal (image context).
+        first_msg = result.messages[0]
+        assert first_msg["role"] == "user"
+        assert isinstance(first_msg["content"], list)
+
+        # Should have: 1 text label + 2 image parts = 3 parts.
+        parts = first_msg["content"]
+        assert len(parts) == 3
+
+        # First part is the label.
+        assert parts[0]["type"] == "text"
+        assert "vaizdin" in parts[0]["text"].lower()
+
+        # Image parts contain correct base64 data.
+        expected_b64 = base64.b64encode(img_data).decode()
+        assert parts[1]["type"] == "image"
+        assert parts[1]["media_type"] == "image/png"
+        assert parts[1]["data"] == expected_b64
+        assert parts[2]["type"] == "image"
+        assert parts[2]["data"] == expected_b64
+
+    def test_media_type_derived_from_extension(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Media type is correctly derived from file extension."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.jpg")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(
+            make_cartridge,
+            presentation_blocks=[
+                {"id": "img1", "type": "image", "src": "photo1.jpg", "alt_text": "JPG"},
+            ],
+            phases=[
+                {
+                    "id": "phase_intro", "title": "I", "is_ai_phase": False,
+                    "interaction": {"type": "button", "choices": [
+                        {"label": "Go", "target_phase": "phase_ai"},
+                    ]},
+                },
+                {
+                    "id": "phase_ai", "title": "AI", "is_ai_phase": True,
+                    "visible_blocks": ["img1"],
+                    "interaction": {
+                        "type": "freeform", "trickster_opening": "...",
+                        "min_exchanges": 2, "max_exchanges": 10,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_reveal",
+                        "on_max_exchanges": "phase_reveal",
+                        "on_partial": "phase_reveal",
+                    },
+                },
+                {"id": "phase_reveal", "title": "R", "is_terminal": True,
+                 "evaluation_outcome": "trickster_loses"},
+            ],
+        )
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+        img_part = result.messages[0]["content"][1]
+        assert img_part["media_type"] == "image/jpeg"
+
+    def test_multiple_images_in_single_message(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Multiple images are all packed into one multimodal message."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png", b"img1")
+        _setup_image_content(content_dir, "test-ai-task-001", "photo2.png", b"img2")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        # Only one multimodal message, not one per image.
+        multimodal_msgs = [
+            m for m in result.messages
+            if isinstance(m.get("content"), list)
+        ]
+        assert len(multimodal_msgs) == 1
+
+        # Two distinct base64 values.
+        image_parts = [
+            p for p in multimodal_msgs[0]["content"]
+            if p.get("type") == "image"
+        ]
+        assert len(image_parts) == 2
+        assert image_parts[0]["data"] != image_parts[1]["data"]
+
+
+class TestMultimodalMemeBlock:
+    """Tests for MemeBlock image extraction with text overlay."""
+
+    def test_meme_block_produces_image_and_text(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """MemeBlock produces image part + text overlay part."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "meme.png")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(
+            make_cartridge,
+            presentation_blocks=[
+                {
+                    "id": "meme1",
+                    "type": "meme",
+                    "image_src": "meme.png",
+                    "top_text": "WHEN YOU",
+                    "bottom_text": "SEE IT",
+                    "alt_text": "Meme",
+                },
+            ],
+            phases=[
+                {
+                    "id": "phase_intro", "title": "I", "is_ai_phase": False,
+                    "interaction": {"type": "button", "choices": [
+                        {"label": "Go", "target_phase": "phase_ai"},
+                    ]},
+                },
+                {
+                    "id": "phase_ai", "title": "AI", "is_ai_phase": True,
+                    "visible_blocks": ["meme1"],
+                    "interaction": {
+                        "type": "freeform", "trickster_opening": "...",
+                        "min_exchanges": 2, "max_exchanges": 10,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_reveal",
+                        "on_max_exchanges": "phase_reveal",
+                        "on_partial": "phase_reveal",
+                    },
+                },
+                {"id": "phase_reveal", "title": "R", "is_terminal": True,
+                 "evaluation_outcome": "trickster_loses"},
+            ],
+        )
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        first_msg = result.messages[0]
+        parts = first_msg["content"]
+
+        # Label + image + text overlay = 3 parts.
+        assert len(parts) == 3
+        assert parts[1]["type"] == "image"
+        assert "WHEN YOU" in parts[2]["text"]
+        assert "SEE IT" in parts[2]["text"]
+
+
+class TestMultimodalBackwardCompat:
+    """Backward compatibility: text-only cartridges produce identical output."""
+
+    def test_no_image_blocks_no_multimodal(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Cartridge with no image blocks produces text-only messages."""
+        setup_base_prompts(tmp_path / "prompts")
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=tmp_path / "content")
+
+        cartridge = make_cartridge()
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+            exchanges=[
+                _make_exchange("student", "Hello"),
+                _make_exchange("trickster", "Hi"),
+            ],
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=2, min_exchanges=2,
+        )
+
+        # All messages should have string content.
+        for msg in result.messages:
+            assert isinstance(msg["content"], str)
+
+    def test_content_dir_none_skips_images(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """content_dir=None skips image resolution even with image blocks."""
+        setup_base_prompts(tmp_path / "prompts")
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader)  # No content_dir.
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        # No multimodal messages.
+        for msg in result.messages:
+            assert isinstance(msg["content"], str)
+
+
+class TestMultimodalGracefulFallback:
+    """Graceful degradation when images are missing or unreadable."""
+
+    def test_missing_image_skipped_with_warning(
+        self, tmp_path: Path, make_session, make_cartridge, caplog,
+    ) -> None:
+        """Missing image file logs warning and skips that image."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        # Create only photo1.png, NOT photo2.png.
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        import logging
+        with caplog.at_level(logging.WARNING):
+            result = cm.assemble_trickster_call(
+                session, cartridge, "gemini",
+                exchange_count=1, min_exchanges=2,
+            )
+
+        # Warning logged for missing file.
+        assert any("photo2.png" in r.message for r in caplog.records)
+
+        # Still has multimodal message with the one image that exists.
+        first_msg = result.messages[0]
+        assert isinstance(first_msg["content"], list)
+        image_parts = [
+            p for p in first_msg["content"] if p.get("type") == "image"
+        ]
+        assert len(image_parts) == 1
+
+    def test_all_images_missing_falls_back_to_text_only(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """When all images are missing, no multimodal message is prepended."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        # Create task dir but no image files.
+        (content_dir / "tasks" / "test-ai-task-001" / "assets").mkdir(
+            parents=True, exist_ok=True,
+        )
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        # No multimodal messages — all text-only.
+        for msg in result.messages:
+            assert isinstance(msg["content"], str)
+
+
+class TestMultimodalPhaseResolution:
+    """Phase resolution edge cases for image extraction."""
+
+    def test_current_phase_none_no_images(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """session.current_phase=None produces no images."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase=None,
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        for msg in result.messages:
+            assert isinstance(msg["content"], str)
+
+    def test_phase_without_visible_blocks_no_images(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Phase with empty visible_blocks produces no images."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=content_dir)
+
+        # Default cartridge has no visible_blocks on the AI phase.
+        cartridge = make_cartridge()
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        for msg in result.messages:
+            assert isinstance(msg["content"], str)
+
+    def test_visible_blocks_with_only_text_blocks(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Phase with only text blocks in visible_blocks produces no images."""
+        setup_base_prompts(tmp_path / "prompts")
+        loader = PromptLoader(tmp_path / "prompts")
+        cm = ContextManager(loader, content_dir=tmp_path / "content")
+
+        cartridge = _make_image_cartridge(
+            make_cartridge,
+            presentation_blocks=[
+                {"id": "txt1", "type": "text", "text": "Some article text"},
+            ],
+            phases=[
+                {
+                    "id": "phase_intro", "title": "I", "is_ai_phase": False,
+                    "interaction": {"type": "button", "choices": [
+                        {"label": "Go", "target_phase": "phase_ai"},
+                    ]},
+                },
+                {
+                    "id": "phase_ai", "title": "AI", "is_ai_phase": True,
+                    "visible_blocks": ["txt1"],
+                    "interaction": {
+                        "type": "freeform", "trickster_opening": "...",
+                        "min_exchanges": 2, "max_exchanges": 10,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_reveal",
+                        "on_max_exchanges": "phase_reveal",
+                        "on_partial": "phase_reveal",
+                    },
+                },
+                {"id": "phase_reveal", "title": "R", "is_terminal": True,
+                 "evaluation_outcome": "trickster_loses"},
+            ],
+        )
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=1, min_exchanges=2,
+        )
+
+        for msg in result.messages:
+            assert isinstance(msg["content"], str)
+
+
+class TestMultimodalTokenBudgeting:
+    """Token budgeting with multimodal image messages."""
+
+    def test_image_token_cost_accounted(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Exchange trimming triggers earlier when images are present."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png")
+        _setup_image_content(content_dir, "test-ai-task-001", "photo2.png")
+
+        loader = PromptLoader(tmp_path / "prompts")
+
+        # Use a tight budget that barely fits system prompt + images + a few exchanges.
+        # Each image = 258 tokens. Two images = 516 tokens.
+        # Text label ~15 chars / 3 = ~5 tokens. Total image msg ~521 tokens.
+        # System prompt is ~200 chars / 3 = ~67 tokens.
+        # Budget of 700 leaves ~112 tokens for exchanges.
+        cm = ContextManager(loader, token_budget=700, content_dir=content_dir)
+
+        # Create many exchanges that exceed the remaining budget.
+        exchanges = []
+        for i in range(10):
+            exchanges.extend(_make_exchange_pair(i))
+
+        cartridge = _make_image_cartridge(make_cartridge)
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+            exchanges=exchanges,
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=20, min_exchanges=2,
+        )
+
+        # First message should be multimodal (image context, never trimmed).
+        assert isinstance(result.messages[0]["content"], list)
+
+        # Exchanges should be trimmed — fewer than original 20.
+        exchange_msgs = [
+            m for m in result.messages
+            if isinstance(m.get("content"), str)
+        ]
+        assert len(exchange_msgs) < 20
+
+    def test_image_context_message_never_trimmed(
+        self, tmp_path: Path, make_session, make_cartridge,
+    ) -> None:
+        """Image context message survives trimming even with tiny budget."""
+        setup_base_prompts(tmp_path / "prompts")
+        content_dir = tmp_path / "content"
+        _setup_image_content(content_dir, "test-ai-task-001", "photo1.png")
+
+        loader = PromptLoader(tmp_path / "prompts")
+        # Very small budget — forces aggressive trimming.
+        cm = ContextManager(loader, token_budget=50, content_dir=content_dir)
+
+        cartridge = _make_image_cartridge(
+            make_cartridge,
+            presentation_blocks=[
+                {"id": "img1", "type": "image", "src": "photo1.png",
+                 "alt_text": "Photo"},
+            ],
+            phases=[
+                {
+                    "id": "phase_intro", "title": "I", "is_ai_phase": False,
+                    "interaction": {"type": "button", "choices": [
+                        {"label": "Go", "target_phase": "phase_ai"},
+                    ]},
+                },
+                {
+                    "id": "phase_ai", "title": "AI", "is_ai_phase": True,
+                    "visible_blocks": ["img1"],
+                    "interaction": {
+                        "type": "freeform", "trickster_opening": "...",
+                        "min_exchanges": 2, "max_exchanges": 10,
+                    },
+                    "ai_transitions": {
+                        "on_success": "phase_reveal",
+                        "on_max_exchanges": "phase_reveal",
+                        "on_partial": "phase_reveal",
+                    },
+                },
+                {"id": "phase_reveal", "title": "R", "is_terminal": True,
+                 "evaluation_outcome": "trickster_loses"},
+            ],
+        )
+
+        exchanges = []
+        for i in range(5):
+            exchanges.extend(_make_exchange_pair(i))
+
+        session = make_session(
+            current_task="test-ai-task-001",
+            current_phase="phase_ai",
+            exchanges=exchanges,
+        )
+
+        result = cm.assemble_trickster_call(
+            session, cartridge, "gemini",
+            exchange_count=10, min_exchanges=2,
+        )
+
+        # Image context message survives — always first.
+        assert isinstance(result.messages[0]["content"], list)
+        image_parts = [
+            p for p in result.messages[0]["content"]
+            if p.get("type") == "image"
+        ]
+        assert len(image_parts) == 1
+
+    def test_estimate_message_tokens_text_only(self) -> None:
+        """Token estimation for text-only message."""
+        tokens = ContextManager._estimate_message_tokens(
+            {"role": "user", "content": "aaa"}
+        )
+        assert tokens == 1.0  # 3 chars / 3 chars_per_token
+
+    def test_estimate_message_tokens_multimodal(self) -> None:
+        """Token estimation for multimodal message with text + images."""
+        msg = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "aaaaaa"},   # 6 chars / 3 = 2 tokens
+                {"type": "image", "media_type": "image/png", "data": "..."},
+                {"type": "image", "media_type": "image/png", "data": "..."},
+            ],
+        }
+        tokens = ContextManager._estimate_message_tokens(msg)
+        assert tokens == 2.0 + 2 * _TOKENS_PER_IMAGE
