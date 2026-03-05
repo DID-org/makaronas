@@ -25,6 +25,8 @@ from typing import Any
 
 from backend.ai import safety
 from backend.ai.context import ContextManager
+from backend.ai.intensity import score_intensity
+from backend.ai.safety import FALLBACK_INTENSITY
 from backend.ai.providers.base import (
     AIProvider,
     TextChunk,
@@ -108,15 +110,19 @@ class TricksterEngine:
         provider: AI provider instance (MockProvider in tests,
             GeminiProvider or AnthropicProvider in production).
         context_manager: Context assembly service.
+        intensity_indicators: Loaded indicator data for intensity scoring.
+            None disables intensity enforcement (graceful degradation).
     """
 
     def __init__(
         self,
         provider: AIProvider,
         context_manager: ContextManager,
+        intensity_indicators: dict | None = None,
     ) -> None:
         self._provider = provider
         self._context_manager = context_manager
+        self._intensity_indicators = intensity_indicators
 
     async def respond(
         self,
@@ -303,6 +309,58 @@ class TricksterEngine:
                     "Safety violation: boundary=%s", violation.boundary,
                 )
             else:
+                # 10b. Intensity scoring (after safety, before storage)
+                intensity_score: float | None = None
+                intensity_deescalation = False
+
+                if self._intensity_indicators is not None:
+                    ceiling = cartridge.safety.intensity_ceiling
+                    intensity_score = score_intensity(
+                        accumulated,
+                        exchange_count,
+                        max_exchanges,
+                        self._intensity_indicators,
+                    )
+                    session.turn_intensities.append(intensity_score)
+
+                    if intensity_score > ceiling * 1.5:
+                        # Hard redaction \u2014 intensity way too high
+                        logger.error(
+                            "Intensity hard redaction: task=%s exchange=%d "
+                            "score=%.2f ceiling=%d",
+                            cartridge.task_id,
+                            exchange_count,
+                            intensity_score,
+                            ceiling,
+                        )
+                        session.exchanges.append(
+                            Exchange(
+                                role="trickster",
+                                content=FALLBACK_INTENSITY,
+                            )
+                        )
+                        session.last_redaction_reason = "intensity"
+                        result.redaction_data = {
+                            "fallback_text": FALLBACK_INTENSITY,
+                            "boundary": "intensity",
+                        }
+                        result.done_data = None
+                        result.usage = getattr(
+                            provider, "_last_usage", None,
+                        )
+                        return
+                    elif intensity_score > ceiling:
+                        # De-escalation flag for Phase 4c
+                        intensity_deescalation = True
+                        logger.warning(
+                            "Intensity exceeded ceiling: task=%s exchange=%d "
+                            "score=%.2f ceiling=%d",
+                            cartridge.task_id,
+                            exchange_count,
+                            intensity_score,
+                            ceiling,
+                        )
+
                 # 11. Safe \u2014 store response and resolve transition
                 session.exchanges.append(
                     Exchange(role="trickster", content=accumulated)
@@ -324,6 +382,13 @@ class TricksterEngine:
                     "next_phase": next_phase,
                     "exchanges_count": exchange_count,
                 }
+
+                if intensity_score is not None:
+                    result.done_data["intensity_score"] = intensity_score
+                    result.done_data["intensity_deescalation"] = (
+                        intensity_deescalation
+                    )
+
                 result.redaction_data = None
 
                 if transition_name is not None:
