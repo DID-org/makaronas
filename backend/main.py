@@ -215,11 +215,28 @@ def _init_ai_services() -> None:
         return
 
     # 3. Create ContextManager and TricksterEngine
+    from backend.ai.intensity import load_intensity_indicators
     from backend.ai.trickster import TricksterEngine
 
     content_dir = PROJECT_ROOT / "content"
     context_manager = ContextManager(prompt_loader, content_dir=content_dir)
-    engine = TricksterEngine(provider, context_manager)
+
+    # Load intensity indicators (graceful degradation if absent)
+    intensity_indicators: dict | None = None
+    try:
+        intensity_indicators = load_intensity_indicators(
+            content_dir / "intensity_indicators.json",
+        )
+    except Exception:
+        logger.warning(
+            "Failed to load intensity indicators. "
+            "Intensity enforcement will be disabled.",
+        )
+
+    engine = TricksterEngine(
+        provider, context_manager,
+        intensity_indicators=intensity_indicators,
+    )
     deps._trickster_engine = engine
 
     # 4. Run startup checks
