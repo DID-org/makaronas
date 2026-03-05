@@ -46,6 +46,17 @@ _DEFAULT_TOKEN_BUDGET = 100_000
 _TOKENS_PER_IMAGE = 258
 
 # ---------------------------------------------------------------------------
+# Task history context — bounded prior task outcomes for cross-task awareness.
+# ---------------------------------------------------------------------------
+_MAX_HISTORY_TASKS = 3
+
+_OUTCOME_LABELS: dict[str, str] = {
+    "on_success": "Mokinys suprato",
+    "on_partial": "Dalinis supratimas",
+    "on_max_exchanges": "Nepavyko suprasti",
+}
+
+# ---------------------------------------------------------------------------
 # File extension -> MIME type mapping for image assets.
 # ---------------------------------------------------------------------------
 _IMAGE_MEDIA_TYPES: dict[str, str] = {
@@ -354,6 +365,11 @@ class ContextManager:
         layer5 = self._build_task_context(session, cartridge, provider)
         if layer5:
             layers.append(layer5)
+
+        # Task history context (bounded prior task outcomes)
+        history = self._build_task_history_context(session)
+        if history:
+            layers.append(history)
 
         # De-escalation context (between task and safety, conditional)
         deesc = self._build_deescalation_context(session, cartridge)
@@ -715,6 +731,53 @@ class ContextManager:
             "nutyl\u0117jimus. Tikslas \u2014 mokyti mokin\u012f m\u0105styti "
             "kriti\u0161kai, ne j\u012f u\u017ego\u017eti."
         )
+
+    @staticmethod
+    def _build_task_history_context(session: GameSession) -> str | None:
+        """Builds task history context layer from prior task outcomes.
+
+        Returns None when session.task_history is empty. Bounded to the
+        3 most recent entries (oldest dropped). Summary is factual from
+        structured data (Framework P19), with explicit context fencing
+        instructions.
+        """
+        if not session.task_history:
+            return None
+
+        recent = session.task_history[-_MAX_HISTORY_TASKS:]
+
+        lines = [
+            "## Ankstesni\u0173 u\u017eduo\u010di\u0173 kontekstas",
+            "",
+        ]
+
+        for entry in recent:
+            outcome_raw = entry.get("evaluation_outcome", "")
+            label = _OUTCOME_LABELS.get(outcome_raw, outcome_raw)
+            exchanges = entry.get("exchange_count", "?")
+            parts = [f"{label} ({exchanges} apsikeitimai)"]
+
+            if entry.get("is_clean"):
+                parts.append("(\u0161varus turinys)")
+
+            intensity = entry.get("intensity_score")
+            if intensity is not None:
+                parts.append(f"(intensyvumas: {intensity}/5)")
+
+            lines.append(f"- {' '.join(parts)}")
+
+        lines.append("")
+        lines.append(
+            "INSTRUKCIJA: Gali remtis mokinio pedagoginiais d\u0117sniais "
+            "(pvz., \u201eTu v\u0117l greitai nuspr\u0119dei\u201c arba "
+            "\u201e\u0160\u012f kart\u0105 buvai atidesnis\u201c). "
+            "NIEKADA nemini u\u017eduo\u010di\u0173 pavadinim\u0173, tem\u0173, "
+            "technik\u0173 ar turinio i\u0161 ankstesni\u0173 u\u017eduo\u010di\u0173. "
+            "Mokinio augimo tendencijos yra svarbios; konkret\u016bs ankstesni\u0173 "
+            "u\u017eduo\u010di\u0173 motyvai \u2014 ne."
+        )
+
+        return "\n".join(lines)
 
     # -------------------------------------------------------------------
     # Multimodal image extraction
