@@ -26,6 +26,7 @@ import logging
 
 from fastapi import Depends, Header, HTTPException
 
+from backend.ai.context import ContextManager
 from backend.ai.prompts import PromptLoader
 from backend.ai.providers.base import AIProvider
 from backend.ai.trickster import TricksterEngine
@@ -61,6 +62,7 @@ _task_registry: TaskRegistry | None = None
 # AI singletons — set by _init_ai_services() in main.py at startup
 _prompt_loader: PromptLoader | None = None
 _trickster_engine: TricksterEngine | None = None
+_context_manager: ContextManager | None = None
 _reload_all = None  # Set to a callable by _init_ai_services()
 
 
@@ -148,6 +150,26 @@ def get_trickster_engine() -> TricksterEngine:
             ).model_dump(),
         )
     return _trickster_engine
+
+
+def get_context_manager() -> ContextManager:
+    """Returns the context manager singleton.
+
+    Raises HTTPException(503) if the context manager hasn't been initialized
+    yet (startup not complete).
+    """
+    if _context_manager is None:
+        raise HTTPException(
+            status_code=503,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="SERVICE_UNAVAILABLE",
+                    message="Context manager is not yet available. Server is starting up.",
+                ),
+            ).model_dump(),
+        )
+    return _context_manager
 
 
 # ---------------------------------------------------------------------------

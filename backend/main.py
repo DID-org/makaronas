@@ -220,6 +220,7 @@ def _init_ai_services() -> None:
 
     content_dir = PROJECT_ROOT / "content"
     context_manager = ContextManager(prompt_loader, content_dir=content_dir)
+    deps._context_manager = context_manager
 
     # Load intensity indicators (graceful degradation if absent)
     intensity_indicators: dict | None = None

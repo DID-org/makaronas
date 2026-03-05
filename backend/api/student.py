@@ -23,6 +23,7 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,15 +31,20 @@ from pydantic import BaseModel
 
 from backend.ai.trickster import DebriefResult, TricksterEngine, TricksterResult
 from backend.ai.usage import log_ai_call
+from backend.ai.context import ContextManager
+from backend.ai.safety import check_output
 from backend.api.deps import (
+    _get_api_key_for_provider,
     check_ai_readiness,
+    create_provider,
+    get_context_manager,
     get_current_user,
     get_database,
     get_session_store,
     get_task_registry,
     get_trickster_engine,
 )
-from backend.config import get_settings
+from backend.config import Settings, get_settings
 from backend.hooks.interfaces import DatabaseAdapter, SessionStore
 from backend.models import resolve_tier
 from backend.schemas import (
@@ -84,6 +90,13 @@ class RespondRequest(BaseModel):
 
     action: str
     payload: str
+
+
+class GenerateRequest(BaseModel):
+    """Request body for POST /session/{session_id}/generate."""
+
+    source_content: str
+    student_prompt: str
 
 
 # ---------------------------------------------------------------------------
@@ -299,6 +312,29 @@ def _resolve_ai_phase(
         )
 
     return phase
+
+
+def _check_generation_readiness(settings: Settings) -> list[str]:
+    """Checks whether the generation path (fast tier) is ready.
+
+    Returns a list of issues. Empty list means ready.
+    Simpler than check_ai_readiness() — no prompt validation needed
+    since generation uses a hardcoded system prompt.
+    """
+    issues: list[str] = []
+    try:
+        model_config = resolve_tier("fast")
+    except KeyError:
+        issues.append("Unknown model tier: 'fast'")
+        return issues
+
+    api_key = _get_api_key_for_provider(model_config.provider, settings)
+    if not api_key:
+        issues.append(
+            f"Missing API key for provider {model_config.provider!r} "
+            f"(tier: 'fast')"
+        )
+    return issues
 
 
 async def _stream_trickster_response(
@@ -715,6 +751,158 @@ async def debrief(
         result, session, session_store, cartridge, call_type="debrief",
     )
     return create_sse_response(generator)
+
+
+# ---------------------------------------------------------------------------
+# Generation endpoint (Context-Isolated Tool AI)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/session/{session_id}/generate")
+async def generate(
+    session_id: str,
+    body: GenerateRequest,
+    user: User = Depends(get_current_user),
+    session_store: SessionStore = Depends(get_session_store),
+    registry: TaskRegistry = Depends(get_task_registry),
+    context_manager: ContextManager = Depends(get_context_manager),
+) -> dict:
+    """Generates content via the context-isolated Tool AI.
+
+    The student provides a prompt and source content; the Tool AI produces
+    output using the ``fast`` tier model. Generated text is safety-checked
+    against the current task's safety config, stored as an artifact in the
+    session, and returned as a standard JSON response (not SSE).
+    """
+    # --- Validation (same pattern as /respond) ---
+    session = await _get_session_or_404(session_id, session_store)
+    _check_ownership(session, user)
+
+    # Input validation: non-empty strings
+    if not body.source_content.strip():
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="INVALID_REQUEST",
+                    message="source_content negali b\u016bti tu\u0161\u010dias.",
+                ),
+            ).model_dump(),
+        )
+    if not body.student_prompt.strip():
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="INVALID_REQUEST",
+                    message="student_prompt negali b\u016bti tu\u0161\u010dias.",
+                ),
+            ).model_dump(),
+        )
+
+    # Load cartridge (needed for safety config)
+    if session.current_task is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_TASK_ASSIGNED",
+                    message="Sesijai n\u0117ra priskirta u\u017eduotis.",
+                ),
+            ).model_dump(),
+        )
+
+    cartridge = registry.get_task(session.current_task)
+    if cartridge is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"U\u017eduotis '{session.current_task}' nerasta.",
+                ),
+            ).model_dump(),
+        )
+
+    # Check generation readiness (fast tier API key)
+    settings = get_settings()
+    issues = _check_generation_readiness(settings)
+    if issues:
+        raise HTTPException(
+            status_code=503,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="AI_UNAVAILABLE",
+                    message="AI paslauga laikinai neprieinama.",
+                ),
+            ).model_dump(),
+        )
+
+    # --- Assemble context and call provider ---
+    assembled = context_manager.assemble_generation_call(
+        body.source_content, body.student_prompt,
+    )
+
+    model_config = resolve_tier("fast")
+    provider = create_provider(model_config, settings)
+
+    start_time = time.monotonic()
+    generated_text, usage = await provider.complete(
+        system_prompt=assembled.system_prompt,
+        messages=assembled.messages,
+        model_config=model_config,
+        tools=None,
+    )
+    elapsed_ms = (time.monotonic() - start_time) * 1000
+
+    # --- Safety check (cartridge.safety is always present) ---
+    safety_redacted = False
+    safety_result = check_output(generated_text, cartridge.safety, is_debrief=False)
+    if not safety_result.is_safe and safety_result.violation is not None:
+        generated_text = safety_result.violation.fallback_text
+        safety_redacted = True
+
+    # --- Store artifact ---
+    artifact = {
+        "student_prompt": body.student_prompt,
+        "generated_text": generated_text,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "safety_redacted": safety_redacted,
+    }
+    session.generated_artifacts.append(artifact)
+    artifact_index = len(session.generated_artifacts) - 1
+
+    # --- Usage logging ---
+    try:
+        log_ai_call(
+            model_id=model_config.model_id,
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            latency_ms=elapsed_ms,
+            task_id=cartridge.task_id,
+            session_id=session.session_id,
+            call_type="generate",
+        )
+    except Exception:
+        logger.warning("Failed to log AI usage for generate", exc_info=True)
+
+    # --- Persist session ---
+    await session_store.save_session(session)
+
+    # --- Build response ---
+    response_data: dict = {
+        "generated_text": generated_text,
+        "artifact_index": artifact_index,
+    }
+    if safety_redacted:
+        response_data["safety_redacted"] = True
+
+    return ApiResponse(ok=True, data=response_data).model_dump()
 
 
 # ---------------------------------------------------------------------------
