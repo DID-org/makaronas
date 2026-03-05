@@ -101,6 +101,23 @@ class AudioBlock(BaseModel):
     duration_seconds: int | None = None
 
 
+class VideoBlock(BaseModel):
+    """Video content — AI-generated videos, news clips, social media videos.
+
+    Accessibility: alt_text is required (Framework Principle 14).
+    transcript provides text alternative for deaf/hard-of-hearing students.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    type: Literal["video"] = "video"
+    src: str
+    alt_text: str
+    transcript: str | None = None
+    duration_seconds: int | None = None
+
+
 class VideoTranscriptBlock(BaseModel):
     """Video transcript — full text of a video with optional source context."""
 
@@ -205,6 +222,7 @@ KNOWN_BLOCK_TYPES: dict[str, type[BaseModel]] = {
     "text": TextBlock,
     "image": ImageBlock,
     "audio": AudioBlock,
+    "video": VideoBlock,
     "video_transcript": VideoTranscriptBlock,
     "meme": MemeBlock,
     "chat_message": ChatMessageBlock,
@@ -264,6 +282,7 @@ PresentationBlock = Annotated[
         TextBlock,
         ImageBlock,
         AudioBlock,
+        VideoBlock,
         VideoTranscriptBlock,
         MemeBlock,
         ChatMessageBlock,
