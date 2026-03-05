@@ -854,3 +854,110 @@ class TestDebriefAIUnavailable:
         assert resp.status_code == 503
         body = resp.json()
         assert body["error"]["code"] == "AI_UNAVAILABLE"
+
+
+# ---------------------------------------------------------------------------
+# Test: Clean task journey (Phase 3b)
+# ---------------------------------------------------------------------------
+
+_CLEAN_EVAL_DATA = {
+    "patterns_embedded": [],
+    "checklist": [],
+    "pass_conditions": {
+        "trickster_wins": "Mokinys neteisingai apkaltino",
+        "partial": "Mokinys abejojo",
+        "trickster_loses": "Mokinys teisingai atpazino",
+    },
+}
+
+
+class TestCleanTaskJourney:
+    """API-level integration tests for clean task respond flow."""
+
+    @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
+    async def test_clean_task_respond_sse(
+        self, _mock_readiness, client, context_manager
+    ):
+        """Full HTTP POST /respond with a clean cartridge produces SSE stream."""
+        provider = MockProvider(
+            responses=["Turinys ", "yra ", "patikimas ir tikras."],
+            usage=UsageInfo(prompt_tokens=80, completion_tokens=15),
+        )
+        engine = _make_engine(provider, context_manager)
+        _inject_engine(engine)
+
+        cartridge_data = _build_ai_cartridge_data(
+            task_id="test-clean-task-001",
+            is_clean=True,
+            evaluation=_CLEAN_EVAL_DATA,
+        )
+        cartridge = TaskCartridge.model_validate(cartridge_data)
+        _use_registry_with([cartridge])
+        await _create_ai_session(task_id="test-clean-task-001")
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/session-test-clean-task-001/respond",
+                json={"action": "freeform", "payload": "Ar tai tikra?"},
+                headers=AUTH_HEADER,
+            )
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/event-stream")
+
+        events = _parse_sse_events(resp.text)
+        token_events = [e for e in events if e["type"] == "token"]
+        done_events = [e for e in events if e["type"] == "done"]
+
+        assert len(token_events) == 3
+        assert len(done_events) == 1
+        assert done_events[0]["data"]["full_text"] == "Turinys yra patikimas ir tikras."
+        assert "exchanges_count" in done_events[0]["data"]["data"]
+
+    @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
+    async def test_clean_task_transition_via_sse(
+        self, _mock_readiness, client, context_manager
+    ):
+        """Respond with 'understood' signal produces correct transition in SSE."""
+        provider = MockProvider(
+            responses=["Puiku, teisingai supratote!"],
+            tool_calls=[ToolCallEvent(
+                function_name="transition_phase",
+                arguments={"signal": "understood"},
+            )],
+        )
+        engine = _make_engine(provider, context_manager)
+        _inject_engine(engine)
+
+        cartridge_data = _build_ai_cartridge_data(
+            task_id="test-clean-task-002",
+            is_clean=True,
+            evaluation=_CLEAN_EVAL_DATA,
+        )
+        cartridge = TaskCartridge.model_validate(cartridge_data)
+        _use_registry_with([cartridge])
+        # Need exchanges >= min_exchanges (2) for transition to fire
+        await _create_ai_session(task_id="test-clean-task-002", exchanges=3)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/session-test-clean-task-002/respond",
+                json={"action": "freeform", "payload": "Turinys atrodo tikras"},
+                headers=AUTH_HEADER,
+            )
+
+        events = _parse_sse_events(resp.text)
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+
+        done_data = done_events[0]["data"]["data"]
+        assert done_data["phase_transition"] == "on_success"
+        assert done_data["next_phase"] == "phase_reveal_success"
+
+        # Session phase should be updated
+        session = await deps._session_store.get_session(
+            "session-test-clean-task-002"
+        )
+        assert session.current_phase == "phase_reveal_success"
