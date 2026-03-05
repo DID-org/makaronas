@@ -11,6 +11,7 @@ No schemas, no config, no framework imports.
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Any
 
 from backend.models import ModelConfig
 
@@ -54,6 +55,14 @@ class UsageInfo:
 # Union type for stream events — consumers use isinstance() to dispatch
 StreamEvent = TextChunk | ToolCallEvent
 
+# Provider-neutral message dict. Content is either:
+# - str (text-only, backward compatible): {"role": "user", "content": "hello"}
+# - list[dict[str, Any]] (multimodal): {"role": "user", "content": [
+#       {"type": "text", "text": "look at this"},
+#       {"type": "image", "media_type": "image/jpeg", "data": "<base64>"}
+#   ]}
+Message = dict[str, Any]
+
 
 # ---------------------------------------------------------------------------
 # AIProvider ABC — the interface every provider implements
@@ -75,7 +84,7 @@ class AIProvider(ABC):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> AsyncIterator[StreamEvent]:
@@ -83,7 +92,9 @@ class AIProvider(ABC):
 
         Args:
             system_prompt: The assembled system instruction.
-            messages: Conversation history as {"role": ..., "content": ...} dicts.
+            messages: Conversation history as Message dicts. Each message has
+                "role" and "content" where content is either a str (text-only)
+                or a list of type-discriminated content parts (multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget, etc.).
             tools: Optional tool definitions for function calling.
 
@@ -96,7 +107,7 @@ class AIProvider(ABC):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> tuple[str, UsageInfo]:
@@ -107,7 +118,9 @@ class AIProvider(ABC):
 
         Args:
             system_prompt: The assembled system instruction.
-            messages: Conversation history as {"role": ..., "content": ...} dicts.
+            messages: Conversation history as Message dicts. Each message has
+                "role" and "content" where content is either a str (text-only)
+                or a list of type-discriminated content parts (multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget, etc.).
             tools: Optional tool definitions for function calling.
 

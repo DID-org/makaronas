@@ -10,13 +10,13 @@ Tier 2 service — imports from base.py (Tier 1) + google-genai SDK.
 import asyncio
 import logging
 from collections.abc import AsyncIterator
-
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 
 from backend.ai.providers.base import (
     AIProvider,
+    Message,
     ModelConfig,
     StreamEvent,
     TextChunk,
@@ -47,8 +47,11 @@ def _is_retryable(exc: Exception) -> bool:
     return False
 
 
-def _build_contents(messages: list[dict[str, str]]) -> list[types.Content]:
+def _build_contents(messages: list[Message]) -> list[types.Content]:
     """Converts provider-neutral message dicts to Gemini Content objects.
+
+    Currently handles text-only content. Multimodal content mapping
+    (images as Gemini Parts) is implemented in Phase 2b.
 
     Role mapping: "user" → "user", "assistant" → "model".
     """
@@ -134,7 +137,7 @@ class GeminiProvider(AIProvider):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> AsyncIterator[StreamEvent]:
@@ -147,7 +150,7 @@ class GeminiProvider(AIProvider):
 
         Args:
             system_prompt: The assembled system instruction.
-            messages: Conversation history as {"role": ..., "content": ...} dicts.
+            messages: Conversation history as Message dicts (text-only or multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget).
             tools: Optional tool definitions for function calling.
 
@@ -223,7 +226,7 @@ class GeminiProvider(AIProvider):
         self,
         *,
         system_prompt: str,
-        messages: list[dict[str, str]],
+        messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
     ) -> tuple[str, UsageInfo]:
@@ -233,7 +236,7 @@ class GeminiProvider(AIProvider):
 
         Args:
             system_prompt: The assembled system instruction.
-            messages: Conversation history as {"role": ..., "content": ...} dicts.
+            messages: Conversation history as Message dicts (text-only or multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget).
             tools: Optional tool definitions for function calling.
 
