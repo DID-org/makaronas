@@ -31,6 +31,35 @@ class TestTricksterPrompts:
         assert tp.behaviour is None
         assert tp.safety is None
         assert tp.task_override is None
+        assert tp.mode_behaviour is None
+
+    def test_mode_behaviour_defaults_to_none(self) -> None:
+        """mode_behaviour defaults to None when not provided."""
+        tp = TricksterPrompts(
+            persona="a", behaviour="b", safety="c", task_override=None
+        )
+        assert tp.mode_behaviour is None
+
+    def test_mode_behaviour_frozen(self) -> None:
+        """mode_behaviour cannot be set after construction."""
+        tp = TricksterPrompts(
+            persona="a", behaviour="b", safety="c", task_override=None,
+            mode_behaviour="mode content",
+        )
+        with pytest.raises(AttributeError):
+            tp.mode_behaviour = "changed"  # type: ignore[misc]
+
+    def test_all_five_fields(self) -> None:
+        """All 5 fields can be set explicitly."""
+        tp = TricksterPrompts(
+            persona="p", behaviour="b", safety="s",
+            task_override="t", mode_behaviour="m",
+        )
+        assert tp.persona == "p"
+        assert tp.behaviour == "b"
+        assert tp.safety == "s"
+        assert tp.task_override == "t"
+        assert tp.mode_behaviour == "m"
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +126,107 @@ class TestFallbackChain:
         result = loader.load_trickster_prompts("gemini")
 
         assert result.persona is None
+
+
+# ---------------------------------------------------------------------------
+# Mode-specific loading
+# ---------------------------------------------------------------------------
+
+
+class TestModeLoading:
+    def test_mode_file_loaded(self, tmp_path: Path) -> None:
+        """Mode-specific file loaded when persona_mode provided."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "presenting behaviour")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+
+        assert result.mode_behaviour == "presenting behaviour"
+
+    def test_provider_specific_mode_preferred(self, tmp_path: Path) -> None:
+        """Provider-specific mode file preferred over base mode file."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "base presenting")
+        write_prompt_file(trickster / "persona_presenting_gemini.md", "gemini presenting")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+
+        assert result.mode_behaviour == "gemini presenting"
+
+    def test_fallback_to_base_mode_file(self, tmp_path: Path) -> None:
+        """Falls back to base mode file when provider-specific missing."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "base presenting")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+
+        assert result.mode_behaviour == "base presenting"
+
+    def test_missing_mode_file_returns_none(self, tmp_path: Path) -> None:
+        """Returns mode_behaviour=None when mode file doesn't exist."""
+        setup_base_prompts(tmp_path)
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+
+        assert result.mode_behaviour is None
+
+    def test_empty_mode_file_returns_none(self, tmp_path: Path) -> None:
+        """Empty/whitespace mode file returns None."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "   \n  ")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+
+        assert result.mode_behaviour is None
+
+    def test_no_mode_returns_none(self, tmp_path: Path) -> None:
+        """mode=None returns mode_behaviour=None (backward compat)."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "should not load")
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini")
+
+        assert result.mode_behaviour is None
+
+    def test_other_fields_unchanged_with_mode(self, tmp_path: Path) -> None:
+        """Other prompt fields unchanged regardless of mode."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "presenting")
+
+        loader = PromptLoader(tmp_path)
+        with_mode = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+        loader.invalidate()
+        without_mode = loader.load_trickster_prompts("gemini")
+
+        assert with_mode.persona == without_mode.persona
+        assert with_mode.behaviour == without_mode.behaviour
+        assert with_mode.safety == without_mode.safety
+        assert with_mode.task_override == without_mode.task_override
+
+    def test_chat_participant_mode(self, tmp_path: Path) -> None:
+        """Underscore in mode name works correctly (chat_participant)."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(
+            trickster / "persona_chat_participant_base.md", "chat participant behaviour"
+        )
+
+        loader = PromptLoader(tmp_path)
+        result = loader.load_trickster_prompts("gemini", persona_mode="chat_participant")
+
+        assert result.mode_behaviour == "chat participant behaviour"
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +399,64 @@ class TestCaching:
         assert without_task.task_override is None
         assert with_task.task_override == "task override"
         assert without_task is not with_task
+
+    def test_different_modes_are_separate_cache_entries(
+        self, tmp_path: Path
+    ) -> None:
+        """Different modes are separate cache entries."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "presenting")
+        write_prompt_file(trickster / "persona_narrator_base.md", "narrator")
+
+        loader = PromptLoader(tmp_path)
+        presenting = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+        narrator = loader.load_trickster_prompts("gemini", persona_mode="narrator")
+        no_mode = loader.load_trickster_prompts("gemini")
+
+        assert presenting.mode_behaviour == "presenting"
+        assert narrator.mode_behaviour == "narrator"
+        assert no_mode.mode_behaviour is None
+        assert presenting is not narrator
+        assert presenting is not no_mode
+
+    def test_mode_plus_provider_are_distinct(self, tmp_path: Path) -> None:
+        """Same mode with different providers are distinct cache entries."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "base presenting")
+        write_prompt_file(trickster / "persona_presenting_gemini.md", "gemini presenting")
+
+        loader = PromptLoader(tmp_path)
+        gemini = loader.load_trickster_prompts("gemini", persona_mode="presenting")
+        anthropic = loader.load_trickster_prompts("anthropic", persona_mode="presenting")
+
+        assert gemini.mode_behaviour == "gemini presenting"
+        assert anthropic.mode_behaviour == "base presenting"
+        assert gemini is not anthropic
+
+    def test_mode_plus_task_id_are_distinct(self, tmp_path: Path) -> None:
+        """Same mode with different task_ids are distinct cache entries."""
+        setup_base_prompts(tmp_path)
+        trickster = tmp_path / "trickster"
+        write_prompt_file(trickster / "persona_presenting_base.md", "presenting")
+        task_dir = tmp_path / "tasks" / "task-001"
+        write_prompt_file(task_dir / "trickster_base.md", "task override")
+
+        loader = PromptLoader(tmp_path)
+        with_task = loader.load_trickster_prompts(
+            "gemini", task_id="task-001", persona_mode="presenting"
+        )
+        without_task = loader.load_trickster_prompts(
+            "gemini", persona_mode="presenting"
+        )
+
+        assert with_task.task_override == "task override"
+        assert without_task.task_override is None
+        assert with_task is not without_task
+        # Both share the same mode file
+        assert with_task.mode_behaviour == "presenting"
+        assert without_task.mode_behaviour == "presenting"
 
 
 # ---------------------------------------------------------------------------

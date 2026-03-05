@@ -3,7 +3,7 @@
 Loads Trickster prompt files from the prompts/ directory tree. Each prompt
 type (persona, behaviour, safety) has a base version and optional
 model-specific overrides. The loader tries the model-specific file first,
-falls back to base, and caches the result keyed by (provider, task_id).
+falls back to base, and caches the result keyed by (provider, task_id, persona_mode).
 
 Consumed by:
 - ContextManager (Phase 4a) — assembles system prompts from loaded layers
@@ -43,6 +43,7 @@ class TricksterPrompts:
     behaviour: str | None
     safety: str | None
     task_override: str | None
+    mode_behaviour: str | None = None
 
 
 class PromptLoader:
@@ -54,10 +55,13 @@ class PromptLoader:
 
     def __init__(self, prompts_dir: Path) -> None:
         self._prompts_dir = prompts_dir
-        self._cache: dict[tuple[str, str | None], TricksterPrompts] = {}
+        self._cache: dict[tuple[str, str | None, str | None], TricksterPrompts] = {}
 
     def load_trickster_prompts(
-        self, provider: str, task_id: str | None = None
+        self,
+        provider: str,
+        task_id: str | None = None,
+        persona_mode: str | None = None,
     ) -> TricksterPrompts:
         """Loads Trickster prompt layers with model-specific fallback.
 
@@ -65,19 +69,24 @@ class PromptLoader:
         (e.g. persona_gemini.md), then falls back to base (persona_base.md).
         Empty or whitespace-only files are treated as absent.
 
+        When persona_mode is provided, also loads the mode-specific behaviour
+        file (e.g. persona_presenting_base.md) with provider fallback.
+
         Args:
             provider: Provider name (e.g. "gemini", "anthropic").
             task_id: Optional task ID for loading task-specific overrides.
+            persona_mode: Optional persona mode for loading mode-specific
+                behaviour file (e.g. "presenting", "chat_participant").
 
         Returns:
             TricksterPrompts with loaded content (or None per field).
         """
-        cache_key = (provider, task_id)
+        cache_key = (provider, task_id, persona_mode)
         if cache_key in self._cache:
-            logger.debug("Cache hit for prompts: provider=%s task_id=%s", provider, task_id)
+            logger.debug("Cache hit for prompts: provider=%s task_id=%s mode=%s", provider, task_id, persona_mode)
             return self._cache[cache_key]
 
-        logger.debug("Cache miss for prompts: provider=%s task_id=%s", provider, task_id)
+        logger.debug("Cache miss for prompts: provider=%s task_id=%s mode=%s", provider, task_id, persona_mode)
         suffix = _PROVIDER_SUFFIX.get(provider)
         trickster_dir = self._prompts_dir / "trickster"
 
@@ -90,11 +99,18 @@ class PromptLoader:
             task_dir = self._prompts_dir / "tasks" / task_id
             task_override = self._load_with_fallback(task_dir, "trickster", suffix)
 
+        mode_behaviour: str | None = None
+        if persona_mode is not None:
+            mode_behaviour = self._load_with_fallback(
+                trickster_dir, f"persona_{persona_mode}", suffix
+            )
+
         result = TricksterPrompts(
             persona=persona,
             behaviour=behaviour,
             safety=safety,
             task_override=task_override,
+            mode_behaviour=mode_behaviour,
         )
         self._cache[cache_key] = result
         return result
