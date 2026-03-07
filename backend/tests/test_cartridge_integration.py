@@ -30,11 +30,73 @@ from backend.tasks.schemas import (
     SearchResultBlock,
     SocialPostBlock,
     TaskCartridge,
+    VideoBlock,
 )
 
 # ---------------------------------------------------------------------------
 # Skeleton task IDs (Phase 5b)
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# VideoBlock schema tests
+# ---------------------------------------------------------------------------
+
+
+class TestVideoBlockSchema:
+    """Verifies that VideoBlock validates correctly as a PresentationBlock."""
+
+    def test_video_block_loads_correctly(self) -> None:
+        """A cassette with a VideoBlock validates without errors."""
+        from backend.tasks.schemas import PresentationBlock
+        from pydantic import TypeAdapter
+
+        adapter = TypeAdapter(PresentationBlock)
+        block = adapter.validate_python({
+            "id": "v1",
+            "type": "video",
+            "src": "https://example.com/video.mp4",
+            "alt_text": "A news clip showing a protest",
+        })
+        assert isinstance(block, VideoBlock)
+        assert block.id == "v1"
+        assert block.type == "video"
+        assert block.src == "https://example.com/video.mp4"
+        assert block.alt_text == "A news clip showing a protest"
+        assert block.transcript is None
+        assert block.duration_seconds is None
+
+    def test_video_block_with_optional_fields(self) -> None:
+        """VideoBlock accepts optional transcript and duration_seconds."""
+        from backend.tasks.schemas import PresentationBlock
+        from pydantic import TypeAdapter
+
+        adapter = TypeAdapter(PresentationBlock)
+        block = adapter.validate_python({
+            "id": "v2",
+            "type": "video",
+            "src": "https://example.com/clip.mp4",
+            "alt_text": "AI-generated video of a politician",
+            "transcript": "Hello, I am a politician.",
+            "duration_seconds": 42,
+        })
+        assert isinstance(block, VideoBlock)
+        assert block.transcript == "Hello, I am a politician."
+        assert block.duration_seconds == 42
+
+    def test_video_block_alt_text_required(self) -> None:
+        """VideoBlock raises ValidationError when alt_text is missing."""
+        import pytest
+        from pydantic import TypeAdapter, ValidationError
+        from backend.tasks.schemas import PresentationBlock
+
+        adapter = TypeAdapter(PresentationBlock)
+        with pytest.raises(ValidationError):
+            adapter.validate_python({
+                "id": "v3",
+                "type": "video",
+                "src": "https://example.com/clip.mp4",
+            })
+
 
 SKELETON_IDS = [
     "task-cherry-pick-001",
