@@ -800,8 +800,8 @@ class TestMixedBlockListSerialization:
 class TestKnownBlockTypes:
     """The type registry maps type strings to model classes."""
 
-    def test_registry_has_eight_types(self) -> None:
-        assert len(KNOWN_BLOCK_TYPES) == 8
+    def test_registry_has_nine_types(self) -> None:
+        assert len(KNOWN_BLOCK_TYPES) == 9
 
     def test_registry_keys_match_type_fields(self) -> None:
         for type_str, model_cls in KNOWN_BLOCK_TYPES.items():
