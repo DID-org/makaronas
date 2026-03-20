@@ -330,6 +330,25 @@ button,
   border: 0;
 }
 
+/* Skip-to-content link — visible only on focus */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-md);
+  z-index: 100;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-platform-bg-alt);
+  color: var(--color-platform-text);
+  border: 2px solid var(--color-platform-accent);
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.skip-link:focus {
+  top: var(--space-sm);
+}
+
 /* Preserve whitespace in untrusted text containers */
 .preserve-whitespace {
   white-space: pre-wrap;

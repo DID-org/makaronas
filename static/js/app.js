@@ -63,6 +63,20 @@
     }
     // Scroll to top when switching sections
     window.scrollTo(0, 0);
+
+    // Focus management: move focus to the new section's heading.
+    // setTimeout(0) ensures the display change has painted before focusing —
+    // without this, .focus() silently fails on elements transitioning from
+    // display: none in some browsers (especially Safari).
+    setTimeout(function () {
+      var section = document.getElementById('section-' + sectionId);
+      if (section) {
+        var heading = section.querySelector('h2[tabindex="-1"]');
+        if (heading) {
+          heading.focus();
+        }
+      }
+    }, 0);
   }
 
   /**
@@ -75,6 +89,9 @@
 
     if (error && error.message) {
       messageEl.textContent = error.message;
+    } else if (error) {
+      // Error object without message — use Lithuanian generic fallback
+      messageEl.textContent = (window.I18n && window.I18n.error_generic) || '';
     } else {
       messageEl.textContent = '';
     }
@@ -101,6 +118,13 @@
         updateState({ section: 'welcome', error: null });
       });
     }
+
+    // Keyboard: Escape dismisses error section, returns to welcome
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && state.section === 'error') {
+        updateState({ section: 'welcome', error: null });
+      }
+    });
 
     // Initial render
     render();
