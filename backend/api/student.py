@@ -99,6 +99,13 @@ class GenerateRequest(BaseModel):
     student_prompt: str
 
 
+class ChoiceRequest(BaseModel):
+    """Request body for POST /session/{session_id}/choice."""
+
+    target_phase: str
+    context_label: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -258,6 +265,22 @@ def _derive_phase_response(cartridge: TaskCartridge, phase: Phase) -> dict:
         "evaluation_outcome": phase.evaluation_outcome,
         "reveal": cartridge.reveal.model_dump() if phase.is_terminal else None,
     }
+
+
+def _get_legal_choice_targets(phase: Phase) -> set[str]:
+    """Returns the set of phase IDs reachable via /choice from this phase.
+
+    ButtonInteraction phases allow transitions to each choice's target_phase.
+    InvestigationInteraction phases allow a single submit_target transition.
+    All other interaction types (freeform, generic, None) have no legal
+    choice transitions — those phases transition via AI done events instead.
+    """
+    interaction = phase.interaction
+    if isinstance(interaction, ButtonInteraction):
+        return {c.target_phase for c in interaction.choices}
+    if isinstance(interaction, InvestigationInteraction):
+        return {interaction.submit_target}
+    return set()
 
 
 # ---------------------------------------------------------------------------
@@ -690,6 +713,137 @@ async def current_session(
     ]
 
     return ApiResponse(ok=True, data=data).model_dump()
+
+
+@router.post("/session/{session_id}/choice")
+async def choose(
+    session_id: str,
+    body: ChoiceRequest,
+    user: User = Depends(get_current_user),
+    session_store: SessionStore = Depends(get_session_store),
+    registry: TaskRegistry = Depends(get_task_registry),
+) -> dict:
+    """Validates and executes a student's phase transition choice.
+
+    Records the choice context for AI continuity, validates the target
+    phase is a legal outbound edge from the current phase, advances
+    the session, and returns the new phase content. Prevents DevTools
+    phase-skipping (Framework P13).
+    """
+    # 1. Session exists
+    session = await _get_session_or_404(session_id, session_store)
+
+    # 2. Ownership
+    _check_ownership(session, user)
+
+    # 3. Active task
+    if session.current_task is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_TASK_ASSIGNED",
+                    message="No task assigned to this session.",
+                ),
+            ).model_dump(),
+        )
+
+    # 4. Load cartridge
+    cartridge = registry.get_task(session.current_task)
+    if cartridge is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Task '{session.current_task}' not found.",
+                ),
+            ).model_dump(),
+        )
+
+    # 5. Active phase
+    if session.current_phase is None:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="NO_ACTIVE_PHASE",
+                    message="No active phase in this session.",
+                ),
+            ).model_dump(),
+        )
+
+    # 6. Stale phase detection (Framework P21) — must precede graph validation
+    current_phase: Phase | None = None
+    for p in cartridge.phases:
+        if p.id == session.current_phase:
+            current_phase = p
+            break
+
+    if current_phase is None:
+        raise HTTPException(
+            status_code=409,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_CONTENT_UPDATED",
+                    message="Task content has been updated since your last interaction.",
+                ),
+                data={"initial_phase": cartridge.initial_phase},
+            ).model_dump(),
+        )
+
+    # 7. Phase-graph validation — the security gate (Framework P13)
+    legal_targets = _get_legal_choice_targets(current_phase)
+    if body.target_phase not in legal_targets:
+        raise HTTPException(
+            status_code=422,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="INVALID_PHASE_TRANSITION",
+                    message="The requested phase transition is not allowed from the current phase.",
+                ),
+            ).model_dump(),
+        )
+
+    # 8. Resolve target phase (defense in depth — cartridge authoring bug check)
+    target_phase: Phase | None = None
+    for p in cartridge.phases:
+        if p.id == body.target_phase:
+            target_phase = p
+            break
+
+    if target_phase is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Target phase '{body.target_phase}' not found in task.",
+                ),
+            ).model_dump(),
+        )
+
+    # 9. Record choice context + advance session
+    session.choices.append({
+        "phase": session.current_phase,
+        "target_phase": body.target_phase,
+        "context_label": body.context_label,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+    session.current_phase = body.target_phase
+    await session_store.save_session(session)
+
+    # 10. Build response
+    return ApiResponse(
+        ok=True,
+        data=_derive_phase_response(cartridge, target_phase),
+    ).model_dump()
 
 
 @router.post("/session/{session_id}/respond")

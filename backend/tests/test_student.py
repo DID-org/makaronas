@@ -1178,6 +1178,338 @@ class TestCurrentSession:
 
 
 # ---------------------------------------------------------------------------
+# POST /session/{session_id}/choice
+# ---------------------------------------------------------------------------
+
+
+class TestChoice:
+    """POST /api/v1/student/session/{id}/choice — phase transition endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_happy_path_button_choice(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Valid button choice transitions to new phase and returns content."""
+        cartridge = _build_cartridge("task-choice-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-choice",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-001",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-choice/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "phase_reveal"},
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
+        assert data["current_phase"] == "phase_reveal"
+        assert data["task_id"] == "task-choice-001"
+        assert data["is_terminal"] is True
+        assert data["evaluation_outcome"] == "trickster_loses"
+        assert data["reveal"] is not None
+
+        # Verify session was updated
+        stored = await deps._session_store.get_session("test-session-choice")
+        assert stored.current_phase == "phase_reveal"
+
+    @pytest.mark.asyncio
+    async def test_context_label_recorded(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Choice with context_label records it in session.choices."""
+        cartridge = _build_cartridge("task-choice-label")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-label",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-label",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-label/choice",
+                headers=AUTH_HEADER,
+                json={
+                    "target_phase": "phase_reveal",
+                    "context_label": "Mokinys pasirinko t\u0119sti",
+                },
+            )
+        assert resp.status_code == 200
+
+        stored = await deps._session_store.get_session("test-session-label")
+        assert len(stored.choices) == 1
+        choice = stored.choices[0]
+        assert choice["phase"] == "phase_intro"
+        assert choice["target_phase"] == "phase_reveal"
+        assert choice["context_label"] == "Mokinys pasirinko t\u0119sti"
+        assert "timestamp" in choice
+
+    @pytest.mark.asyncio
+    async def test_null_context_label_still_records_choice(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Choice with null context_label still records the transition."""
+        cartridge = _build_cartridge("task-choice-null")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-null-label",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-null",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-null-label/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "phase_reveal"},
+            )
+        assert resp.status_code == 200
+
+        stored = await deps._session_store.get_session("test-session-null-label")
+        assert len(stored.choices) == 1
+        assert stored.choices[0]["context_label"] is None
+
+    @pytest.mark.asyncio
+    async def test_invalid_transition_wrong_target(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Target phase exists in cartridge but is not a legal edge → 422."""
+        # Build cartridge with intro → reveal only, and another non-connected phase
+        cartridge = _build_cartridge(
+            "task-choice-inv",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "\u012evadas",
+                    "visible_blocks": ["block-headline"],
+                    "is_ai_phase": False,
+                    "interaction": {
+                        "type": "button",
+                        "choices": [
+                            {"label": "T\u0119sti", "target_phase": "phase_reveal"},
+                        ],
+                    },
+                },
+                {
+                    "id": "phase_other",
+                    "title": "Kitas",
+                },
+                {
+                    "id": "phase_reveal",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+        )
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-inv",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-inv",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-inv/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "phase_other"},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_PHASE_TRANSITION"
+
+    @pytest.mark.asyncio
+    async def test_invalid_transition_freeform_phase(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Freeform phase has no choice targets → any /choice returns 422."""
+        cartridge = _build_cartridge(
+            "task-choice-freeform",
+            phases=[
+                {
+                    "id": "phase_freeform",
+                    "title": "Dialogas",
+                    "is_ai_phase": True,
+                    "interaction": {
+                        "type": "freeform",
+                        "trickster_opening": "Sveiki!",
+                        "min_exchanges": 1,
+                        "max_exchanges": 3,
+                    },
+                },
+                {
+                    "id": "phase_reveal",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+            initial_phase="phase_freeform",
+        )
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-freeform",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-freeform",
+            current_phase="phase_freeform",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-freeform/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "phase_reveal"},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_PHASE_TRANSITION"
+
+    @pytest.mark.asyncio
+    async def test_invalid_transition_nonexistent_phase(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Target phase doesn't exist anywhere → 422 INVALID_PHASE_TRANSITION."""
+        cartridge = _build_cartridge("task-choice-noexist")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-noexist",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-noexist",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-noexist/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "does_not_exist"},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_PHASE_TRANSITION"
+
+    @pytest.mark.asyncio
+    async def test_terminal_phase_content(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Transitioning to a terminal phase returns terminal fields."""
+        cartridge = _build_cartridge("task-choice-term")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-term",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-term",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-term/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "phase_reveal"},
+            )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["is_terminal"] is True
+        assert data["evaluation_outcome"] == "trickster_loses"
+        assert data["reveal"] is not None
+        assert data["reveal"]["key_lesson"] is not None
+
+    @pytest.mark.asyncio
+    async def test_session_not_found(self, client: httpx.AsyncClient) -> None:
+        """Nonexistent session → 404."""
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/nonexistent/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "anywhere"},
+            )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "SESSION_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_ownership_check(
+        self, client: httpx.AsyncClient, other_session_id: str
+    ) -> None:
+        """Session owned by another user → 403."""
+        async with client:
+            resp = await client.post(
+                f"/api/v1/student/session/{other_session_id}/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "anywhere"},
+            )
+        assert resp.status_code == 403
+        assert resp.json()["error"]["code"] == "FORBIDDEN"
+
+    @pytest.mark.asyncio
+    async def test_no_active_task(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Session with no current_task → 422."""
+        async with client:
+            resp = await client.post(
+                f"/api/v1/student/session/{session_id}/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "anywhere"},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "NO_TASK_ASSIGNED"
+
+    @pytest.mark.asyncio
+    async def test_no_active_phase(self, client: httpx.AsyncClient) -> None:
+        """Session with task but no current_phase → 422."""
+        cartridge = _build_cartridge("task-choice-nophase")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-nophase",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-choice-nophase",
+            current_phase=None,
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-session-nophase/choice",
+                headers=AUTH_HEADER,
+                json={"target_phase": "phase_intro"},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "NO_ACTIVE_PHASE"
+
+
+# ---------------------------------------------------------------------------
 # POST /session/{session_id}/respond
 # ---------------------------------------------------------------------------
 
