@@ -233,6 +233,33 @@ def _derive_trickster_intro(phase: Phase) -> str | None:
     return None
 
 
+def _derive_phase_response(cartridge: TaskCartridge, phase: Phase) -> dict:
+    """Assembles a phase content response dict for the student API.
+
+    Combines existing derivation helpers with terminal phase fields and
+    reveal gating. Reused by /current, /next, /choice, and done event
+    enrichment to eliminate duplication.
+
+    Returns:
+        Dict with keys: task_id, task_type, medium, title, content,
+        available_actions, trickster_intro, current_phase, is_terminal,
+        evaluation_outcome, reveal.
+    """
+    return {
+        "task_id": cartridge.task_id,
+        "task_type": cartridge.task_type,
+        "medium": cartridge.medium,
+        "title": cartridge.title,
+        "content": _derive_content_blocks(cartridge, phase),
+        "available_actions": _derive_available_actions(phase),
+        "trickster_intro": _derive_trickster_intro(phase),
+        "current_phase": phase.id,
+        "is_terminal": phase.is_terminal,
+        "evaluation_outcome": phase.evaluation_outcome,
+        "reveal": cartridge.reveal.model_dump() if phase.is_terminal else None,
+    }
+
+
 # ---------------------------------------------------------------------------
 # AI integration helpers
 # ---------------------------------------------------------------------------
@@ -582,17 +609,87 @@ async def next_task(
 
     return ApiResponse(
         ok=True,
-        data={
-            "task_id": cartridge.task_id,
-            "task_type": cartridge.task_type,
-            "medium": cartridge.medium,
-            "title": cartridge.title,
-            "content": _derive_content_blocks(cartridge, initial_phase),
-            "available_actions": _derive_available_actions(initial_phase),
-            "trickster_intro": _derive_trickster_intro(initial_phase),
-            "current_phase": cartridge.initial_phase,
-        },
+        data=_derive_phase_response(cartridge, initial_phase),
     ).model_dump()
+
+
+@router.get("/session/{session_id}/current")
+async def current_session(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    session_store: SessionStore = Depends(get_session_store),
+    registry: TaskRegistry = Depends(get_task_registry),
+) -> dict:
+    """Returns the session's current phase content without mutating state.
+
+    Read-only recovery endpoint for page refresh. Returns phase content
+    plus accumulated dialogue history so the frontend can re-render the
+    student's current position. Does NOT modify the session.
+    """
+    session = await _get_session_or_404(session_id, session_store)
+    _check_ownership(session, user)
+
+    # --- No active task ---
+    if session.current_task is None:
+        return ApiResponse(ok=True, data={"current_task": None}).model_dump()
+
+    # --- Load cartridge ---
+    cartridge = registry.get_task(session.current_task)
+    if cartridge is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Task '{session.current_task}' not found.",
+                ),
+            ).model_dump(),
+        )
+
+    # --- Stale phase detection (Framework P21) ---
+    if (
+        session.current_phase is not None
+        and not registry.is_phase_valid(session.current_task, session.current_phase)
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_CONTENT_UPDATED",
+                    message="Task content has been updated since your last interaction.",
+                ),
+                data={"initial_phase": cartridge.initial_phase},
+            ).model_dump(),
+        )
+
+    # --- Find current phase ---
+    current_phase = None
+    for phase in cartridge.phases:
+        if phase.id == session.current_phase:
+            current_phase = phase
+            break
+
+    if current_phase is None:
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="TASK_NOT_FOUND",
+                    message=f"Phase '{session.current_phase}' not found in task.",
+                ),
+            ).model_dump(),
+        )
+
+    # --- Build response ---
+    data = _derive_phase_response(cartridge, current_phase)
+    data["dialogue_history"] = [
+        exchange.model_dump() for exchange in session.exchanges
+    ]
+
+    return ApiResponse(ok=True, data=data).model_dump()
 
 
 @router.post("/session/{session_id}/respond")

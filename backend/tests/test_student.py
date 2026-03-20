@@ -899,6 +899,283 @@ class TestNextTask:
             resp = await client.get("/api/v1/student/session/any-id/next")
         assert resp.status_code == 401
 
+    # --- Terminal phase field tests (Phase 1a) ---
+
+    @pytest.mark.asyncio
+    async def test_next_includes_terminal_fields_non_terminal(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Non-terminal initial phase → is_terminal=False, evaluation_outcome=None, reveal=None."""
+        cartridge = _build_cartridge("task-term-001")
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-term-001",
+                headers=AUTH_HEADER,
+            )
+        data = resp.json()["data"]
+        assert data["is_terminal"] is False
+        assert data["evaluation_outcome"] is None
+        assert data["reveal"] is None
+
+    @pytest.mark.asyncio
+    async def test_next_terminal_phase_includes_reveal(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Terminal initial phase → is_terminal=True with reveal data."""
+        cartridge = _build_cartridge(
+            "task-termrev-001",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_wins",
+                },
+            ],
+            reveal={
+                "key_lesson": "Test lesson",
+                "additional_resources": ["https://example.com"],
+            },
+        )
+        _use_registry_with([cartridge])
+
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/next?task_id=task-termrev-001",
+                headers=AUTH_HEADER,
+            )
+        data = resp.json()["data"]
+        assert data["is_terminal"] is True
+        assert data["evaluation_outcome"] == "trickster_wins"
+        assert data["reveal"]["key_lesson"] == "Test lesson"
+        assert data["reveal"]["additional_resources"] == ["https://example.com"]
+
+
+# ---------------------------------------------------------------------------
+# GET /session/{session_id}/current
+# ---------------------------------------------------------------------------
+
+
+class TestCurrentSession:
+    """GET /api/v1/student/session/{id}/current — read-only recovery endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_returns_current_phase_content(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Session with active task returns full phase content."""
+        cartridge = _build_cartridge("task-cur-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-cur",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-cur-001",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-session-cur/current",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
+        assert data["task_id"] == "task-cur-001"
+        assert data["current_phase"] == "phase_intro"
+        assert data["is_terminal"] is False
+        assert data["evaluation_outcome"] is None
+        assert data["reveal"] is None
+        assert isinstance(data["content"], list)
+        assert isinstance(data["available_actions"], list)
+        assert isinstance(data["dialogue_history"], list)
+        assert len(data["dialogue_history"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_returns_dialogue_history(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Session with exchanges includes dialogue_history."""
+        from backend.schemas import Exchange
+
+        cartridge = _build_cartridge("task-hist-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-hist",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-hist-001",
+            current_phase="phase_intro",
+            exchanges=[
+                Exchange(role="trickster", content="Sveiki!"),
+                Exchange(role="student", content="Tai yra manipuliacija."),
+            ],
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-session-hist/current",
+                headers=AUTH_HEADER,
+            )
+        data = resp.json()["data"]
+        assert len(data["dialogue_history"]) == 2
+        assert data["dialogue_history"][0]["role"] == "trickster"
+        assert data["dialogue_history"][0]["content"] == "Sveiki!"
+        assert data["dialogue_history"][1]["role"] == "student"
+        assert data["dialogue_history"][1]["content"] == "Tai yra manipuliacija."
+        # Timestamps should be present
+        assert "timestamp" in data["dialogue_history"][0]
+
+    @pytest.mark.asyncio
+    async def test_no_current_task_returns_null(
+        self, client: httpx.AsyncClient, session_id: str
+    ) -> None:
+        """Session with no current_task returns {current_task: null}."""
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{session_id}/current",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["current_task"] is None
+
+    @pytest.mark.asyncio
+    async def test_session_not_found_returns_404(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/nonexistent/current",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "SESSION_NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_ownership_check_returns_403(
+        self, client: httpx.AsyncClient, other_session_id: str
+    ) -> None:
+        async with client:
+            resp = await client.get(
+                f"/api/v1/student/session/{other_session_id}/current",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 403
+        assert resp.json()["error"]["code"] == "FORBIDDEN"
+
+    @pytest.mark.asyncio
+    async def test_stale_phase_returns_409(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Stale phase after reload → TASK_CONTENT_UPDATED (409)."""
+        cartridge = _build_cartridge("task-stale-cur-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-stale-cur",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-stale-cur-001",
+            current_phase="phase_that_was_removed",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-session-stale-cur/current",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 409
+        body = resp.json()
+        assert body["error"]["code"] == "TASK_CONTENT_UPDATED"
+        assert body["data"]["initial_phase"] == "phase_intro"
+
+    @pytest.mark.asyncio
+    async def test_read_only_no_mutation(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Calling /current twice returns identical results — no state mutation."""
+        cartridge = _build_cartridge("task-ro-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-ro",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-ro-001",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp1 = await client.get(
+                "/api/v1/student/session/test-session-ro/current",
+                headers=AUTH_HEADER,
+            )
+            resp2 = await client.get(
+                "/api/v1/student/session/test-session-ro/current",
+                headers=AUTH_HEADER,
+            )
+        assert resp1.json() == resp2.json()
+
+        # Verify session wasn't mutated
+        stored = await deps._session_store.get_session("test-session-ro")
+        assert stored.current_task == "task-ro-001"
+        assert stored.current_phase == "phase_intro"
+
+    @pytest.mark.asyncio
+    async def test_terminal_phase_includes_reveal(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Terminal phase in /current returns reveal data."""
+        cartridge = _build_cartridge(
+            "task-cur-term-001",
+            phases=[
+                {
+                    "id": "phase_intro",
+                    "title": "Atskleidimas",
+                    "is_terminal": True,
+                    "evaluation_outcome": "trickster_loses",
+                },
+            ],
+        )
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-session-cur-term",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task="task-cur-term-001",
+            current_phase="phase_intro",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-session-cur-term/current",
+                headers=AUTH_HEADER,
+            )
+        data = resp.json()["data"]
+        assert data["is_terminal"] is True
+        assert data["evaluation_outcome"] == "trickster_loses"
+        assert data["reveal"]["key_lesson"] is not None
+        assert isinstance(data["reveal"]["additional_resources"], list)
+
+    @pytest.mark.asyncio
+    async def test_no_auth_returns_401(self, client: httpx.AsyncClient) -> None:
+        async with client:
+            resp = await client.get("/api/v1/student/session/any-id/current")
+        assert resp.status_code == 401
+
 
 # ---------------------------------------------------------------------------
 # POST /session/{session_id}/respond
