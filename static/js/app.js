@@ -12,7 +12,8 @@
 
   var state = {
     section: 'welcome',   // which section is visible
-    error: null            // { message: string } | null
+    error: null,           // { message: string } | null
+    locked: false          // UI lockout during API calls (Phase 3a)
   };
 
   // --------------------------------------------------------------------------
