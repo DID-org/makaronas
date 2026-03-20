@@ -4,6 +4,9 @@ Creates the Makaronas backend API with:
 - API versioning via router prefix (/api/v1/)
 - CORS middleware (origins from settings)
 - Request logging middleware (raw ASGI — no response body buffering)
+- CSP middleware (Content-Security-Policy on every response)
+- Rate limiting middleware (per-session on AI endpoints)
+- Static file serving (static/ directory at root URL)
 - Global exception handlers (HTTPException, validation, catch-all)
 - Health endpoint
 
@@ -15,6 +18,7 @@ schemas (Tier 1).
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from typing import Any
@@ -72,6 +76,172 @@ class RequestLoggingMiddleware:
             logger.info(
                 "%s %s %d %.1fms", method, path, status_code, duration_ms
             )
+
+
+# ---------------------------------------------------------------------------
+# CSP middleware (raw ASGI — streaming-safe)
+# ---------------------------------------------------------------------------
+
+# Framework Principle 13: Security by Design.
+# Restricts resource loading to same-origin. 'unsafe-inline' for styles only
+# (needed for dynamic style changes in Phase 2a section switching).
+CSP_HEADER_VALUE = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' blob: data:; "
+    "media-src 'self'; "
+    "connect-src 'self'"
+)
+
+
+class CSPMiddleware:
+    """Adds Content-Security-Policy header to every HTTP response.
+
+    Uses raw ASGI to avoid response body buffering (safe for SSE streaming).
+    Intercepts http.response.start to inject the header.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Wraps send to inject CSP header into response start."""
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def csp_send(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append(
+                    (b"content-security-policy", CSP_HEADER_VALUE.encode())
+                )
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, csp_send)
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting middleware (raw ASGI — streaming-safe)
+# ---------------------------------------------------------------------------
+
+# Per-session rate limit on AI-consuming endpoints only.
+# Framework Principle 13: a single student's runaway session must not
+# exhaust the school's token budget or the platform's API quota.
+RATE_LIMIT_MAX_REQUESTS = 20
+RATE_LIMIT_WINDOW_SECONDS = 60
+
+# Paths that trigger rate limiting (suffixes after /session/{id}/)
+_RATE_LIMITED_SUFFIXES = ("/respond", "/generate")
+
+# The path prefix that rate-limited endpoints share
+_SESSION_PATH_PREFIX = "/api/v1/student/session/"
+
+
+class RateLimitMiddleware:
+    """Per-session rate limiter on AI-consuming endpoints.
+
+    Tracks request counts in a fixed window per session ID. Only applies
+    to POST requests on /respond and /generate endpoints. Returns HTTP 429
+    with ApiResponse envelope body when the limit is exceeded.
+
+    Uses raw ASGI to avoid response body buffering (safe for SSE streaming).
+    MVP: in-memory dict — production replaces with Redis or equivalent.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        # session_id -> (request_count, window_start_monotonic)
+        self._counters: dict[str, tuple[int, float]] = {}
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Checks rate limit for matching requests, passes through otherwise."""
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # Only rate-limit POST requests (G7: skip OPTIONS/GET)
+        method = scope.get("method", "")
+        if method != "POST":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        session_id = self._extract_session_id(path)
+        if session_id is None:
+            await self.app(scope, receive, send)
+            return
+
+        # Check and update counter
+        now = time.monotonic()
+        count, window_start = self._counters.get(session_id, (0, now))
+
+        # Reset window if expired
+        if now - window_start >= RATE_LIMIT_WINDOW_SECONDS:
+            count = 0
+            window_start = now
+
+        count += 1
+        self._counters[session_id] = (count, window_start)
+
+        if count > RATE_LIMIT_MAX_REQUESTS:
+            await self._send_429(send)
+            return
+
+        await self.app(scope, receive, send)
+
+    def _extract_session_id(self, path: str) -> str | None:
+        """Extracts session ID from rate-limited paths, or returns None.
+
+        Matches: /api/v1/student/session/{id}/respond
+                 /api/v1/student/session/{id}/generate
+        """
+        if not path.startswith(_SESSION_PATH_PREFIX):
+            return None
+
+        # Check if path ends with a rate-limited suffix
+        suffix_match = False
+        for suffix in _RATE_LIMITED_SUFFIXES:
+            if path.endswith(suffix):
+                suffix_match = True
+                break
+
+        if not suffix_match:
+            return None
+
+        # Extract session ID: everything between /session/ and the last /
+        rest = path[len(_SESSION_PATH_PREFIX):]
+        # rest looks like "{session_id}/respond" or "{session_id}/generate"
+        parts = rest.rsplit("/", 1)
+        if len(parts) != 2 or not parts[0]:
+            return None
+
+        return parts[0]
+
+    async def _send_429(self, send: Send) -> None:
+        """Sends HTTP 429 response with ApiResponse envelope body."""
+        body = json.dumps({
+            "ok": False,
+            "data": None,
+            "error": {
+                "code": "RATE_LIMITED",
+                "message": "Too many requests. Please wait a moment.",
+            },
+        }).encode()
+
+        await send({
+            "type": "http.response.start",
+            "status": 429,
+            "headers": [
+                (b"content-type", b"application/json"),
+            ],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": body,
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -333,8 +503,9 @@ def create_app() -> FastAPI:
     )
 
     # -- Middleware (order matters: last added = first executed) --
+    # Execution order: CSP → RateLimit → Logging → CORS → App
 
-    # CORS — must be outermost to handle preflight before auth
+    # CORS — innermost, handles preflight at framework level
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -346,6 +517,12 @@ def create_app() -> FastAPI:
     # Request logging — raw ASGI, streaming-safe
     application.add_middleware(RequestLoggingMiddleware)
 
+    # Rate limiting — per-session on AI endpoints (429s appear in logs)
+    application.add_middleware(RateLimitMiddleware)
+
+    # CSP — outermost, ensures ALL responses get the header (including 429s)
+    application.add_middleware(CSPMiddleware)
+
     # -- Exception handlers --
     application.add_exception_handler(StarletteHTTPException, _http_exception_response)
     application.add_exception_handler(RequestValidationError, _validation_error_response)
@@ -353,6 +530,16 @@ def create_app() -> FastAPI:
 
     # -- Routers --
     _register_routes(application)
+
+    # -- Static files (AFTER routes — catch-all, must not intercept API) --
+    from starlette.staticfiles import StaticFiles
+
+    from backend.config import PROJECT_ROOT
+
+    application.mount(
+        "/", StaticFiles(directory=str(PROJECT_ROOT / "static"), html=True),
+        name="static",
+    )
 
     # -- Task registry --
     _init_task_registry()

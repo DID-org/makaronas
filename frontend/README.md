@@ -10,13 +10,15 @@ The Makaronas frontend is a **separate SPA** (Single Page Application) that comm
    uvicorn backend.main:app --port 8000 --reload
    ```
 
-2. Browse the interactive API docs:
+2. Open `http://localhost:8000/` — the frontend is served from the `static/` directory at the project root via the backend's StaticFiles mount (same-origin, no CORS needed).
+
+3. Browse the interactive API docs:
    ```
    http://localhost:8000/docs
    ```
    The Swagger UI shows every endpoint, request/response shapes, and lets you make test calls directly.
 
-3. Point your SPA dev server at `http://localhost:3000` or `http://localhost:5173` — both are pre-configured as allowed CORS origins.
+4. **Alternative (SPA development):** You can still run a separate dev server at `http://localhost:3000` or `http://localhost:5173` — both are pre-configured as allowed CORS origins. But the default V4 approach is same-origin serving from `static/`.
 
 ## API Namespaces
 
