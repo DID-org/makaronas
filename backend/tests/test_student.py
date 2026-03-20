@@ -952,6 +952,131 @@ class TestNextTask:
         assert data["reveal"]["key_lesson"] == "Test lesson"
         assert data["reveal"]["additional_resources"] == ["https://example.com"]
 
+    # --- Task-switch state reset tests (Phase 1c) ---
+
+    @pytest.mark.asyncio
+    async def test_task_switch_resets_per_task_state(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Switching to a different task resets per-task fields, preserves task_history."""
+        cartridge_a = _build_cartridge("task-sw-001")
+        cartridge_b = _build_cartridge("task-sw-002")
+        _use_registry_with([cartridge_a, cartridge_b])
+
+        # Create session and load first task
+        session = GameSession(
+            session_id="test-switch-session",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            await client.get(
+                "/api/v1/student/session/test-switch-session/next?task_id=task-sw-001",
+                headers=AUTH_HEADER,
+            )
+
+            # Populate per-task state to simulate mid-task activity
+            session = await deps._session_store.get_session("test-switch-session")
+            session.exchanges = [{"role": "student", "content": "test", "timestamp": "t1"}]
+            session.choices = [{"target_phase": "p2", "context_label": "clicked"}]
+            session.turn_intensities = [0.5, 0.7]
+            session.generated_artifacts = [{"text": "artifact"}]
+            session.prompt_snapshots = {"persona": "snapshot"}
+            session.checklist_progress = {"c1": True}
+            session.investigation_paths = ["/path/1"]
+            session.raw_performance = {"score": 42}
+            session.last_redaction_reason = "test reason"
+            session.task_history = [{"task_id": "task-sw-001", "evaluation_outcome": "trickster_loses"}]
+            await deps._session_store.save_session(session)
+
+            # Switch to a different task
+            resp = await client.get(
+                "/api/v1/student/session/test-switch-session/next?task_id=task-sw-002",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+        # Verify per-task state was reset
+        session = await deps._session_store.get_session("test-switch-session")
+        assert session.exchanges == []
+        assert session.choices == []
+        assert session.turn_intensities == []
+        assert session.generated_artifacts == []
+        assert session.prompt_snapshots is None
+        assert session.checklist_progress == {}
+        assert session.investigation_paths == []
+        assert session.raw_performance == {}
+        assert session.last_redaction_reason is None
+        # task_history persists across tasks
+        assert len(session.task_history) == 1
+        assert session.task_history[0]["task_id"] == "task-sw-001"
+
+    @pytest.mark.asyncio
+    async def test_same_task_reload_does_not_reset_state(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """Reloading the same task preserves per-task state."""
+        cartridge = _build_cartridge("task-reload-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-reload-session",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            # Load task first time
+            await client.get(
+                "/api/v1/student/session/test-reload-session/next?task_id=task-reload-001",
+                headers=AUTH_HEADER,
+            )
+
+            # Populate per-task state
+            session = await deps._session_store.get_session("test-reload-session")
+            session.exchanges = [{"role": "student", "content": "test", "timestamp": "t1"}]
+            session.turn_intensities = [0.5]
+            await deps._session_store.save_session(session)
+
+            # Reload same task
+            resp = await client.get(
+                "/api/v1/student/session/test-reload-session/next?task_id=task-reload-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+        # Per-task state preserved (not reset)
+        session = await deps._session_store.get_session("test-reload-session")
+        assert len(session.exchanges) == 1
+        assert len(session.turn_intensities) == 1
+
+    @pytest.mark.asyncio
+    async def test_first_task_load_no_prior_task(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """First task (current_task=None) works without triggering reset."""
+        cartridge = _build_cartridge("task-first-001")
+        _use_registry_with([cartridge])
+
+        session = GameSession(
+            session_id="test-first-session",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.get(
+                "/api/v1/student/session/test-first-session/next?task_id=task-first-001",
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["task_id"] == "task-first-001"
+
 
 # ---------------------------------------------------------------------------
 # GET /session/{session_id}/current
@@ -1622,6 +1747,196 @@ class TestRespond:
                 json={"action": "freeform", "payload": "test"},
             )
         assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Done event enrichment tests (Phase 1c)
+# ---------------------------------------------------------------------------
+
+
+class _TransitionStubEngine:
+    """Stub engine that simulates a phase transition in done_data.
+
+    Used to test done event enrichment — sets next_phase to a target
+    phase ID so the SSE generator can enrich the done event.
+    """
+
+    def __init__(self, next_phase: str, transition: str = "trickster_loses"):
+        self._next_phase = next_phase
+        self._transition = transition
+
+    async def respond(self, session, cartridge, phase, student_input):
+        """Returns a TricksterResult with a phase transition."""
+        async def _tokens():
+            for t in ["Transition ", "response. "]:
+                yield t
+            result.done_data = {
+                "phase_transition": self._transition,
+                "next_phase": self._next_phase,
+                "exchanges_count": 2,
+            }
+        result = TricksterResult(token_iterator=_tokens())
+        return result
+
+    async def debrief(self, session, cartridge):
+        """Returns a DebriefResult (no transition)."""
+        async def _tokens():
+            for t in ["Mock ", "debrief. "]:
+                yield t
+            result.done_data = {"debrief_complete": True}
+        result = DebriefResult(token_iterator=_tokens())
+        return result
+
+
+class _InvalidPhaseStubEngine:
+    """Stub engine that returns a next_phase not in the cartridge."""
+
+    async def respond(self, session, cartridge, phase, student_input):
+        async def _tokens():
+            for t in ["Bad ", "phase. "]:
+                yield t
+            result.done_data = {
+                "phase_transition": "trickster_loses",
+                "next_phase": "nonexistent_phase",
+                "exchanges_count": 1,
+            }
+        result = TricksterResult(token_iterator=_tokens())
+        return result
+
+
+class TestDoneEventEnrichment:
+    """Tests for SSE done event enrichment with next_phase_content (Phase 1c)."""
+
+    @pytest.fixture(autouse=True)
+    def _inject_ai_deps(self):
+        """Injects AI deps so endpoint Depends() resolve without 503."""
+        # Default engine — overridden per test as needed
+        app.dependency_overrides[get_trickster_engine] = lambda: _StubEngine()
+        if get_task_registry not in app.dependency_overrides:
+            app.dependency_overrides[get_task_registry] = lambda: TaskRegistry(
+                Path("/tmp"), Path("/tmp")
+            )
+
+    @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
+    async def test_done_event_includes_next_phase_content_on_transition(
+        self, _mock_readiness, client: httpx.AsyncClient
+    ) -> None:
+        """When a phase transition occurs, done event includes next_phase_content."""
+        task_id = "task-enrich-001"
+        cartridge = TaskCartridge.model_validate(_ai_cartridge_data(task_id))
+
+        registry = TaskRegistry(Path("/tmp"), Path("/tmp"))
+        registry._by_id[task_id] = cartridge
+        registry._by_status.setdefault(cartridge.status, set()).add(task_id)
+        registry._by_trigger[cartridge.trigger].add(task_id)
+        registry._by_technique[cartridge.technique].add(task_id)
+        registry._by_medium[cartridge.medium].add(task_id)
+        app.dependency_overrides[get_task_registry] = lambda: registry
+
+        # Engine that transitions to phase_reveal (terminal phase)
+        app.dependency_overrides[get_trickster_engine] = lambda: _TransitionStubEngine(
+            next_phase="phase_reveal"
+        )
+
+        session = GameSession(
+            session_id="test-enrich-session",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task=task_id,
+            current_phase="phase_ai",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-enrich-session/respond",
+                json={"action": "freeform", "payload": "I see the trick"},
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+        events = _parse_sse_events(resp.text)
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+
+        done_data = done_events[0]["data"]["data"]
+        assert "next_phase_content" in done_data
+        npc = done_data["next_phase_content"]
+        assert npc["task_id"] == task_id
+        assert npc["current_phase"] == "phase_reveal"
+        assert npc["is_terminal"] is True
+        assert npc["evaluation_outcome"] == "trickster_loses"
+        assert npc["reveal"] is not None
+        assert npc["reveal"]["key_lesson"] == "Test lesson"
+
+    @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
+    async def test_done_event_no_enrichment_without_transition(
+        self, _mock_readiness, client: httpx.AsyncClient
+    ) -> None:
+        """When no phase transition occurs, done event has no next_phase_content."""
+        session_id = await _setup_ai_session()
+
+        async with client:
+            resp = await client.post(
+                f"/api/v1/student/session/{session_id}/respond",
+                json={"action": "freeform", "payload": "test"},
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+        events = _parse_sse_events(resp.text)
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+
+        done_data = done_events[0]["data"]["data"]
+        assert "next_phase_content" not in done_data
+
+    @pytest.mark.asyncio
+    @patch("backend.api.student.check_ai_readiness", return_value=[])
+    async def test_done_event_degrades_gracefully_on_invalid_phase(
+        self, _mock_readiness, client: httpx.AsyncClient
+    ) -> None:
+        """When next_phase references a nonexistent phase, done event emits without crash."""
+        task_id = "task-badphase-001"
+        cartridge = TaskCartridge.model_validate(_ai_cartridge_data(task_id))
+
+        registry = TaskRegistry(Path("/tmp"), Path("/tmp"))
+        registry._by_id[task_id] = cartridge
+        registry._by_status.setdefault(cartridge.status, set()).add(task_id)
+        registry._by_trigger[cartridge.trigger].add(task_id)
+        registry._by_technique[cartridge.technique].add(task_id)
+        registry._by_medium[cartridge.medium].add(task_id)
+        app.dependency_overrides[get_task_registry] = lambda: registry
+
+        app.dependency_overrides[get_trickster_engine] = lambda: _InvalidPhaseStubEngine()
+
+        session = GameSession(
+            session_id="test-badphase-session",
+            student_id=FAKE_USER_ID,
+            school_id=FAKE_SCHOOL_ID,
+            current_task=task_id,
+            current_phase="phase_ai",
+        )
+        await deps._session_store.save_session(session)
+
+        async with client:
+            resp = await client.post(
+                "/api/v1/student/session/test-badphase-session/respond",
+                json={"action": "freeform", "payload": "test"},
+                headers=AUTH_HEADER,
+            )
+        assert resp.status_code == 200
+
+        events = _parse_sse_events(resp.text)
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+
+        done_data = done_events[0]["data"]["data"]
+        # next_phase is set but no next_phase_content (graceful degradation)
+        assert done_data["next_phase"] == "nonexistent_phase"
+        assert "next_phase_content" not in done_data
 
 
 # ---------------------------------------------------------------------------

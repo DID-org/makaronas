@@ -189,6 +189,19 @@ def _find_initial_phase(cartridge: TaskCartridge) -> Phase:
     )
 
 
+def _find_phase_by_id(cartridge: TaskCartridge, phase_id: str) -> Phase | None:
+    """Finds a phase by ID in the cartridge's phase list.
+
+    Returns None if not found (defensive — should not happen with
+    validated cartridges, but the done event enrichment should degrade
+    gracefully rather than crash the stream).
+    """
+    for phase in cartridge.phases:
+        if phase.id == phase_id:
+            return phase
+    return None
+
+
 def _derive_content_blocks(cartridge: TaskCartridge, phase: Phase) -> list[dict]:
     """Resolves visible_blocks IDs to serialized presentation block dicts.
 
@@ -481,6 +494,14 @@ async def _stream_trickster_response(
                 "is_clean": cartridge.is_clean,
             })
 
+        # Enrich done event with next phase content for seamless transitions
+        if done_data.get("next_phase") is not None:
+            target_phase = _find_phase_by_id(cartridge, done_data["next_phase"])
+            if target_phase is not None:
+                done_data["next_phase_content"] = _derive_phase_response(
+                    cartridge, target_phase
+                )
+
         yield format_sse_event(
             "done",
             DoneEvent(full_text=full_text, data=done_data),
@@ -621,6 +642,22 @@ async def next_task(
                 data={"initial_phase": cartridge.initial_phase},
             ).model_dump(),
         )
+
+    # --- Reset per-task state when switching tasks ---
+    is_task_switch = (
+        session.current_task is not None
+        and session.current_task != resolved_task_id
+    )
+    if is_task_switch:
+        session.exchanges = []
+        session.choices = []
+        session.turn_intensities = []
+        session.generated_artifacts = []
+        session.prompt_snapshots = None
+        session.checklist_progress = {}
+        session.investigation_paths = []
+        session.raw_performance = {}
+        session.last_redaction_reason = None
 
     # --- Derive response from initial phase ---
     initial_phase = _find_initial_phase(cartridge)
