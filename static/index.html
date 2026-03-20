@@ -1,12 +1,61 @@
 <!DOCTYPE html>
 <html lang="lt">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Makaronas</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Makaronas</title>
+  <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-    <h1>Makaronas</h1>
-    <p>Placeholder — replaced by Phase 2a.</p>
+
+  <header class="platform-header">
+    <span class="platform-header__title">Makaronas</span>
+  </header>
+
+  <main id="app" data-active-section="welcome">
+
+    <section id="section-welcome" class="section" aria-label="Pradžia">
+      <h2 tabindex="-1">Makaronas</h2>
+      <p>Mokymo platforma, kurioje dirbtinis intelektas padeda atpažinti informacinę manipuliaciją.</p>
+      <button id="btn-start" class="btn btn-primary" type="button">Pradėti</button>
+    </section>
+
+    <section id="section-task" class="section" aria-label="Užduotis">
+      <div class="task-layout">
+        <div class="content-panel">
+          <h2 tabindex="-1">Turinys</h2>
+          <!-- PresentationBlocks rendered here (Phase 4a+) -->
+        </div>
+        <div class="interaction-panel">
+          <h2 tabindex="-1">Sąveika</h2>
+          <!-- Interaction UI rendered here (Phase 5a+) -->
+        </div>
+      </div>
+    </section>
+
+    <section id="section-debrief" class="section" aria-label="Aptarimas">
+      <h2 tabindex="-1">Aptarimas</h2>
+      <!-- Layer 2: Fourth wall break (Phase 6b) -->
+    </section>
+
+    <section id="section-reveal" class="section" aria-label="Išvados">
+      <h2 tabindex="-1">Išvados</h2>
+      <!-- Layer 3: Factual lesson (Phase 6b) -->
+    </section>
+
+    <section id="section-end" class="section" aria-label="Pabaiga">
+      <h2 tabindex="-1">Sesija baigta</h2>
+      <p>Ačiū, kad dalyvavai.</p>
+    </section>
+
+    <section id="section-error" class="section" aria-label="Klaida">
+      <h2 tabindex="-1">Klaida</h2>
+      <p id="error-message" class="error-message"></p>
+      <button id="btn-retry" class="btn btn-secondary" type="button">Bandyti dar kartą</button>
+    </section>
+
+  </main>
+
+  <script src="/js/app.js"></script>
 </body>
 </html>

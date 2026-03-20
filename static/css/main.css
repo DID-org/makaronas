@@ -1,0 +1,365 @@
+/* ==========================================================================
+   Makaronas — Main Stylesheet
+   CSS system: colour tokens, layout primitives, section switching, typography.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Reset
+   -------------------------------------------------------------------------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Custom Properties — Colour Registers (Vision §3.4)
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* Platform (neutral frame — calm, honest, structural) */
+  --color-platform-bg: #1c1f26;
+  --color-platform-bg-alt: #23272f;
+  --color-platform-text: #c8cdd5;
+  --color-platform-text-muted: #8890a0;
+  --color-platform-border: #363c48;
+  --color-platform-accent: #5080c0;
+
+  /* Content (the stage — where the Trickster performs) */
+  --color-content-bg: #1a2230;
+  --color-content-text: #d0d8e8;
+  --color-content-border: #2a3648;
+  --color-content-heading: #70a8e0;
+
+  /* Dialogue (adversarial space — the Trickster's voice) */
+  --color-dialogue-bg: #1a2230;
+  --color-dialogue-text: #d0d8e8;
+  --color-dialogue-border: #5080c0;
+  --color-dialogue-trickster: #70a8e0;
+  --color-dialogue-student: #a0b8d8;
+
+  /* Debrief (fourth wall break — the AI speaks as itself) */
+  --color-debrief-bg: #2a1a2e;
+  --color-debrief-text: #e0d0e8;
+  --color-debrief-border: #9060a0;
+  --color-debrief-heading: #c080d0;
+
+  /* Reveal (factual/grounded — verified truth) */
+  --color-reveal-bg: #1a2e22;
+  --color-reveal-text: #d0e8d8;
+  --color-reveal-border: #50a070;
+  --color-reveal-heading: #70c090;
+
+  /* Functional */
+  --color-error: #e05050;
+  --color-error-bg: #2e1a1a;
+  --color-error-border: #a05050;
+  --color-focus-ring: #5080c0;
+  --color-disabled: #555e6e;
+
+  /* Typography */
+  --font-body: system-ui, -apple-system, sans-serif;
+  --font-size-base: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --line-height-body: 1.6;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Layout */
+  --header-height: 3.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   Base Typography
+   -------------------------------------------------------------------------- */
+
+html {
+  font-size: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+  color: var(--color-platform-text);
+  background-color: var(--color-platform-bg);
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+a {
+  color: var(--color-platform-accent);
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+
+.platform-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-lg);
+  background-color: var(--color-platform-bg-alt);
+  border-bottom: 1px solid var(--color-platform-border);
+}
+
+.platform-header__title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-platform-text);
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------------------
+   Section Switching
+   Sections are hidden by default. The active section is determined by
+   [data-active-section] on #app. CSS handles visibility — JS only sets
+   the data attribute.
+   -------------------------------------------------------------------------- */
+
+.section {
+  display: none;
+}
+
+[data-active-section="welcome"] #section-welcome,
+[data-active-section="task"] #section-task,
+[data-active-section="debrief"] #section-debrief,
+[data-active-section="reveal"] #section-reveal,
+[data-active-section="end"] #section-end,
+[data-active-section="error"] #section-error {
+  display: flex;
+}
+
+/* --------------------------------------------------------------------------
+   Section Base Layout
+   -------------------------------------------------------------------------- */
+
+#section-welcome,
+#section-end {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+#section-welcome h2,
+#section-end h2 {
+  margin-bottom: var(--space-md);
+}
+
+#section-welcome p,
+#section-end p {
+  max-width: 36rem;
+  color: var(--color-platform-text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+#section-error {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+#section-error .error-message {
+  color: var(--color-error);
+  margin-bottom: var(--space-lg);
+  max-width: 36rem;
+}
+
+/* --------------------------------------------------------------------------
+   Task Layout — Side-by-Side Panels
+   -------------------------------------------------------------------------- */
+
+.task-layout {
+  display: flex;
+  height: calc(100vh - var(--header-height));
+  width: 100%;
+}
+
+.content-panel {
+  flex: 1 1 50%;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  background-color: var(--color-content-bg);
+  border-right: 1px solid var(--color-content-border);
+}
+
+.interaction-panel {
+  flex: 1 1 50%;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  background-color: var(--color-platform-bg);
+}
+
+/* Layout variant: investigation (60/40) */
+.task-layout.layout-investigation .content-panel {
+  flex: 0 0 60%;
+}
+
+.task-layout.layout-investigation .interaction-panel {
+  flex: 0 0 40%;
+}
+
+/* --------------------------------------------------------------------------
+   Debrief & Reveal Sections
+   -------------------------------------------------------------------------- */
+
+#section-debrief {
+  flex-direction: column;
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-xl);
+  background-color: var(--color-debrief-bg);
+  color: var(--color-debrief-text);
+}
+
+#section-debrief h2 {
+  color: var(--color-debrief-heading);
+  margin-bottom: var(--space-md);
+}
+
+#section-reveal {
+  flex-direction: column;
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-xl);
+  background-color: var(--color-reveal-bg);
+  color: var(--color-reveal-text);
+}
+
+#section-reveal h2 {
+  color: var(--color-reveal-heading);
+  margin-bottom: var(--space-md);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+button,
+.btn {
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: var(--space-sm) var(--space-lg);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-primary {
+  background-color: var(--color-platform-accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #4070b0;
+}
+
+.btn-primary:disabled {
+  background-color: var(--color-disabled);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-platform-accent);
+  border: 1px solid var(--color-platform-border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-platform-bg-alt);
+}
+
+/* --------------------------------------------------------------------------
+   Focus Styles (Accessibility)
+   -------------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Utility Classes
+   -------------------------------------------------------------------------- */
+
+/* Screen-reader-only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Preserve whitespace in untrusted text containers */
+.preserve-whitespace {
+  white-space: pre-wrap;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow Viewport — Mandatory, Not Polish (§3.4)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 800px) {
+  .task-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .task-layout > * {
+    width: 100%;
+    height: auto;
+    overflow: visible; /* CRITICAL: prevents scroll traps on touch devices */
+  }
+
+  .content-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--color-content-border);
+  }
+
+  #section-welcome,
+  #section-end,
+  #section-error {
+    min-height: auto;
+    padding: var(--space-lg);
+  }
+}
