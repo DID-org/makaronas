@@ -1340,3 +1340,163 @@ button,
   margin-top: var(--space-lg);
   width: 100%;
 }
+
+/* ==========================================================================
+   Generation Interaction (Phase 7c — Empathy Flip)
+   Stage 1: student writes prompt, views AI-generated result, sends to Trickster.
+   ========================================================================== */
+
+.generation-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+.generation-label {
+  display: block;
+  font-size: var(--font-size-base);
+  color: var(--color-platform-text);
+  margin-bottom: var(--space-xs);
+}
+
+.generation-input {
+  width: 100%;
+  min-height: 6em;
+  max-height: 12em;
+  resize: vertical;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-platform-border);
+  border-radius: 6px;
+  background-color: var(--color-platform-bg);
+  color: var(--color-platform-text);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.generation-input::placeholder {
+  color: var(--color-platform-text-muted);
+}
+
+.generation-input:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -1px;
+}
+
+.generation-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.generation-submit-btn {
+  min-width: 8em;
+}
+
+/* Result area — semi-trusted AI content register (like debrief) */
+.generation-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.generation-result__prompt {
+  padding: var(--space-sm) var(--space-md);
+  border-left: 2px solid var(--color-platform-border);
+  opacity: 0.8;
+}
+
+.generation-result__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.generation-result__prompt-text {
+  color: var(--color-platform-text);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.generation-result__output {
+  background-color: var(--color-debrief-bg);
+  border-left: 3px solid var(--color-debrief-border);
+  border-radius: 8px;
+  padding: var(--space-md);
+}
+
+.generation-result__heading {
+  color: var(--color-debrief-heading);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--space-sm);
+}
+
+.generation-result__content {
+  color: var(--color-debrief-text);
+  line-height: 1.6;
+}
+
+.generation-result__content p {
+  margin-bottom: var(--space-sm);
+}
+
+.generation-result__content p:last-child {
+  margin-bottom: 0;
+}
+
+.generation-result__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-sm);
+}
+
+/* Prominent send button — THE action (P1: Train the Pause) */
+.generation-send-btn {
+  font-size: 1.05em;
+  padding: var(--space-sm) var(--space-lg);
+  background-color: var(--color-platform-accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.generation-send-btn:hover {
+  background-color: #6090d0;
+}
+
+.generation-send-btn:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Safety redaction notice */
+.generation-safety-notice {
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  font-style: italic;
+  padding: var(--space-xs) var(--space-md);
+}
+
+/* Error display within generation container */
+.generation-error {
+  color: var(--color-error);
+  padding: var(--space-sm);
+  border-radius: 6px;
+  background-color: rgba(255, 80, 80, 0.08);
+}
+
+.generation-error-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.generation-error-actions__btn {
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+}

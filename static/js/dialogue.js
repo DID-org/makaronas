@@ -888,7 +888,8 @@
     renderFreeformInteraction: renderFreeformInteraction,
     renderDialogueHistory: renderDialogueHistory,
     clearDialogue: clearDialogue,
-    createStreamingDisplay: createStreamingDisplay
+    createStreamingDisplay: createStreamingDisplay,
+    appendStudentBubble: appendStudentBubble
   };
 
 })();

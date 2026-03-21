@@ -72,6 +72,14 @@ window.I18n = {
   // ---------------------------------------------------------------------------
   btn_submit_generation: 'Si\u0173sti Tricksteriui',
   placeholder_generation: 'Para\u0161ykite savo manipuliacijos bandym\u0105\u2026',
+  generation_prompt_label: 'Para\u0161ykite instrukcij\u0105 DI, kaip sukurti manipuliuojant\u012F \u012Fra\u0161\u0105:',
+  btn_generate: 'Generuoti',
+  generation_loading: 'Generuojama\u2026',
+  generation_timeout: 'Generavimas u\u017Etruko per ilgai. Bandykite dar kart\u0105.',
+  generation_error: 'Nepavyko sugeneruoti. Bandykite dar kart\u0105.',
+  generation_result_heading: 'Sugeneruotas rezultatas',
+  generation_your_prompt: 'J\u016Bs\u0173 instrukcija',
+  generation_safety_notice: 'Turinys buvo pataisytas saugumo prie\u017Eastimis.',
 
   // ---------------------------------------------------------------------------
   // Interaction (Phase 5a)
