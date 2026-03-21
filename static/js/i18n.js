@@ -71,6 +71,8 @@ window.I18n = {
   // ---------------------------------------------------------------------------
   // Accessibility
   // ---------------------------------------------------------------------------
-  skip_to_content: 'Pereiti prie turinio'
+  skip_to_content: 'Pereiti prie turinio',
+  search_key_finding: 'Svarbus radinys',
+  search_dead_end: 'Aklavi\u0117t\u0117'
 
 };

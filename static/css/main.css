@@ -528,6 +528,21 @@ button,
   word-break: break-word;
 }
 
+.block-generic__data dt {
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  margin-top: var(--space-sm);
+}
+
+.block-generic__data dt:first-child {
+  margin-top: 0;
+}
+
+.block-generic__data dd {
+  margin-left: 0;
+  color: var(--color-content-text);
+}
+
 /* --- Asset Error Fallback --- */
 
 .block-asset-error {
@@ -685,4 +700,74 @@ button,
 
 .block-meme__text--bottom {
   bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Search Result Block (Phase 4c)
+   -------------------------------------------------------------------------- */
+
+.block-search-result {
+  background: var(--color-content-bg);
+  border: 1px solid var(--color-content-border);
+  border-radius: 8px;
+  padding: var(--space-md);
+  cursor: pointer;
+}
+
+.block-search-result__query {
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.block-search-result__title {
+  font-weight: 600;
+  color: var(--color-content-heading);
+  margin-bottom: var(--space-sm);
+}
+
+.block-search-result__snippet {
+  color: var(--color-content-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+  white-space: pre-wrap;
+}
+
+.block-search-result__url {
+  display: inline-block;
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-accent);
+  text-decoration: none;
+}
+
+.block-search-result__url:hover {
+  text-decoration: underline;
+}
+
+/* Key finding: warm left border accent */
+.block-search-result--key-finding {
+  border-left: 3px solid #d4a843;
+}
+
+/* Dead end: muted/dimmed — subtle, must not spoil the investigation (Framework P1) */
+.block-search-result--dead-end {
+  opacity: 0.7;
+  border-color: var(--color-platform-border);
+}
+
+/* Children container: hidden by default, indented when visible */
+.block-search-result__children[hidden] {
+  display: none;
+}
+
+.block-search-result__children:not([hidden]) {
+  margin-top: var(--space-md);
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--color-content-border);
+}
+
+/* Adjacent search results tighten into a list */
+.block-search-result + .block-search-result {
+  margin-top: var(--space-sm);
 }

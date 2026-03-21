@@ -285,6 +285,80 @@
   }
 
   // --------------------------------------------------------------------------
+  // Search Result Block Renderer (Phase 4c)
+  // --------------------------------------------------------------------------
+
+  function renderSearchResultBlock(block) {
+    var el = document.createElement('div');
+    el.className = 'block block-search-result';
+    if (block.is_key_finding) {
+      el.className += ' block-search-result--key-finding';
+    }
+    if (block.is_dead_end) {
+      el.className += ' block-search-result--dead-end';
+    }
+    el.id = 'block-' + block.id;
+    el.setAttribute('role', 'treeitem');
+
+    // Tree nodes with children get aria-expanded; leaf nodes do not
+    var hasChildren = block.child_queries && block.child_queries.length > 0;
+    if (hasChildren) {
+      el.setAttribute('aria-expanded', 'false');
+    }
+
+    var query = document.createElement('div');
+    query.className = 'block-search-result__query';
+    query.textContent = block.query;
+    el.appendChild(query);
+
+    var title = document.createElement('div');
+    title.className = 'block-search-result__title';
+    title.textContent = block.title;
+    el.appendChild(title);
+
+    var snippet = document.createElement('div');
+    snippet.className = 'block-search-result__snippet';
+    snippet.textContent = block.snippet;
+    el.appendChild(snippet);
+
+    if (block.url) {
+      var link = document.createElement('a');
+      link.className = 'block-search-result__url';
+      link.href = block.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = block.url;
+      el.appendChild(link);
+    }
+
+    // Screen reader status labels for key finding / dead end
+    if (block.is_key_finding) {
+      var srKey = document.createElement('span');
+      srKey.className = 'sr-only';
+      srKey.textContent = window.I18n.search_key_finding;
+      el.appendChild(srKey);
+    }
+    if (block.is_dead_end) {
+      var srDead = document.createElement('span');
+      srDead.className = 'sr-only';
+      srDead.textContent = window.I18n.search_dead_end;
+      el.appendChild(srDead);
+    }
+
+    // Child group container — empty until Phase 5c populates it
+    if (hasChildren) {
+      var children = document.createElement('div');
+      children.className = 'block-search-result__children';
+      children.setAttribute('role', 'group');
+      children.setAttribute('data-child-queries', JSON.stringify(block.child_queries));
+      children.hidden = true;
+      el.appendChild(children);
+    }
+
+    return el;
+  }
+
+  // --------------------------------------------------------------------------
   // Generic Fallback — for unknown block types
   // --------------------------------------------------------------------------
 
@@ -298,11 +372,37 @@
     label.textContent = block.type;
     el.appendChild(label);
 
-    // GenericBlock has a `data` dict — display it as formatted JSON
+    // Render data as a definition list for readability
     var dataContent = block.data || {};
-    var pre = document.createElement('pre');
-    pre.textContent = JSON.stringify(dataContent, null, 2);
-    el.appendChild(pre);
+    var entries = Object.entries(dataContent);
+
+    if (entries.length === 0) {
+      var pre = document.createElement('pre');
+      pre.textContent = '{}';
+      el.appendChild(pre);
+    } else {
+      var dl = document.createElement('dl');
+      dl.className = 'block-generic__data';
+      for (var i = 0; i < entries.length; i++) {
+        var dt = document.createElement('dt');
+        dt.textContent = entries[i][0];
+        dl.appendChild(dt);
+
+        var dd = document.createElement('dd');
+        var val = entries[i][1];
+        if (val === null || val === undefined) {
+          dd.textContent = String(val);
+        } else if (typeof val === 'object') {
+          var valPre = document.createElement('pre');
+          valPre.textContent = JSON.stringify(val, null, 2);
+          dd.appendChild(valPre);
+        } else {
+          dd.textContent = String(val);
+        }
+        dl.appendChild(dd);
+      }
+      el.appendChild(dl);
+    }
 
     return el;
   }
@@ -319,8 +419,8 @@
     video_transcript: renderVideoTranscriptBlock,
     chat_message: renderChatMessageBlock,
     social_post: renderSocialPostBlock,
-    meme: renderMemeBlock
-    // 4c adds: search_result (+ replaces generic fallback)
+    meme: renderMemeBlock,
+    search_result: renderSearchResultBlock
   };
 
   // --------------------------------------------------------------------------
