@@ -136,6 +136,11 @@
       section: 'task'
     });
 
+    // Clear dialogue state from previous phase (Phase 5b)
+    if (window.Dialogue) {
+      window.Dialogue.clearDialogue();
+    }
+
     // Content panel: preserve heading, render presentation blocks
     var contentPanel = document.querySelector('.content-panel');
     if (contentPanel && window.Renderer) {
@@ -280,9 +285,17 @@
         return;
       }
       // Active task — render the current phase
-      // Preserve dialogueHistory for Phase 5b chat recovery
       state.dialogueHistory = data.dialogue_history || [];
       renderPhase(data);
+
+      // Restore dialogue history if the current phase is a freeform interaction (Phase 5b)
+      if (state.dialogueHistory.length > 0 && window.Dialogue) {
+        var recoveryPanel = document.querySelector('.interaction-panel');
+        if (recoveryPanel) {
+          window.Dialogue.renderDialogueHistory(recoveryPanel, state.dialogueHistory);
+        }
+      }
+
       console.log('[Makaronas] Recovery: restored active task');
     }).catch(function (err) {
       if (err.code === 'SESSION_NOT_FOUND' || err.code === 'TASK_CONTENT_UPDATED') {

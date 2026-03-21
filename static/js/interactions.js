@@ -33,7 +33,11 @@
       case 'button':
         renderButtonInteraction(panel, interaction, phaseData);
         break;
-      // Phase 5b: case 'freeform'
+      case 'freeform':
+        if (window.Dialogue) {
+          window.Dialogue.renderFreeformInteraction(panel, interaction, phaseData);
+        }
+        break;
       // Phase 5c: case 'investigation'
       default:
         renderUnsupportedInteraction(panel, interaction.type);

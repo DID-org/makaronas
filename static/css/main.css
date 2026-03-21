@@ -813,3 +813,203 @@ button,
 .block-search-result + .block-search-result {
   margin-top: var(--space-sm);
 }
+
+/* --------------------------------------------------------------------------
+   Dialogue (Phase 5b — Freeform Chat UI)
+   -------------------------------------------------------------------------- */
+
+/* Interaction panel becomes a flex column when hosting dialogue */
+.interaction-panel.interaction-panel--dialogue {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Scrollable chat area — fills space above the input */
+.dialogue-area {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-sm) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* --- Message Bubbles --- */
+
+.dialogue-message {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 12px;
+  max-width: 80%;
+  word-wrap: break-word;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-base);
+}
+
+.dialogue-message--trickster {
+  align-self: flex-start;
+  background-color: var(--color-dialogue-trickster);
+  color: #1a2230;
+  border-bottom-left-radius: 2px;
+}
+
+/* Markdown rendered inside trickster bubbles */
+.dialogue-message--trickster p {
+  margin-bottom: var(--space-sm);
+}
+
+.dialogue-message--trickster p:last-child {
+  margin-bottom: 0;
+}
+
+.dialogue-message--trickster strong {
+  font-weight: 600;
+}
+
+.dialogue-message--trickster a {
+  color: #1a2230;
+  text-decoration: underline;
+}
+
+.dialogue-message--student {
+  align-self: flex-end;
+  background-color: var(--color-dialogue-student);
+  color: #1a2230;
+  border-bottom-right-radius: 2px;
+}
+
+/* Redacted bubble: brief flash to signal safety correction (P12) */
+.dialogue-message--redacted {
+  animation: redact-flash 0.3s ease-out;
+}
+
+@keyframes redact-flash {
+  0% { border: 2px solid var(--color-error); }
+  100% { border: 2px solid transparent; }
+}
+
+/* --- Typing Indicator --- */
+
+.dialogue-typing {
+  display: none;
+  align-self: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-dialogue-trickster);
+  font-size: var(--font-size-sm);
+}
+
+.dialogue-typing--active {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.dialogue-typing__dots {
+  display: flex;
+  gap: 3px;
+}
+
+.dialogue-typing__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-dialogue-trickster);
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+.dialogue-typing__dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dialogue-typing__dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+
+/* --- Input Area --- */
+
+.dialogue-input-area {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-dialogue-border);
+}
+
+.dialogue-input {
+  flex: 1 1 auto;
+  min-height: 2.5em;
+  max-height: 8em;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-dialogue-bg);
+  color: var(--color-dialogue-text);
+  border: 1px solid var(--color-dialogue-border);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+  resize: vertical;
+}
+
+.dialogue-input::placeholder {
+  color: var(--color-platform-text-muted);
+}
+
+.dialogue-input:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -1px;
+}
+
+.dialogue-send-btn {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-platform-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.dialogue-send-btn:hover:not(:disabled) {
+  background-color: #4070b0;
+}
+
+.dialogue-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Error Display (inline, below the last message) --- */
+
+.dialogue-error {
+  align-self: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dialogue-error__retry {
+  background: none;
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.dialogue-error__retry:hover {
+  background-color: var(--color-error-bg);
+}

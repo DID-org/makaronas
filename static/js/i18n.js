@@ -25,6 +25,10 @@ window.I18n = {
   // ---------------------------------------------------------------------------
   btn_send: 'Si\u0173sti',
   placeholder_message: '\u012Eveskite savo atsakym\u0105\u2026',
+  dialogue_typing: 'Tricksteris ra\u0161o\u2026',
+  dialogue_send_disabled: 'Palaukite atsakymo',
+  dialogue_error_retry: 'Bandyti i\u0161 naujo',
+  dialogue_error_partial: 'Atsakymas nutr\u016Bko. Bandykite dar kart\u0105.',
 
   // ---------------------------------------------------------------------------
   // Debrief / Reveal
