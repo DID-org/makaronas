@@ -878,14 +878,51 @@ button,
   border-bottom-right-radius: 2px;
 }
 
-/* Redacted bubble: brief flash to signal safety correction (P12) */
+/* Redacted bubble: persistent left border accent + brief flash (P12) */
 .dialogue-message--redacted {
+  border-left: 2px solid var(--color-error);
   animation: redact-flash 0.3s ease-out;
 }
 
 @keyframes redact-flash {
-  0% { border: 2px solid var(--color-error); }
-  100% { border: 2px solid transparent; }
+  0% { box-shadow: 0 0 0 2px var(--color-error); }
+  100% { box-shadow: 0 0 0 2px transparent; }
+}
+
+/* Redaction notice — visible feedback that safety intervened (Phase 6a) */
+.dialogue-redaction-notice {
+  align-self: flex-start;
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  animation: redaction-notice-fade 5s ease-out forwards;
+}
+
+@keyframes redaction-notice-fade {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --- Markdown Settling Transition (Phase 6a) --- */
+
+.dialogue-message--settling {
+  transition: opacity 150ms ease-out;
+}
+
+/* --- Exchange Counter (Phase 6a) --- */
+
+.dialogue-exchange-counter {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  align-self: center;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: var(--color-platform-bg);
+  color: var(--color-platform-text-muted);
+  font-size: var(--font-size-sm);
+  border-radius: 12px;
+  text-align: center;
 }
 
 /* --- Typing Indicator --- */

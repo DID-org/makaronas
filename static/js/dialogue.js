@@ -1,8 +1,8 @@
 /* ==========================================================================
    Makaronas — dialogue.js
    Freeform chat UI: message display, streaming, typing indicator, auto-scroll,
-   draft persistence, error/redact handling.
-   Phase 5b — where the Trickster comes alive.
+   draft persistence, error/redact handling. Reusable streaming display helper.
+   Phase 5b foundation + Phase 6a polish.
    ========================================================================== */
 
 (function () {
@@ -13,18 +13,20 @@
   // --------------------------------------------------------------------------
 
   var exchanges = [];       // {role, content} pairs for the current phase
-  var streaming = false;    // True while SSE stream is active
   var currentAbort = null;  // Abort handle from streamRespond
-  var userScrolledAway = false;
   var lastStudentMessage = null; // For retry on error
 
   // DOM references (set during render, cleared on cleanup)
   var dialogueArea = null;
-  var typingIndicator = null;
+  var typingIndicator = null; // Owned by streamDisplay, referenced for bubble insertion
   var inputArea = null;
   var textarea = null;
   var sendBtn = null;
-  var streamingBubble = null;
+  var streamDisplay = null;   // StreamingDisplay instance for the dialogue area
+
+  // Exchange counter
+  var exchangeCounter = null; // DOM element
+  var maxExchanges = null;    // From interaction.max_exchanges
 
   // Draft persistence key — same string as STORAGE_KEYS.interactionState in app.js
   // (STORAGE_KEYS is private to app.js IIFE — scout brief §1 confirmed)
@@ -32,6 +34,236 @@
 
   // Scroll threshold for manual-scroll-pause detection (px)
   var SCROLL_THRESHOLD = 50;
+
+  // --------------------------------------------------------------------------
+  // Shared Helpers (used by both dialogue module and createStreamingDisplay)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Builds a typing indicator element (animated dots).
+   */
+  function buildTypingIndicator() {
+    var indicator = document.createElement('div');
+    indicator.className = 'dialogue-typing';
+    indicator.setAttribute('role', 'status');
+    var label = document.createElement('span');
+    label.className = 'sr-only';
+    label.textContent = (window.I18n && window.I18n.dialogue_typing) || 'Typing...';
+    var dotsContainer = document.createElement('span');
+    dotsContainer.className = 'dialogue-typing__dots';
+    for (var i = 0; i < 3; i++) {
+      var dot = document.createElement('span');
+      dot.className = 'dialogue-typing__dot';
+      dotsContainer.appendChild(dot);
+    }
+    indicator.appendChild(label);
+    indicator.appendChild(dotsContainer);
+    return indicator;
+  }
+
+  /**
+   * Replaces streaming text with markdown-rendered HTML using a subtle
+   * opacity transition for visual "settling" (Vision §3.7).
+   * Double requestAnimationFrame ensures the browser paints the intermediate
+   * opacity state before swapping content (Gotcha §6.1).
+   */
+  function settleMarkdown(bubble, fullText) {
+    if (!window.Renderer) {
+      bubble.textContent = fullText;
+      return;
+    }
+    bubble.classList.add('dialogue-message--settling');
+    bubble.style.opacity = '0.7';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        bubble.innerHTML = window.Renderer.renderMarkdown(fullText);
+        bubble.style.opacity = '1';
+        function onEnd() {
+          bubble.classList.remove('dialogue-message--settling');
+          bubble.style.opacity = '';
+          bubble.removeEventListener('transitionend', onEnd);
+        }
+        bubble.addEventListener('transitionend', onEnd);
+      });
+    });
+  }
+
+  /**
+   * Appends a redaction notice below a redacted bubble (P12 — honest reveals).
+   * Notice auto-fades visually after 5s but remains in the DOM for screen readers.
+   */
+  function appendRedactionNotice(bubble) {
+    var notice = document.createElement('div');
+    notice.className = 'dialogue-redaction-notice';
+    notice.setAttribute('role', 'alert');
+    notice.textContent = (window.I18n && window.I18n.redaction_notice) ||
+      'Response was corrected for safety reasons.';
+    // Insert notice right after the bubble
+    if (bubble.nextSibling) {
+      bubble.parentNode.insertBefore(notice, bubble.nextSibling);
+    } else {
+      bubble.parentNode.appendChild(notice);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Streaming Display Helper (reusable — Phase 6b consumes this)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Creates a streaming display controller for a container element.
+   * Manages typing indicator, token streaming, markdown settling,
+   * redaction feedback, and error handling.
+   *
+   * @param {HTMLElement} container - DOM element to render into
+   * @param {Object} options - Configuration
+   * @param {Function} options.onComplete - Called after done: (fullText, data)
+   * @param {Function} options.onRedact - Called after redaction: (fallbackText)
+   * @param {Function} options.onError - Called after error: (code, msg, partial)
+   * @param {boolean} options.showTypingIndicator - Show typing dots (default: true)
+   * @param {string} options.bubbleClass - CSS class for bubbles
+   *   (default: 'dialogue-message dialogue-message--trickster')
+   * @returns {Object} Controller: handleToken, handleDone, handleRedact,
+   *   handleError, showTyping, getTypingIndicator, destroy
+   */
+  function createStreamingDisplay(container, options) {
+    options = options || {};
+    var onComplete = options.onComplete || null;
+    var onRedactCb = options.onRedact || null;
+    var onErrorCb = options.onError || null;
+    var showTypingOpt = options.showTypingIndicator !== false;
+    var bubbleClass = options.bubbleClass ||
+      'dialogue-message dialogue-message--trickster';
+
+    var sdTypingIndicator = null;
+    var sdStreamingBubble = null;
+    var sdUserScrolledAway = false;
+    var sdStreaming = false;
+    var destroyed = false;
+
+    // Create typing indicator
+    if (showTypingOpt) {
+      sdTypingIndicator = buildTypingIndicator();
+      container.appendChild(sdTypingIndicator);
+    }
+
+    // Scroll detection for auto-scroll pause
+    function onScroll() {
+      if (sdStreaming) {
+        var atBottom = container.scrollTop + container.clientHeight >=
+                       container.scrollHeight - SCROLL_THRESHOLD;
+        sdUserScrolledAway = !atBottom;
+      }
+    }
+    container.addEventListener('scroll', onScroll);
+
+    function sdScrollToBottom() {
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function sdShowTyping(show) {
+      if (!sdTypingIndicator) return;
+      if (show) {
+        sdTypingIndicator.classList.add('dialogue-typing--active');
+      } else {
+        sdTypingIndicator.classList.remove('dialogue-typing--active');
+      }
+    }
+
+    function appendBubble(content, rendered) {
+      var bubble = document.createElement('div');
+      bubble.className = bubbleClass;
+      if (rendered && window.Renderer) {
+        bubble.innerHTML = window.Renderer.renderMarkdown(content);
+      } else {
+        bubble.textContent = content;
+      }
+      if (sdTypingIndicator && sdTypingIndicator.parentNode === container) {
+        container.insertBefore(bubble, sdTypingIndicator);
+      } else {
+        container.appendChild(bubble);
+      }
+      return bubble;
+    }
+
+    function handleToken(text) {
+      if (destroyed) return;
+      sdShowTyping(false);
+      sdStreaming = true;
+      if (!sdStreamingBubble) {
+        sdStreamingBubble = appendBubble('', false);
+      }
+      sdStreamingBubble.textContent += text;
+      if (!sdUserScrolledAway) sdScrollToBottom();
+    }
+
+    function handleDone(fullText, data) {
+      if (destroyed) return;
+      sdShowTyping(false);
+      sdStreaming = false;
+      sdUserScrolledAway = false;
+      if (sdStreamingBubble) {
+        settleMarkdown(sdStreamingBubble, fullText);
+      }
+      sdStreamingBubble = null;
+      sdScrollToBottom();
+      if (onComplete) onComplete(fullText, data);
+    }
+
+    function handleRedact(fallbackText) {
+      if (destroyed) return;
+      sdShowTyping(false);
+      sdStreaming = false;
+      if (sdStreamingBubble) {
+        if (window.Renderer) {
+          sdStreamingBubble.innerHTML = window.Renderer.renderMarkdown(fallbackText);
+        } else {
+          sdStreamingBubble.textContent = fallbackText;
+        }
+        sdStreamingBubble.classList.add('dialogue-message--redacted');
+        appendRedactionNotice(sdStreamingBubble);
+      }
+      sdStreamingBubble = null;
+      sdScrollToBottom();
+      if (onRedactCb) onRedactCb(fallbackText);
+    }
+
+    function handleError(code, msg, partial) {
+      if (destroyed) return;
+      sdShowTyping(false);
+      sdStreaming = false;
+      if (sdStreamingBubble && partial) {
+        sdStreamingBubble.textContent = partial;
+      } else if (sdStreamingBubble && !sdStreamingBubble.textContent) {
+        if (sdStreamingBubble.parentNode) {
+          sdStreamingBubble.parentNode.removeChild(sdStreamingBubble);
+        }
+      }
+      sdStreamingBubble = null;
+      if (onErrorCb) onErrorCb(code, msg, partial);
+    }
+
+    function destroy() {
+      destroyed = true;
+      sdStreaming = false;
+      container.removeEventListener('scroll', onScroll);
+      if (sdTypingIndicator && sdTypingIndicator.parentNode) {
+        sdTypingIndicator.parentNode.removeChild(sdTypingIndicator);
+      }
+      sdTypingIndicator = null;
+      sdStreamingBubble = null;
+    }
+
+    return {
+      handleToken: handleToken,
+      handleDone: handleDone,
+      handleRedact: handleRedact,
+      handleError: handleError,
+      showTyping: sdShowTyping,
+      getTypingIndicator: function () { return sdTypingIndicator; },
+      destroy: destroy
+    };
+  }
 
   // --------------------------------------------------------------------------
   // Public API
@@ -46,38 +278,59 @@
     // Add flex column class for dialogue layout
     panel.classList.add('interaction-panel--dialogue');
 
+    // Store max exchanges for counter
+    maxExchanges = (interaction && interaction.max_exchanges) || null;
+
     // Build the chat area
     dialogueArea = document.createElement('div');
     dialogueArea.className = 'dialogue-area';
     dialogueArea.setAttribute('role', 'log');
     dialogueArea.setAttribute('aria-live', 'polite');
 
-    // Typing indicator (hidden by default)
-    typingIndicator = document.createElement('div');
-    typingIndicator.className = 'dialogue-typing';
-    typingIndicator.setAttribute('role', 'status');
-    var typingLabel = document.createElement('span');
-    typingLabel.className = 'sr-only';
-    typingLabel.textContent = (window.I18n && window.I18n.dialogue_typing) || 'Typing...';
-    var dotsContainer = document.createElement('span');
-    dotsContainer.className = 'dialogue-typing__dots';
-    for (var i = 0; i < 3; i++) {
-      var dot = document.createElement('span');
-      dot.className = 'dialogue-typing__dot';
-      dotsContainer.appendChild(dot);
+    // Build exchange counter (only if max_exchanges is set)
+    if (maxExchanges) {
+      renderExchangeCounter();
     }
-    typingIndicator.appendChild(typingLabel);
-    typingIndicator.appendChild(dotsContainer);
-    dialogueArea.appendChild(typingIndicator);
 
-    // Auto-scroll detection
-    dialogueArea.addEventListener('scroll', function () {
-      if (streaming) {
-        var atBottom = dialogueArea.scrollTop + dialogueArea.clientHeight >=
-                       dialogueArea.scrollHeight - SCROLL_THRESHOLD;
-        userScrolledAway = !atBottom;
+    // Create streaming display (manages typing indicator, streaming, settling)
+    streamDisplay = createStreamingDisplay(dialogueArea, {
+      onComplete: function (fullText, data) {
+        currentAbort = null;
+        exchanges.push({ role: 'trickster', content: fullText });
+
+        // Update exchange counter from backend authority
+        if (data && data.exchanges_count != null) {
+          updateExchangeCount(data.exchanges_count);
+        }
+
+        // Phase transition or continue
+        if (data && data.next_phase_content) {
+          window.App.handlePhaseTransition(data.next_phase_content);
+        } else {
+          setInputDisabled(false);
+          if (textarea) textarea.focus();
+        }
+        scrollToBottom();
+      },
+      onRedact: function (fallbackText) {
+        currentAbort = null;
+        exchanges.push({ role: 'trickster', content: fallbackText });
+        setInputDisabled(false);
+        if (textarea) textarea.focus();
+        scrollToBottom();
+      },
+      onError: function (code, msg, partial) {
+        currentAbort = null;
+        showErrorDisplay(msg ||
+          ((window.I18n && window.I18n.dialogue_error_partial) ||
+           'Response interrupted.'));
+        setInputDisabled(false);
+        scrollToBottom();
       }
     });
+
+    // Get typing indicator reference for bubble insertion
+    typingIndicator = streamDisplay.getTypingIndicator();
 
     // Build the input area
     inputArea = document.createElement('div');
@@ -143,10 +396,10 @@
     if (!history || !history.length) return;
     if (!dialogueArea) return;
 
-    // Clear existing messages (but keep typing indicator)
+    // Clear existing messages (keep typing indicator and exchange counter)
     var children = dialogueArea.childNodes;
     for (var i = children.length - 1; i >= 0; i--) {
-      if (children[i] !== typingIndicator) {
+      if (children[i] !== typingIndicator && children[i] !== exchangeCounter) {
         dialogueArea.removeChild(children[i]);
       }
     }
@@ -165,6 +418,16 @@
 
     // Ensure typing indicator is at the end
     dialogueArea.appendChild(typingIndicator);
+
+    // Update exchange counter from recovered history (Gotcha §6.2)
+    if (exchangeCounter && maxExchanges) {
+      var studentCount = 0;
+      for (var k = 0; k < exchanges.length; k++) {
+        if (exchanges[k].role === 'student') studentCount++;
+      }
+      updateExchangeCount(studentCount);
+    }
+
     scrollToBottom();
   }
 
@@ -174,14 +437,17 @@
    */
   function clearDialogue() {
     exchanges = [];
-    streaming = false;
-    userScrolledAway = false;
     lastStudentMessage = null;
-    streamingBubble = null;
 
     if (currentAbort) {
       currentAbort.abort();
       currentAbort = null;
+    }
+
+    // Destroy streaming display (cleans up typing indicator, scroll listener)
+    if (streamDisplay) {
+      streamDisplay.destroy();
+      streamDisplay = null;
     }
 
     // Remove dialogue layout class if present
@@ -196,6 +462,8 @@
     inputArea = null;
     textarea = null;
     sendBtn = null;
+    exchangeCounter = null;
+    maxExchanges = null;
   }
 
   // --------------------------------------------------------------------------
@@ -248,6 +516,47 @@
   }
 
   // --------------------------------------------------------------------------
+  // Exchange Counter
+  // --------------------------------------------------------------------------
+
+  /**
+   * Creates the exchange counter element at the top of the dialogue area.
+   * Sticky positioned so it remains visible while scrolling.
+   */
+  function renderExchangeCounter() {
+    exchangeCounter = document.createElement('div');
+    exchangeCounter.className = 'dialogue-exchange-counter';
+    exchangeCounter.setAttribute('aria-label',
+      (window.I18n && window.I18n.exchange_counter_label) || 'Conversation progress');
+    var text = document.createElement('span');
+    text.className = 'dialogue-exchange-counter__text';
+    text.textContent = formatExchangeCount(0, maxExchanges);
+    exchangeCounter.appendChild(text);
+    // Insert as first child of dialogueArea
+    if (dialogueArea.firstChild) {
+      dialogueArea.insertBefore(exchangeCounter, dialogueArea.firstChild);
+    } else {
+      dialogueArea.appendChild(exchangeCounter);
+    }
+  }
+
+  /**
+   * Updates the exchange counter text with the current count.
+   */
+  function updateExchangeCount(count) {
+    if (!exchangeCounter || !maxExchanges) return;
+    var text = exchangeCounter.querySelector('.dialogue-exchange-counter__text');
+    if (text) {
+      text.textContent = formatExchangeCount(count, maxExchanges);
+    }
+  }
+
+  function formatExchangeCount(current, max) {
+    var template = (window.I18n && window.I18n.exchange_counter) || '{current}/{max}';
+    return template.replace('{current}', current).replace('{max}', max);
+  }
+
+  // --------------------------------------------------------------------------
   // Streaming
   // --------------------------------------------------------------------------
 
@@ -281,149 +590,25 @@
     // Disable input during streaming
     setInputDisabled(true);
 
-    // Show typing indicator
-    showTyping(true);
+    // Show typing indicator via streaming display
+    if (streamDisplay) {
+      streamDisplay.showTyping(true);
+    }
 
-    // Start streaming
-    streaming = true;
-    userScrolledAway = false;
-    streamingBubble = null;
-
+    // Start streaming — wire directly to streaming display callbacks
     var result = window.Api.streamRespond(sessionId, 'respond', text, {
-      onToken: handleToken,
-      onDone: function (fullText, data) {
-        handleDone(fullText, data, phaseData);
-      },
-      onRedact: handleRedact,
-      onError: handleError
+      onToken: streamDisplay.handleToken,
+      onDone: streamDisplay.handleDone,
+      onRedact: streamDisplay.handleRedact,
+      onError: streamDisplay.handleError
     });
 
     currentAbort = result;
   }
 
-  /**
-   * Handles a streaming token — appends text to the current bubble.
-   */
-  function handleToken(text) {
-    // Hide typing indicator on first token
-    showTyping(false);
-
-    // Create streaming bubble if needed
-    if (!streamingBubble) {
-      streamingBubble = appendTricksterBubble('', false);
-    }
-
-    // Append via textContent (safe, fast — §4.1)
-    streamingBubble.textContent += text;
-
-    // Auto-scroll unless student scrolled away
-    if (!userScrolledAway) {
-      scrollToBottom();
-    }
-  }
-
-  /**
-   * Handles the done event — finalizes the trickster response.
-   */
-  function handleDone(fullText, data) {
-    showTyping(false);
-    streaming = false;
-    currentAbort = null;
-
-    // Replace streaming bubble content with markdown-rendered version (§4.1)
-    if (streamingBubble && window.Renderer) {
-      streamingBubble.innerHTML = window.Renderer.renderMarkdown(fullText);
-    }
-
-    exchanges.push({ role: 'trickster', content: fullText });
-    streamingBubble = null;
-
-    // Check for phase transition (§6.4)
-    if (data && data.next_phase_content) {
-      // Phase transition — handlePhaseTransition will call renderPhase
-      // which calls clearDialogue via the wiring in app.js
-      window.App.handlePhaseTransition(data.next_phase_content);
-    } else {
-      // Conversation continues — re-enable input
-      setInputDisabled(false);
-      if (textarea) {
-        textarea.focus();
-      }
-    }
-
-    scrollToBottom();
-  }
-
-  /**
-   * Handles redact event — replaces bubble content with fallback (P12).
-   */
-  function handleRedact(fallbackText) {
-    showTyping(false);
-    streaming = false;
-    currentAbort = null;
-
-    if (streamingBubble) {
-      // Replace with sanitised fallback via markdown renderer
-      if (window.Renderer) {
-        streamingBubble.innerHTML = window.Renderer.renderMarkdown(fallbackText);
-      } else {
-        streamingBubble.textContent = fallbackText;
-      }
-      // Visual flash to signal safety correction
-      streamingBubble.classList.add('dialogue-message--redacted');
-    }
-
-    exchanges.push({ role: 'trickster', content: fallbackText });
-    streamingBubble = null;
-
-    // Re-enable input for next turn
-    setInputDisabled(false);
-    if (textarea) {
-      textarea.focus();
-    }
-    scrollToBottom();
-  }
-
-  /**
-   * Handles stream error — preserves partial text, shows retry option.
-   */
-  function handleError(code, message, partialText) {
-    showTyping(false);
-    streaming = false;
-    currentAbort = null;
-
-    // If there's partial text in the streaming bubble, keep it
-    if (streamingBubble && partialText) {
-      streamingBubble.textContent = partialText;
-    } else if (streamingBubble && !streamingBubble.textContent) {
-      // Empty streaming bubble — remove it
-      if (streamingBubble.parentNode) {
-        streamingBubble.parentNode.removeChild(streamingBubble);
-      }
-    }
-    streamingBubble = null;
-
-    // Show inline error with retry
-    showErrorDisplay(message || ((window.I18n && window.I18n.dialogue_error_partial) || 'Response interrupted.'));
-
-    // Re-enable input
-    setInputDisabled(false);
-    scrollToBottom();
-  }
-
   // --------------------------------------------------------------------------
   // UI Helpers
   // --------------------------------------------------------------------------
-
-  function showTyping(show) {
-    if (typingIndicator) {
-      if (show) {
-        typingIndicator.classList.add('dialogue-typing--active');
-      } else {
-        typingIndicator.classList.remove('dialogue-typing--active');
-      }
-    }
-  }
 
   function setInputDisabled(disabled) {
     if (textarea) {
@@ -497,26 +682,19 @@
     if (!appState.session) return;
 
     removeErrorDisplay();
-
-    // Remove the last student exchange from local array since we're re-sending
-    // Actually, the backend processes each /respond independently, so we
-    // just re-send. Keep the existing student bubble visible.
-
     setInputDisabled(true);
-    showTyping(true);
-    streaming = true;
-    userScrolledAway = false;
-    streamingBubble = null;
+
+    if (streamDisplay) {
+      streamDisplay.showTyping(true);
+    }
 
     var sessionId = appState.session.session_id;
 
     var result = window.Api.streamRespond(sessionId, 'respond', lastStudentMessage, {
-      onToken: handleToken,
-      onDone: function (fullText, data) {
-        handleDone(fullText, data);
-      },
-      onRedact: handleRedact,
-      onError: handleError
+      onToken: streamDisplay.handleToken,
+      onDone: streamDisplay.handleDone,
+      onRedact: streamDisplay.handleRedact,
+      onError: streamDisplay.handleError
     });
 
     currentAbort = result;
@@ -567,7 +745,8 @@
   window.Dialogue = {
     renderFreeformInteraction: renderFreeformInteraction,
     renderDialogueHistory: renderDialogueHistory,
-    clearDialogue: clearDialogue
+    clearDialogue: clearDialogue,
+    createStreamingDisplay: createStreamingDisplay
   };
 
 })();

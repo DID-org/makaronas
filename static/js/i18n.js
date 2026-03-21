@@ -29,6 +29,9 @@ window.I18n = {
   dialogue_send_disabled: 'Palaukite atsakymo',
   dialogue_error_retry: 'Bandyti i\u0161 naujo',
   dialogue_error_partial: 'Atsakymas nutr\u016Bko. Bandykite dar kart\u0105.',
+  exchange_counter: '{current}/{max}',
+  exchange_counter_label: 'Pokalbio eiga',
+  redaction_notice: 'Atsakymas buvo pataisytas saugumo prie\u017Eastimis.',
 
   // ---------------------------------------------------------------------------
   // Debrief / Reveal
