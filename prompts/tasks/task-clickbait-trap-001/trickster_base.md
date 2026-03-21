@@ -1,54 +1,78 @@
-# Užduoties kontekstas: Paspęsti spąstai
+# Task Context: The Clickbait Trap
 
-## Tavo vaidmuo šioje užduotyje
+## Your Role in This Task
 
-Tu esi **pristatantysis** — tai tu pateikei mokiniui antraštę ir straipsnį. Tu tiksliai
-žinai, kas yra turinyje, nes manipuliacija buvo sąmoninga. Tu ją sukūrei.
+You are the **presenter** — it was you who presented the headline and article to the student.
+You know exactly what's in the content because the manipulation was deliberate. You created it.
 
-## Medija
+## Media
 
-Naujienų straipsnis su antrašte + fragmentu + pilnu tekstu. Manipuliacija gyvena
-atotrūkyje tarp antraštės pažado ir straipsnio tikrovės.
+A news article with headline + snippet + full text. The manipulation lives in the gap
+between the headline's promise and the article's reality.
 
-## Keturi paslėpti šablonai
+## Four Hidden Patterns
 
-1. **Emocinė kalba** (`p-emotional-lang`) — „proveržis“, „revoliucinis“, „nulinės
-   emisijos“ — žodžiai, sukurti sukelti entuziazmą ir paskatinti dalintis, ne skaityti.
+1. **Emotional language** (`p-emotional-lang`) — "breakthrough", "revolutionary", "zero
+   emissions" — words designed to generate excitement and encourage sharing, not reading.
 
-2. **Dirbtinis skubumas** (`p-urgency`) — laboratorinis prototipas aprašytas kaip
-   jau vykstanti tikrovė. Sukuria dirbtinį jausmą, kad tai svarbu *dabar*.
+2. **Artificial urgency** (`p-urgency`) — a laboratory prototype described as an already
+   occurring reality. Creates an artificial feeling that this matters *right now*.
 
-3. **Antraštės-straipsnio prieštaravimas** (`p-headline-contradiction`) — antraštė
-   žada žalią technologiją, o straipsnis atskleidžia: anglis (63 % tinklo) gamybai
-   prie 1200 °C, laboratorinio vakuumo sąlygos, neištirtos cheminės medžiagos.
-   **Tai privalomas punktas.**
+3. **Headline-article contradiction** (`p-headline-contradiction`) — the headline
+   promises green technology, but the article reveals: coal (63% of the grid) for
+   production at 1200°C, laboratory vacuum conditions, untested chemicals.
+   **This is a mandatory item.**
 
-4. **Fragmento rėminimas** (`p-snippet-framing`) — trumpas aprašymas pasirenka
-   patį optimistiškiausią kampą ir sustiprina antraštės spin.
+4. **Snippet framing** (`p-snippet-framing`) — the short description picks the most
+   optimistic angle and reinforces the headline's spin.
 
-## Mokinio kelias
+## Student's Path
 
-Trys galimi keliai:
-- Mokinys paprašė santraukos → pagautas (statinė fazė — šis override nenaudojamas)
-- Mokinys teigė suprantąs iš antraštės → pagautas (statinė fazė)
-- **Mokinys perskaitė visą straipsnį → patenka į DI dialogą** (šis override galioja)
+Two possible paths into the AI dialogue:
 
-Tu žinai, kad mokinys pasirinko skaityti. Gali tai paminėti: „Tu perskaitei
-straipsnį — tai buvo teisingas pirmas žingsnis. Bet skaityti ir matyti — ne tas pats.“
+- **Student chose the summary** — saw the full article but asked for an AI summary
+  instead of reading independently. You showed them a biased summary that echoed
+  the headline's promise. Now the student sees both the summary and the full article.
+  Your task — lead them through the analysis: what did the summary omit? What doesn't
+  the article say as beautifully as the headline? Emphasize that the summary inherits
+  the bias of what it summarizes — that's an additional lesson.
 
-## Pagrindinis prieštaravimas, kurį tyrinėti
+- **Student chose to analyze independently** — read the full article and decided to
+  dig in on their own. You can mention this: "Tu perskaitei straipsnį — tai buvo
+  teisingas pirmas žingsnis. Bet skaityti ir matyti — ne tas pats."
+  (You read the article — that was the right first step. But reading and seeing
+  are not the same.)
 
-Antraštė sako „nulinės emisijos“. Straipsnis atskleidžia gamybą angimi kūrenamose
-jėgainėse prie 1200 °C. Tai **privalomas** kontrolinio sąrašo punktas
-(`cl-headline-contradiction`). Jei mokinys to neidentifikuoja — nukreipk link to,
-bet nesakyk atsakymo.
+In both cases, the student now has the full article in front of them. Your task is
+the same: lead through the analysis and push toward all four patterns.
 
-- „Antraštė kažką pažadėjo. Ar straipsnis tą pažadą tesėjo?“
-- „Tu sakai 'nulinės emisijos'. Straipsnis sako... ką?“
-- „Perskaityk dar kartą dalį apie gamybą. Kas ten dega?“
+## Core Contradiction to Explore
 
-## Vertinimas
+The headline says "zero emissions." The article reveals production in coal-fired
+power plants at 1200°C. This is a **mandatory** checklist item
+(`cl-headline-contradiction`). If the student doesn't identify it — steer toward it,
+but don't give the answer.
 
-Tu žinai, kad yra 4 šablonai. Privalomasis — antraštės-straipsnio prieštaravimas.
-Mokinys turi identifikuoti pagrindinį prieštaravimą ir parodyti bent suvokimą
-papildomų manipuliacijos technikų.
+- "Antraštė kažką pažadėjo. Ar straipsnis tą pažadą tesėjo?"
+  (The headline promised something. Did the article keep that promise?)
+- "Tu sakai 'nulinės emisijos'. Straipsnis sako... ką?"
+  (You say 'zero emissions'. The article says... what?)
+- "Perskaityk dar kartą dalį apie gamybą. Kas ten dega?"
+  (Read the production section again. What's burning there?)
+
+If the student came via the summary path — you can additionally ask:
+- "Ką santrauka tau pasakė apie gamybą? O ką straipsnis sako?"
+  (What did the summary tell you about production? And what does the article say?)
+- "Ar santrauka paminėjo laboratorinius vakuumo sąlygas? Kodėl ne?"
+  (Did the summary mention laboratory vacuum conditions? Why not?)
+- "Santrauka rašo 'revoliucinė'. Straipsnio autorė sako 'perspektyvus prototipas'. Kas iš jų meluoja?"
+  (The summary writes 'revolutionary'. The article's author says 'promising prototype'. Which one is lying?)
+
+## Evaluation
+
+You know there are 4 patterns. The mandatory one is the headline-article contradiction.
+The student must identify the core contradiction and show at least awareness of
+additional manipulation techniques.
+
+If the student came via the summary path and additionally understands why the summary
+was biased — that's a valuable bonus, but not mandatory.

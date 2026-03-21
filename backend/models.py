@@ -25,7 +25,7 @@ CLAUDE_SONNET: str = "claude-sonnet-4-6"
 CLAUDE_OPUS: str = "claude-opus-4-6"
 
 # --- Gemini models ---
-GEMINI_FLASH_LITE: str = "gemini-flash-lite-latest"
+GEMINI_FLASH_LITE: str = "gemini-3.1-flash-lite-preview"
 GEMINI_FLASH: str = "gemini-3-flash-preview"
 GEMINI_PRO: str = "gemini-3.1-pro-preview"
 
@@ -45,7 +45,8 @@ class ModelConfig:
 
     provider: str          # "gemini" or "anthropic"
     model_id: str          # e.g. "gemini-3-flash-preview"
-    thinking_budget: int = 0  # Gemini thinking tokens (0 = off)
+    thinking_budget: int = 0  # Gemini thinking tokens (0 = off, legacy)
+    thinking_level: str = ""  # Gemini thinking level: "", "low", "medium", "high"
 
 
 # ---------------------------------------------------------------------------
@@ -60,9 +61,9 @@ class ModelConfig:
 # and cost while keeping Flash's improved instruction-following over Lite.
 
 TIER_MAP: dict[str, ModelConfig] = {
-    "fast": ModelConfig(provider="gemini", model_id=GEMINI_FLASH_LITE, thinking_budget=0),
-    "standard": ModelConfig(provider="gemini", model_id=GEMINI_FLASH, thinking_budget=0),
-    "complex": ModelConfig(provider="gemini", model_id=GEMINI_PRO, thinking_budget=0),
+    "fast": ModelConfig(provider="gemini", model_id=GEMINI_FLASH, thinking_level="low"),
+    "standard": ModelConfig(provider="gemini", model_id=GEMINI_FLASH, thinking_level="medium"),
+    "complex": ModelConfig(provider="gemini", model_id=GEMINI_PRO, thinking_level="medium"),
 }
 
 

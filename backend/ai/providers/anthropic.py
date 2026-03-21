@@ -138,6 +138,7 @@ class AnthropicProvider(AIProvider):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> AsyncIterator[StreamEvent]:
         """Streams a response as text chunks and tool call events.
 
@@ -236,6 +237,7 @@ class AnthropicProvider(AIProvider):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> tuple[str, UsageInfo]:
         """Returns the full response text and usage info (non-streaming).
 

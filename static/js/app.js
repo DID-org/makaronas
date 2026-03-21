@@ -26,7 +26,13 @@
   // Task Sequence (honest stub — replaced by V9 Roadmap Engine)
   // --------------------------------------------------------------------------
 
-  var TASK_SEQUENCE = ['task-01', 'task-04'];
+  // Only active cartridges — draft skeletons (cherry-pick, phantom-quote,
+  // wedge, misleading-frame) are excluded until archetype visions complete them.
+  var TASK_SEQUENCE = [
+    'task-tunguska-001',          // ai_driven, article — rhetoric analysis (easiest entry point)
+    'task-follow-money-001',      // hybrid, investigation — deeper, guided discovery
+    'task-clickbait-trap-001'     // hybrid, article — clickbait patterns
+  ];
 
   // --------------------------------------------------------------------------
   // Session Storage Keys (namespaced to avoid collisions)
@@ -126,6 +132,21 @@
   // --------------------------------------------------------------------------
 
   /**
+   * Returns a Lithuanian context hint for the task medium.
+   * Helps the student understand what they're looking at.
+   */
+  function _getMediumHint(medium) {
+    var hints = {
+      'article':          'Ka\u017ekas pasidalino \u0161iuo straipsniu socialiniuose tinkluose.',
+      'social_post':      '\u0160is \u012fra\u0161as plinta socialiniuose tinkluose.',
+      'chat':             'Pokalbis, kur\u012f ka\u017ekas tau persiunt\u0117.',
+      'investigation':    'I\u0161tirk ir surask ties\u0105.',
+      'image':            'Ka\u017ekas pasidalino \u0161ia nuotrauka.'
+    };
+    return hints[medium] || null;
+  }
+
+  /**
    * Renders a phase into the content and interaction panels.
    * Called on initial task load, phase transitions, and session recovery.
    * This is imperative — not called from the render() loop.
@@ -146,15 +167,38 @@
       window.Investigation.clearInvestigation();
     }
 
-    // Content panel: preserve heading, render presentation blocks
+    // Content panel: task header + presentation blocks
     var contentPanel = document.querySelector('.content-panel');
     if (contentPanel && window.Renderer) {
-      var contentHeading = contentPanel.querySelector('h2');
       window.Renderer.renderBlocksInto(contentPanel, phaseData.content || [], phaseData.task_id);
-      if (contentHeading) {
-        contentHeading.textContent = phaseData.title || ((window.I18n && window.I18n.content_heading) || 'Turinys');
-        contentPanel.insertBefore(contentHeading, contentPanel.firstChild);
+
+      // Build task header: number + title + medium context
+      var taskHeader = document.createElement('div');
+      taskHeader.className = 'task-header';
+
+      var taskNumber = state.taskSequenceIndex + 1;
+      var taskLabel = document.createElement('span');
+      taskLabel.className = 'task-header__label';
+      taskLabel.textContent = 'U\u017eduotis ' + taskNumber;
+
+      var taskTitle = document.createElement('h2');
+      taskTitle.className = 'task-header__title';
+      taskTitle.tabIndex = -1;
+      taskTitle.textContent = phaseData.title || '';
+
+      taskHeader.appendChild(taskLabel);
+      taskHeader.appendChild(taskTitle);
+
+      // Medium context — tell the student what they're looking at
+      var mediumHint = _getMediumHint(phaseData.medium);
+      if (mediumHint) {
+        var contextEl = document.createElement('p');
+        contextEl.className = 'task-header__context';
+        contextEl.textContent = mediumHint;
+        taskHeader.appendChild(contextEl);
       }
+
+      contentPanel.insertBefore(taskHeader, contentPanel.firstChild);
     }
 
     // Layout class: reset and apply variant based on interaction type
@@ -339,25 +383,40 @@
     separator.setAttribute('aria-hidden', 'true');
     interactionPanel.appendChild(separator);
 
-    // 7. Start debrief, then reveal + button on completion
+    // 7. Start debrief (if there was AI dialogue), then reveal + button
+    //    Static terminal phases (reached via buttons, no AI exchanges) skip
+    //    the debrief — the trickster_content already contains the reveal.
+    var hadDialogue = state.dialogueHistory && state.dialogueHistory.length > 0;
     var sessionId = state.session && state.session.session_id;
+
+    if (!hadDialogue) {
+      // Skip debrief — show reveal + next button directly
+      _renderPostTaskEnding(interactionPanel);
+      return;
+    }
+
     renderDebrief(interactionPanel, sessionId, function () {
-      // onComplete: render reveal and next task button
-      if (state.terminal && state.terminal.reveal) {
-        renderReveal(interactionPanel, state.terminal.reveal);
-      }
-
-      // "Kitas uždavinys" button
-      var nextBtn = document.createElement('button');
-      nextBtn.className = 'btn btn-primary post-task-next-btn';
-      nextBtn.textContent = (window.I18n && window.I18n.btn_next_task) || 'Kitas u\u017Edavinys';
-      nextBtn.id = 'btn-next-task';
-      nextBtn.addEventListener('click', loadNextTask);
-      interactionPanel.appendChild(nextBtn);
-
-      // Focus management: move to next task button after reveal appears
-      setTimeout(function () { nextBtn.focus(); }, 0);
+      _renderPostTaskEnding(interactionPanel);
     });
+  }
+
+  /**
+   * Renders reveal section + "Kitas uždavinys" button.
+   * Called after debrief completes, or directly for static terminal phases.
+   */
+  function _renderPostTaskEnding(container) {
+    if (state.terminal && state.terminal.reveal) {
+      renderReveal(container, state.terminal.reveal);
+    }
+
+    var nextBtn = document.createElement('button');
+    nextBtn.className = 'btn btn-primary post-task-next-btn';
+    nextBtn.textContent = (window.I18n && window.I18n.btn_next_task) || 'Kitas u\u017Edavinys';
+    nextBtn.id = 'btn-next-task';
+    nextBtn.addEventListener('click', loadNextTask);
+    container.appendChild(nextBtn);
+
+    setTimeout(function () { nextBtn.focus(); }, 0);
   }
 
   /**
@@ -708,6 +767,16 @@
       startNewBtn.addEventListener('click', function () {
         clearSession();
         updateState({ section: 'welcome', error: null });
+      });
+    }
+
+    // DEV: Skip button — jumps to next task in sequence
+    var devSkipBtn = document.getElementById('btn-dev-skip');
+    if (devSkipBtn) {
+      devSkipBtn.addEventListener('click', function () {
+        if (!state.session) return;
+        console.log('[DEV] Skipping task at index', state.taskSequenceIndex);
+        loadNextTask();
       });
     }
 

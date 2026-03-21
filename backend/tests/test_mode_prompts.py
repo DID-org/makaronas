@@ -213,7 +213,7 @@ class TestModeContentElements:
         prompts = loader.load_trickster_prompts("gemini", persona_mode="presenting")
         assert prompts.mode_behaviour is not None
         content = prompts.mode_behaviour.lower()
-        assert "autorius" in content or "suk\u016br" in content
+        assert "author" in content or "created" in content
 
     def test_chat_participant_has_frame_maintenance(
         self, loader: PromptLoader,
@@ -224,7 +224,7 @@ class TestModeContentElements:
         )
         assert prompts.mode_behaviour is not None
         content = prompts.mode_behaviour.lower()
-        assert "vaidmen" in content or "kauk" in content
+        assert "character" in content or "mask" in content
 
     def test_chat_participant_has_multi_character(
         self, loader: PromptLoader,
@@ -235,18 +235,18 @@ class TestModeContentElements:
         )
         assert prompts.mode_behaviour is not None
         content = prompts.mode_behaviour.lower()
-        assert "keli" in content  # kelių veikėjų / kelis dalyvius
+        assert "multi" in content or "multiple" in content  # multi-character
 
     def test_narrator_has_socratic(self, loader: PromptLoader) -> None:
         """Narrator mode references Socratic/guide approach."""
         prompts = loader.load_trickster_prompts("gemini", persona_mode="narrator")
         assert prompts.mode_behaviour is not None
         content = prompts.mode_behaviour.lower()
-        assert "gid" in content or "sokrat" in content or "pasakotoj" in content
+        assert "guide" in content or "socratic" in content or "narrator" in content
 
     def test_commenter_has_brevity(self, loader: PromptLoader) -> None:
         """Commenter mode references short/brief responses."""
         prompts = loader.load_trickster_prompts("gemini", persona_mode="commenter")
         assert prompts.mode_behaviour is not None
         content = prompts.mode_behaviour.lower()
-        assert "trump" in content  # trumpiau / trumpumo / trumpi
+        assert "brief" in content or "short" in content  # brevity

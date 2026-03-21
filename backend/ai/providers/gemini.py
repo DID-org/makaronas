@@ -120,16 +120,42 @@ def _build_config(
     system_prompt: str,
     model_config: ModelConfig,
     tools: list[dict] | None,
+    force_tool: bool = False,
 ) -> types.GenerateContentConfig:
-    """Builds the GenerateContentConfig for a Gemini API call."""
+    """Builds the GenerateContentConfig for a Gemini API call.
+
+    Args:
+        system_prompt: System instruction text.
+        model_config: Provider-specific configuration.
+        tools: Optional tool definitions for function calling.
+        force_tool: If True, sets function calling mode to ANY,
+            forcing the model to produce a tool call. Use when the
+            model should signal a transition rather than continue
+            talking.
+    """
     gemini_tools = _build_tools(tools)
+
+    # Build thinking config — prefer thinking_level (string) over thinking_budget (int)
+    thinking_config = None
+    if model_config.thinking_level:
+        level_map = {
+            "low": types.ThinkingLevel.LOW,
+            "medium": types.ThinkingLevel.MEDIUM,
+            "high": types.ThinkingLevel.HIGH,
+            "minimal": types.ThinkingLevel.MINIMAL,
+        }
+        level = level_map.get(model_config.thinking_level)
+        if level:
+            thinking_config = types.ThinkingConfig(thinkingLevel=level)
+    if thinking_config is None and model_config.thinking_budget:
+        thinking_config = types.ThinkingConfig(
+            thinking_budget=model_config.thinking_budget,
+        )
 
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
         temperature=_DEFAULT_TEMPERATURE,
-        thinking_config=types.ThinkingConfig(
-            thinking_budget=model_config.thinking_budget,
-        ),
+        thinking_config=thinking_config,
     )
 
     if gemini_tools is not None:
@@ -137,6 +163,12 @@ def _build_config(
         config.automatic_function_calling = (
             types.AutomaticFunctionCallingConfig(disable=True)
         )
+        if force_tool:
+            config.tool_config = types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(
+                    mode="ANY",
+                )
+            )
 
     return config
 
@@ -171,6 +203,7 @@ class GeminiProvider(AIProvider):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> AsyncIterator[StreamEvent]:
         """Streams a response as text chunks and tool call events.
 
@@ -190,7 +223,7 @@ class GeminiProvider(AIProvider):
         """
         self._last_usage = None
         contents = _build_contents(messages)
-        config = _build_config(system_prompt, model_config, tools)
+        config = _build_config(system_prompt, model_config, tools, force_tool=force_tool)
 
         last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES + 1):
@@ -260,6 +293,7 @@ class GeminiProvider(AIProvider):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> tuple[str, UsageInfo]:
         """Returns the full response text and usage info (non-streaming).
 
@@ -270,12 +304,13 @@ class GeminiProvider(AIProvider):
             messages: Conversation history as Message dicts (text-only or multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget).
             tools: Optional tool definitions for function calling.
+            force_tool: If True, forces the model to produce a tool call.
 
         Returns:
             Tuple of (full response text, token usage information).
         """
         contents = _build_contents(messages)
-        config = _build_config(system_prompt, model_config, tools)
+        config = _build_config(system_prompt, model_config, tools, force_tool=force_tool)
 
         last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES + 1):

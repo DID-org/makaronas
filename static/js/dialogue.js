@@ -327,7 +327,26 @@
 
         // Phase transition or continue
         if (data && data.next_phase_content) {
-          window.App.handlePhaseTransition(data.next_phase_content);
+          var nextPhase = data.next_phase_content;
+          if (nextPhase.is_terminal) {
+            // Terminal phases transition immediately (reveal flow preserves dialogue)
+            window.App.handlePhaseTransition(nextPhase);
+          } else {
+            // Non-terminal: show continue button so student can read Makaronas's last message
+            setInputDisabled(true);
+            var continueBtn = document.createElement('button');
+            continueBtn.className = 'btn dialogue-continue-btn';
+            continueBtn.type = 'button';
+            continueBtn.textContent = (window.I18n && window.I18n.btn_continue) || 'T\u0119sti';
+            continueBtn.addEventListener('click', function () {
+              window.App.handlePhaseTransition(nextPhase);
+            });
+            // Append button after the last trickster bubble
+            var dialogueAreaEl = dialogueArea || document.querySelector('.dialogue-area');
+            if (dialogueAreaEl) {
+              dialogueAreaEl.appendChild(continueBtn);
+            }
+          }
         } else {
           setInputDisabled(false);
           if (textarea) textarea.focus();

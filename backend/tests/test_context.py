@@ -789,10 +789,11 @@ class TestTransitionTool:
         params = TRANSITION_TOOL["parameters"]
         assert params["type"] == "object"
         assert "signal" in params["properties"]
+        assert "response_text" in params["properties"]
         assert set(params["properties"]["signal"]["enum"]) == {
             "understood", "partial", "max_reached",
         }
-        assert params["required"] == ["signal"]
+        assert set(params["required"]) == {"signal", "response_text"}
 
 
 # ---------------------------------------------------------------------------

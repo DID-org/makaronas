@@ -60,6 +60,7 @@ class MockProvider(AIProvider):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> AsyncIterator[StreamEvent]:
         """Yields canned text chunks followed by tool call events.
 
@@ -83,6 +84,7 @@ class MockProvider(AIProvider):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> tuple[str, UsageInfo]:
         """Returns concatenated responses and configured usage info.
 

@@ -87,6 +87,7 @@ class AIProvider(ABC):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> AsyncIterator[StreamEvent]:
         """Streams a response as text chunks and tool call events.
 
@@ -97,6 +98,8 @@ class AIProvider(ABC):
                 or a list of type-discriminated content parts (multimodal).
             model_config: Provider-specific configuration (model ID, thinking budget, etc.).
             tools: Optional tool definitions for function calling.
+            force_tool: If True, forces the model to produce a tool call
+                (Gemini: mode=ANY). Ignored if tools is None.
 
         Yields:
             TextChunk for text tokens, ToolCallEvent for tool invocations.
@@ -110,6 +113,7 @@ class AIProvider(ABC):
         messages: list[Message],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> tuple[str, UsageInfo]:
         """Returns the full response text and usage info (non-streaming).
 

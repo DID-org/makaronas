@@ -96,6 +96,7 @@ class SpyProvider(MockProvider):
         messages: list[dict[str, str]],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> AsyncIterator[StreamEvent]:
         """Records kwargs then delegates to MockProvider behavior."""
         self.stream_calls.append({
@@ -103,6 +104,7 @@ class SpyProvider(MockProvider):
             "messages": messages,
             "model_config": model_config,
             "tools": tools,
+            "force_tool": force_tool,
         })
         if self.error is not None:
             raise self.error
@@ -135,6 +137,7 @@ class MultiCallProvider(AIProvider):
         messages: list[dict[str, str]],
         model_config: ModelConfig,
         tools: list[dict] | None = None,
+        force_tool: bool = False,
     ) -> AsyncIterator[StreamEvent]:
         """Yields responses for the current call index, then advances."""
         idx = min(self._call_index, len(self._call_responses) - 1)

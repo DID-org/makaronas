@@ -115,18 +115,20 @@ class TestLithuanianCharacters:
     def test_persona_contains_lt_chars(self, loader: PromptLoader) -> None:
         prompts = loader.load_trickster_prompts("gemini")
         assert prompts.persona is not None
-        for char in self._LT_CHARS:
-            assert char in prompts.persona, (
-                f"Lithuanian char U+{ord(char):04X} missing from persona"
-            )
+        # Prompts are now English with Lithuanian examples; check that
+        # at least 4 Lithuanian diacritical chars survive in examples
+        found = [c for c in self._LT_CHARS if c in prompts.persona]
+        assert len(found) >= 4, (
+            f"Expected >= 4 Lithuanian chars in persona examples, found: {found}"
+        )
 
-    def test_persona_contains_lt_quotes(self, loader: PromptLoader) -> None:
+    def test_persona_contains_lt_examples(self, loader: PromptLoader) -> None:
         prompts = loader.load_trickster_prompts("gemini")
         assert prompts.persona is not None
-        for char in self._LT_QUOTES:
-            assert char in prompts.persona, (
-                f"Lithuanian quote U+{ord(char):04X} missing from persona"
-            )
+        # Prompts are now English with Lithuanian example phrases;
+        # verify Lithuanian examples are present (e.g., "Makaronas", pasta metaphors)
+        assert "Makaronas" in prompts.persona
+        assert "makaronus" in prompts.persona or "makaron" in prompts.persona.lower()
 
     def test_behaviour_contains_lt_chars(self, loader: PromptLoader) -> None:
         prompts = loader.load_trickster_prompts("gemini")
@@ -135,11 +137,12 @@ class TestLithuanianCharacters:
         assert "\u0105" in prompts.behaviour  # ą
         assert "\u0161" in prompts.behaviour  # š
 
-    def test_safety_contains_lt_chars(self, loader: PromptLoader) -> None:
+    def test_safety_contains_boundary_keywords(self, loader: PromptLoader) -> None:
         prompts = loader.load_trickster_prompts("gemini")
         assert prompts.safety is not None
-        assert "\u0105" in prompts.safety  # ą
-        assert "\u0117" in prompts.safety  # ė
+        # Safety prompts are now English; verify key boundary concepts present
+        assert "self-harm" in prompts.safety or "prohibited" in prompts.safety.lower()
+        assert "safety" in prompts.safety.lower() or "boundar" in prompts.safety.lower()
 
     def test_clickbait_override_contains_lt_chars(
         self, loader: PromptLoader
@@ -148,8 +151,11 @@ class TestLithuanianCharacters:
             "gemini", "task-clickbait-trap-001"
         )
         assert prompts.task_override is not None
-        assert "\u0161" in prompts.task_override  # š
-        assert "\u201e" in prompts.task_override  # „
+        # Prompts are now English with Lithuanian example phrases
+        found = [c for c in self._LT_CHARS if c in prompts.task_override]
+        assert len(found) >= 3, (
+            f"Expected >= 3 Lithuanian chars in clickbait examples, found: {found}"
+        )
 
     def test_follow_money_override_contains_lt_chars(
         self, loader: PromptLoader
@@ -239,8 +245,8 @@ class TestContentElements:
         """Safety file defines content boundaries."""
         prompts = loader.load_trickster_prompts("gemini")
         assert prompts.safety is not None
-        # Should mention forbidden content categories
-        assert "savi\u017eal" in prompts.safety  # savižal (self-harm)
+        # Should mention forbidden content categories (now English)
+        assert "self-harm" in prompts.safety or "harm" in prompts.safety.lower()
 
     def test_clickbait_references_patterns(
         self, loader: PromptLoader

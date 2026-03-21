@@ -484,12 +484,12 @@ class TestWedgeAdversarialInput:
         )
 
         system = result.system_prompt.lower()
-        # From persona_chat_participant_base.md: "niekada neišeik iš vaidmens"
-        assert "vaidmen" in system, (
+        # From persona_chat_participant_base.md (now English): "character"
+        assert "character" in system, (
             "Frame-preservation instruction missing from system prompt"
         )
-        # From persona_chat_participant_base.md: "kaukę" (mask concept)
-        assert "kauk" in system, (
+        # From persona_chat_participant_base.md (now English): "mask"
+        assert "mask" in system, (
             "Mask/frame concept missing from system prompt"
         )
 

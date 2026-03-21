@@ -1,0 +1,181 @@
+{
+  "task_id": "task-tunguska-001",
+  "task_type": "ai_driven",
+  "title": "Slėpta tiesa",
+  "description": "Sensacingas straipsnis apie Tunguskos sprogimą — Tesla, slapti eksperimentai, vyriausybių slėpimas. Teorija gali būti teisinga arba ne — tai ne mokinio užduotis. Užduotis — rasti vietas, kur straipsnis nustoja tyrinėti ir pradeda manipuliuoti.",
+  "version": "1.0.0",
+  "trigger": "cynicism",
+  "technique": "emotional_framing",
+  "medium": "article",
+  "learning_objectives": [
+    "Atskirti tyrinėjimą nuo manipuliacijos — kur straipsnis nustoja informuoti ir pradeda įtikinti",
+    "Atpažinti emocinę manipuliaciją nepriklausomai nuo turinio teisingumo",
+    "Suprasti, kad tikri faktai gali būti naudojami manipuliacijai — tiesa ir manipuliacija nėra priešingybės",
+    "Identifikuoti konkrečias retorines priemones: emocinė kalba, retoriniai klausimai, koreliaciją=priežastis, bevardžiai galingieji"
+  ],
+  "difficulty": 3,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "straipsnis",
+    "retorika",
+    "emocijos",
+    "konspiracijos",
+    "kritinis mąstymas"
+  ],
+  "status": "active",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "article-tunguska",
+      "type": "text",
+      "text": "PAGALIAU ATSKLEISTA: TUNGUSKOS SPROGIMAS NEBUVO METEORITAS! SLĖPTA TIESA, KURIĄ VALDŽIA NORĖJO PALAIDOTI AMŽINAI!\n\nJau daugiau nei šimtmetį mums buvo meluojama. Oficiali istorija teigia, kad 1908 m. birželio 30 d. virš atokios Sibiro Tunguskos upės regiono sprogo meteoritas ar kometa. Tačiau kas, jei pasakytume, kad tai — tik patogi pasaka, sukurta nuslėpti kur kas baisesnę tiesą? Tiesą, kurią pasaulio galingieji desperatiškai bando nuslėpti nuo mūsų visų.\n\nNaujai paviešinti, dešimtmečius slėpti liudininkų parodymai ir nepriklausomų tyrėjų įžvalgos piešia visiškai kitokį vaizdą. Įsivaizduokite: saulėtą rytą dangų perskrodžia ne ugnies kamuolys iš kosmoso, o akinanti, beveik dirktinė šviesa, lydima kurtinančio garso, kuris primena ne gamtos stichiją, o galingiausio ginklo sprogimą. Vietos gyventojai, kurių pasakojimai buvo ciniškai ignoruojami, kalbėjo apie „antrą saulę“, kuri praskriejo dangumi, o po to sekė „griaustinių serija“, nuo kurios drebėjo žemė ir dužo langai už šimtų kilometrų. Ar taip elgiasi paprastas akmuo iš kosmoso?\n\nOficialūs mokslininkai dešimtmečius ieškojo meteorito liekanų, bet jų nerado. JOKIO KRATERIO. JOKIŲ FRAGMENTŲ. Tik milžiniškas, daugiau nei 2000 kvadratinių kilometrų plotas, kuriame medžiai išguldyti lyg degtukai — visi nukreipti nuo sprogimo epicentro. Mokslas tai vadina „oro sprogimu“, bet ar tai ne patogus paaiškinimas, kai trūksta įrodymų? Nepriklausomi tyrėjai kelia klausimą: o gal nieko ir nebuvo galima rasti, nes sprogimas nebuvo materialus? Gal tai buvo galingos energijos pliūpsnis, sukurtas ne gamtos, o žmogaus?\n\nApsvarstykite faktus, kuriuos valdžia nutyli: tuo metu Nikola Tesla, genialus išradėjas, aplenkęs savo laikmetį, aktyviai eksperimentavo su belaidžiu energijos perdavimu. Jo Wardenclyffe bokštas buvo sukurtas perduoti energiją per visą planetą. Ar gali būti, kad Tunguskos sprogimas — tai ne kas kita, kaip nepavykusio ar slaptų tapusio eksperimento pasekmė? Galbūt Tesla, bandydamas įrodyti savo teorijos galią, netyčia nukreipė milžinišką energijos spindlį į atokų Sibiro regioną? Ši teorija paaiškintų viską: kodėl nebuvo kraterio, kodėl dangus švytėjo kelias dienas po įvykio visoje Europoje ir kodėl oficialūs šaltiniai taip skubėjo viską „nurašyti“ meteoritui, užuot tyrę kitas, kur kas nepatogesnes versijas.\n\nTiesa yra ten, bet ji palaidota po melo sluoksniais. Kol mes tikime pasakomis apie krentančias žvaigždes, tikrieji įvykiai lieka šešėlyje. Kitą kartą, kai išgirsite oficialią versiją, paklauskite savęs: kodėl jie taip stengiasi, kad patikėtumėte būtent ja? Kas iš tiesų įvyko virš Tunguskos tą lemtingą 1908-ųjų rytą? Atsakymų turime ieškoti ne kosmoso platybėse, o čia, Žemėje — tarp slaptų archyvų ir nutildytų genijų istorijų.",
+      "style": "article"
+    }
+  ],
+  "phases": [
+    {
+      "id": "dialogue",
+      "title": "Straipsnio analizė",
+      "visible_blocks": [
+        "article-tunguska"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Perskaityk šitą straipsnį. Gali būti, kad teorija teisinga — gali būti, kad ne. Tai nėra tavo užduotis. Tavo užduotis — rasti vietas, kur straipsnis bando tave ĮTIKINTI, o ne INFORMUOTI. Kur jis nustoja tyrinėti ir pradeda manipuliuoti?",
+        "min_exchanges": 3,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "reveal",
+        "on_partial": "reveal",
+        "on_max_exchanges": "reveal"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal",
+      "title": "Atskleidimas",
+      "visible_blocks": [
+        "article-tunguska"
+      ],
+      "trickster_content": "Gerai, pažiūrėkime, ką šis straipsnis iš tikrųjų daro:\n\n• **Emocinė kalba** — „mums buvo meluojama“, „baisesnę tiesą“, „desperatiškai bando nuslėpti“. Šie žodžiai kuria skubos ir pasipiktinimo jausmą DAR PRIEŠ pateikiant bet kokius įrodymus.\n\n• **Retoriniai klausimai kaip įrodymai** — „Ar taip elgiasi paprastas akmuo iš kosmoso?“ Klausimas skamba įtikinamai, bet jis nieko neįrodo. Jis tik sukelia abejones.\n\n• **Koreliacija = priežastis** — Tesla eksperimentavo su belaidžiu energijos perdavimu. Tunguskos sprogimas įvyko tuo metu. Vadinasi, Tesla tai padarė? Tai klasikinė logikos klaida — du dalykai įvyko tuo pačiu metu, bet tai nereiškia, kad vienas sukėlė kitą.\n\n• **Bevardžiai galingieji** — „pasaulio galingieji“, „valdžia nutyli“, „oficialūs šaltiniai skubėjo“. Kas konkrečiai? Kokie galingieji? Kokia valdžia? Nenurodomas nė vienas konkretus asmuo ar institucija — tai leidžia skaitytojui įsivaizduoti pačiam.\n\n• **Vaizdingas aprašymas vietoj įrodymų** — sprogimo aprašymas yra kinematografinis: „akinanti šviesa“, „kurtinantis garsas“. Tai sukuria emocinį vaizdą, kuris atstoja mokslinius duomenis.\n\n• **Tikri faktai, panaudoti manipuliacijai** — Tesla TIKRAI eksperimentavo su belaidžiu energijos perdavimu. Krateris TIKRAI nebuvo rastas. Šie faktai yra tikri — bet straipsnis juos sujungia taip, tarsi išvada būtų vienintelė įmanoma.\n\nSvarbiausias dalykas: teorija gali būti įdomi ir verta tyrinėjimo. Bet šis straipsnis ne tyrinėja — jis įtikina. Ir tai yra skirtumas, kurį verta matyti kiekvieną kartą, kai skaitai bet ką — ar tai konspiracijų portalas, ar pagrindinis naujienų kanalas.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    }
+  ],
+  "initial_phase": "dialogue",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-emotional-language",
+        "description": "Emocinė kalba — „mums buvo meluojama“, „desperatiškai bando nuslėpti“ — sukuria emocinį foną prieš pateikiant įrodymus",
+        "technique": "emotional_framing",
+        "real_world_connection": "Emocinė kalba yra pagrindinis manipuliacijos įrankis tiek konspiracijose, tiek pagrindiniuose naujienų kanaluose"
+      },
+      {
+        "id": "p-rhetorical-questions",
+        "description": "Retoriniai klausimai vietoj įrodymų — „Ar taip elgiasi paprastas akmuo?“ skamba įtikinamai, bet nieko neįrodo",
+        "technique": "emotional_framing",
+        "real_world_connection": "Retoriniai klausimai sukuria abejonių jausmą nereikalaujant įrodymų — skaitytojo protas pats užpildo „atsakymą“"
+      },
+      {
+        "id": "p-correlation-causation",
+        "description": "Koreliacija = priežastis — Tesla eksperimentavo tuo metu, Tunguska įvyko tuo metu, vadinasi Tesla tai padarė",
+        "technique": "cherry_picking",
+        "real_world_connection": "Du įvykiai tuo pačiu metu nereiškia priežastinio ryšio — bet žmogaus protas natūraliai ieško ryšių"
+      },
+      {
+        "id": "p-unnamed-powers",
+        "description": "Bevardžiai galingieji — „pasaulio galingieji“, „valdžia“ be konkrečių pavadinimų leidžia skaitytojui pačiam įsivaizduoti priešą",
+        "technique": "fabrication",
+        "real_world_connection": "Nekonkretus priešas yra galingesnis už konkretų — kiekvienas skaitytojas įstato savo „galinguosius“"
+      },
+      {
+        "id": "p-vivid-imagery",
+        "description": "Vaizdingi aprašymai vietoj faktų — kinematografinis sprogimo vaizdavimas atstoja mokslinius duomenis",
+        "technique": "emotional_framing",
+        "real_world_connection": "Vaizdingas pasakojimas įtraukia emociškai ir sumažina kritinio mąstymo poreikį"
+      },
+      {
+        "id": "p-real-facts-misused",
+        "description": "Tikri faktai panaudoti manipuliacijai — Tesla tikrai eksperimentavo, krateris tikrai nerastas, bet straipsnis sujungia juos taip, tarsi išvada būtų vienintelė",
+        "technique": "cherry_picking",
+        "real_world_connection": "Pačios efektyviausios manipuliacijos naudoja tikrus faktus — nes jų negalima paneigti, tik kvestionuoti išvadas"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-emotional-language",
+        "description": "Mokinys identifikuoja emocinę kalbą su konkrečiais pavyzdžiais iš straipsnio",
+        "pattern_refs": [
+          "p-emotional-language"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-rhetorical-questions",
+        "description": "Mokinys atpažįsta retorinius klausimus kaip įtikinimo priemonę, ne kaip įrodymus",
+        "pattern_refs": [
+          "p-rhetorical-questions"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-correlation-causation",
+        "description": "Mokinys identifikuoja Tesla-Tunguska laiko sutapimo logikos klaidą",
+        "pattern_refs": [
+          "p-correlation-causation"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-unnamed-powers",
+        "description": "Mokinys pastebi, kad „galingieji“ ir „valdžia“ niekada neįvardijami konkrečiai",
+        "pattern_refs": [
+          "p-unnamed-powers"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-real-facts-misused",
+        "description": "Mokinys supranta, kad straipsnis naudoja tikrus faktus manipuliacijai — tiesa ir manipuliacija gali egzistuoti kartu",
+        "pattern_refs": [
+          "p-real-facts-misused"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys nesugeba identifikuoti konkrečių manipuliacijos priemonių — lieka ties „at tai fake“ be specifikos",
+      "partial": "Mokinys identifikuoja 1–2 priemones su pavyzdžiais, bet nepastebi gilesnių (pvz., tikrų faktų panaudojimo manipuliacijai)",
+      "trickster_loses": "Mokinys identifikuoja 3+ priemones su konkrečiais pavyzdžiais ir supranta, kad manipuliacija nepriklausoma nuo turinio teisingumo"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-tunguska-001",
+    "persona_mode": "chat_participant",
+    "has_static_fallback": false,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Teorija gali būti teisinga arba neteisinga — tai ne tavo problema. Tavo problema — atpažinti, kada tekstas bando tave įTIKINTI, o ne INFORMUOTI. Emocijos, retoriniai klausimai, bevardžiai galingieji — tai įrankiai. Kai juos matai, gali pats nuspręsti, ar tikėti.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}

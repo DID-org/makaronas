@@ -89,13 +89,13 @@ class TestPromptLoading:
         result = loader.load_creation_eval_prompt("gemini")
         assert result is None
 
-    def test_content_is_lithuanian(self, prompts_dir_with_creation_eval):
+    def test_content_has_evaluation_keywords(self, prompts_dir_with_creation_eval):
         loader = PromptLoader(prompts_dir_with_creation_eval)
         result = loader.load_creation_eval_prompt("gemini")
         assert result is not None
-        # Verify Lithuanian keywords from the coaching framework
-        assert "vertink" in result.lower() or "vertinimo" in result.lower()
-        assert "metodologij" in result.lower() or "metodolog" in result.lower()
+        # Verify English keywords from the coaching framework
+        assert "evaluat" in result.lower()
+        assert "methodology" in result.lower() or "manipulation" in result.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ class TestArtifactsTriggerInjection:
         session = make_session(generated_artifacts=[_artifact()])
         cartridge = make_cartridge()
         result = context_manager._build_task_context(session, cartridge, "gemini")
-        assert "K\u016brimo vertinimas" in result or "meistras" in result
+        assert "Creation Evaluation" in result or "master" in result
 
     def test_absent_when_artifacts_empty(
         self, context_manager, make_session, make_cartridge,
@@ -162,10 +162,10 @@ class TestOrderingAfterArtifacts:
         session = make_session(generated_artifacts=[_artifact()])
         cartridge = make_cartridge()
         result = context_manager._build_task_context(session, cartridge, "gemini")
-        # Artifacts section header from Phase 7c
+        # Artifacts section header from Phase 7c (still Lithuanian in context.py)
         artifacts_marker = "Mokinio sukurtas turinys"
-        # Creation eval header
-        creation_eval_marker = "K\u016brimo vertinimas"
+        # Creation eval header (now English in the prompt file)
+        creation_eval_marker = "Creation Evaluation"
         assert artifacts_marker in result
         assert creation_eval_marker in result
         assert result.index(artifacts_marker) < result.index(creation_eval_marker)
@@ -185,10 +185,10 @@ class TestAdversarialCartridgeWithArtifacts:
         session = make_session(generated_artifacts=[_artifact()])
         cartridge = make_cartridge(is_clean=False)
         result = context_manager._build_task_context(session, cartridge, "gemini")
-        # Adversarial task context marker (ASCII ž in static method)
+        # Adversarial task context marker (still Lithuanian in context.py)
         assert "Uzduoties kontekstas" in result
-        # Creation eval present
-        assert "meistras" in result or "K\u016brimo vertinimas" in result
+        # Creation eval present (now English in prompt file)
+        assert "master" in result or "Creation Evaluation" in result
 
 
 # ---------------------------------------------------------------------------
@@ -216,10 +216,10 @@ class TestCleanCartridgeWithArtifacts:
             },
         )
         result = context_manager._build_task_context(session, cartridge, "gemini")
-        # Clean task context marker
+        # Clean task context marker (still Lithuanian in context.py)
         assert "Svaraus turinio kontekstas" in result
-        # Creation eval present
-        assert "meistras" in result or "K\u016brimo vertinimas" in result
+        # Creation eval present (now English in prompt file)
+        assert "master" in result or "Creation Evaluation" in result
 
 
 # ---------------------------------------------------------------------------
@@ -243,8 +243,8 @@ class TestFullSystemPromptIntegration:
             session, cartridge, "gemini",
             exchange_count=0, min_exchanges=2,
         )
-        assert "K\u016brimo vertinimas" in assembled.system_prompt or \
-               "meistras" in assembled.system_prompt
+        assert "Creation Evaluation" in assembled.system_prompt or \
+               "master" in assembled.system_prompt
 
     def test_debrief_excludes_creation_eval(
         self, context_manager, make_session, make_cartridge,
@@ -259,7 +259,7 @@ class TestFullSystemPromptIntegration:
             session, cartridge, "gemini",
         )
         # Debrief uses its own path, not _build_task_context
-        assert "K\u016brimo vertinimas" not in assembled.system_prompt
+        assert "Creation Evaluation" not in assembled.system_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -276,11 +276,11 @@ class TestSignalSemantics:
         assert result is not None
         text = result.lower()
         # Understood / comprehension
-        assert "supratim" in text, "Missing 'understood' signal concept"
+        assert "understanding" in text, "Missing 'understood' signal concept"
         # Partial
-        assert "dalini" in text, "Missing 'partial' signal concept"
+        assert "partial" in text, "Missing 'partial' signal concept"
         # Max reached / inability
-        assert "nepavyko" in text or "negal\u0117jo" in text, \
+        assert "failed" in text or "could not" in text, \
             "Missing 'max_reached' signal concept"
 
 
@@ -304,7 +304,7 @@ class TestGracefulFallback:
         # Artifacts data still present
         assert "Mokinio sukurtas turinys" in result
         # Creation eval absent
-        assert "K\u016brimo vertinimas" not in result
+        assert "Creation Evaluation" not in result
 
     def test_warning_logged_when_prompt_missing(
         self, context_manager_no_creation_eval, make_session, make_cartridge,

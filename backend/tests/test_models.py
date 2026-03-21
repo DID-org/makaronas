@@ -24,7 +24,7 @@ EXPECTED_CONSTANTS = {
     "CLAUDE_HAIKU": "claude-haiku-4-5-20251001",
     "CLAUDE_SONNET": "claude-sonnet-4-6",
     "CLAUDE_OPUS": "claude-opus-4-6",
-    "GEMINI_FLASH_LITE": "gemini-flash-lite-latest",
+    "GEMINI_FLASH_LITE": "gemini-3.1-flash-lite-preview",
     "GEMINI_FLASH": "gemini-3-flash-preview",
     "GEMINI_PRO": "gemini-3.1-pro-preview",
 }
@@ -43,7 +43,7 @@ class TestModelConstants:
         assert CLAUDE_OPUS == "claude-opus-4-6"
 
     def test_gemini_flash_lite_value(self) -> None:
-        assert GEMINI_FLASH_LITE == "gemini-flash-lite-latest"
+        assert GEMINI_FLASH_LITE == "gemini-3.1-flash-lite-preview"
 
     def test_gemini_flash_value(self) -> None:
         assert GEMINI_FLASH == "gemini-3-flash-preview"

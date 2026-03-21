@@ -58,7 +58,19 @@
     // --- Content panel: restructure to show only starting query cards ---
     restructureContentPanel(interaction.starting_queries || []);
 
-    // --- Interaction panel: build controls ---
+    // --- Interaction panel: show trickster message + compact controls ---
+    // Render trickster message above controls (it gets cleared by renderInteraction)
+    if (phaseData.trickster_intro) {
+      var tricksterMsg = document.createElement('div');
+      tricksterMsg.className = 'investigation-trickster-message trickster-response';
+      if (window.Renderer) {
+        tricksterMsg.innerHTML = window.Renderer.renderMarkdown(phaseData.trickster_intro);
+      } else {
+        tricksterMsg.textContent = phaseData.trickster_intro;
+      }
+      interactionPanel.appendChild(tricksterMsg);
+    }
+
     renderControls();
 
     // --- beforeunload persistence ---
@@ -165,7 +177,8 @@
       addMarkButtonIfNeeded(el, block);
     }
 
-    contentPanel.appendChild(treeContainer);
+    // Insert tree at the TOP of content panel (before articles, not after)
+    contentPanel.insertBefore(treeContainer, contentPanel.firstChild);
 
     // Delegated click handler on tree container
     treeContainer.addEventListener('click', handleTreeClick);

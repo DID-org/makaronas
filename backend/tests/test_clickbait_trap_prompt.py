@@ -315,8 +315,8 @@ class TestClickbaitTrapContextAssembly:
             exchange_count=1, min_exchanges=2,
         )
 
-        # Distinctive phrase from the clickbait-trap prompt
-        assert "Pasp\u0119sti sp\u0105stai" in result.system_prompt
+        # Distinctive phrase from the clickbait-trap prompt (now in English)
+        assert "Clickbait Trap" in result.system_prompt
 
     def test_structured_eval_data_in_system_prompt(
         self, context_manager, make_session, make_cartridge,
@@ -348,8 +348,8 @@ class TestClickbaitTrapContextAssembly:
             exchange_count=1, min_exchanges=2,
         )
 
-        # Distinctive phrase from persona_presenting_base.md
-        assert "Pristatančiojo režimas" in result.system_prompt
+        # Distinctive phrase from persona_presenting_base.md (now in English)
+        assert "Presenter Mode" in result.system_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -479,19 +479,15 @@ class TestClickbaitTrapScenarios:
 class TestClickbaitTrapPromptContent:
     """Verifies key structural elements in the prompt file content."""
 
-    def test_no_english_content(self, loader: PromptLoader) -> None:
-        """Prompt file contains no English common words."""
-        import re
-
+    def test_prompt_is_in_english(self, loader: PromptLoader) -> None:
+        """Prompt file is written in English (model reasons in English)."""
         prompts = loader.load_trickster_prompts(
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
-        english = re.findall(
-            r"\b(the|and|for|with|this|that|from|but|not|are|was|were)\b",
-            prompts.task_override.lower(),
-        )
-        assert english == [], f"English words found in prompt: {english}"
+        # English structural markers should be present
+        assert "Task Context" in prompts.task_override
+        assert "Student" in prompts.task_override
 
     def test_references_all_pattern_ids(self, loader: PromptLoader) -> None:
         """Prompt references all 4 pattern IDs from the cartridge."""
@@ -518,7 +514,7 @@ class TestClickbaitTrapPromptContent:
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
-        assert "pristatantysis" in prompts.task_override
+        assert "presenter" in prompts.task_override.lower()
 
     def test_no_transition_mechanics(self, loader: PromptLoader) -> None:
         """Prompt doesn't contain transition tool mechanics."""
@@ -545,4 +541,4 @@ class TestClickbaitTrapPromptContent:
         )
         assert prompts.task_override is not None
         content = prompts.task_override
-        assert "4 \u0161ablon" in content or "Keturi" in content or "keturi" in content
+        assert "4 pattern" in content.lower() or "four" in content.lower()

@@ -19,6 +19,7 @@ schemas (T1), tasks/schemas (T1), models (T1).
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -41,6 +42,25 @@ logger = logging.getLogger("makaronas.ai.trickster")
 
 # Minimum response length before triggering malformed-response retry.
 _MIN_RESPONSE_LENGTH = 10
+
+# Regex to extract transition signals leaked as text instead of tool calls.
+# Some models (especially lighter ones) emit the tool call as JSON text
+# instead of using the function calling mechanism. This catches common
+# patterns like: { "action": "transition_phase", ... "signal": "understood" }
+_TEXT_SIGNAL_RE = re.compile(
+    r"""transition_phase.*?['"]?(understood|partial|max_reached)['"]?""",
+    re.DOTALL,
+)
+
+# Regex to strip leaked tool call text from displayed output.
+# Catches multiple formats models may emit:
+#   { "action": "transition_phase", ... }
+#   befp_transition_phase: {signal: 'understood'}
+#   transition_phase({"signal": "understood"})
+_LEAKED_TOOL_CALL_RE = re.compile(
+    r'\s*(?:\{[^{}]*transition_phase[^{}]*\}|befp_transition_phase\s*:.+|transition_phase\s*\(.+\))\s*$',
+    re.DOTALL,
+)
 
 # Signal name -> AiTransitions attribute name mapping.
 _SIGNAL_MAP: dict[str, str] = {
@@ -220,11 +240,18 @@ class TricksterEngine:
             transition_signal: str | None = None
 
             # 6-7. Call provider and stream + accumulate
+            # Force tool call only on the last possible exchange —
+            # earlier exchanges offer the tool but let the model choose.
+            # This prevents premature forced transitions while ensuring
+            # the conversation always ends cleanly at max_exchanges.
+            has_tools = ctx.tools is not None and len(ctx.tools) > 0
+            force_now = has_tools and exchange_count >= max_exchanges - 1
             async for event in provider.stream(
                 system_prompt=ctx.system_prompt,
                 messages=ctx.messages,
                 model_config=model_config,
                 tools=ctx.tools,
+                force_tool=force_now,
             ):
                 if isinstance(event, TextChunk):
                     accumulated += event.text
@@ -234,6 +261,16 @@ class TricksterEngine:
                         sig = event.arguments.get("signal")
                         if sig in _SIGNAL_MAP:
                             transition_signal = sig
+                            # Extract response_text from tool call —
+                            # this is the model's final message to the
+                            # student, included in the tool call so it
+                            # can talk and signal atomically.
+                            response_text = event.arguments.get(
+                                "response_text", ""
+                            )
+                            if response_text:
+                                accumulated += response_text
+                                yield response_text
                         else:
                             logger.warning(
                                 "Unknown transition signal: %s", sig,
@@ -243,6 +280,23 @@ class TricksterEngine:
                             "Unexpected tool call: %s",
                             event.function_name,
                         )
+
+            # 7b. Text-based signal fallback \u2014 some models emit the
+            # tool call as JSON text instead of using function calling.
+            if transition_signal is None:
+                m = _TEXT_SIGNAL_RE.search(accumulated)
+                if m:
+                    transition_signal = m.group(1)
+                    # Strip the leaked JSON from accumulated text so it
+                    # doesn't appear in exchanges or the done event
+                    accumulated = _LEAKED_TOOL_CALL_RE.sub(
+                        '', accumulated,
+                    ).rstrip()
+                    logger.warning(
+                        "Extracted transition signal from text: %s "
+                        "(model leaked tool call as text)",
+                        transition_signal,
+                    )
 
             # 8. Malformed response check \u2014 retry once if < 10 chars
             if (
@@ -260,6 +314,7 @@ class TricksterEngine:
                     messages=ctx.messages,
                     model_config=model_config,
                     tools=ctx.tools,
+                    force_tool=force_now,
                 ):
                     if isinstance(event, TextChunk):
                         accumulated += event.text
@@ -269,6 +324,12 @@ class TricksterEngine:
                             sig = event.arguments.get("signal")
                             if sig in _SIGNAL_MAP:
                                 retry_signal = sig
+                                response_text = event.arguments.get(
+                                    "response_text", ""
+                                )
+                                if response_text:
+                                    accumulated += response_text
+                                    yield response_text
 
                 if retry_signal is not None:
                     transition_signal = retry_signal

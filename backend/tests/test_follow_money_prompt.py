@@ -372,8 +372,8 @@ class TestFollowMoneyContextAssembly:
             exchange_count=1, min_exchanges=2,
         )
 
-        # Distinctive phrase from persona_narrator_base.md
-        assert "Pasakotojo re\u017eimas" in result.system_prompt
+        # Distinctive phrase from persona_narrator_base.md (now English)
+        assert "Narrator Mode" in result.system_prompt
 
 
 # ---------------------------------------------------------------------------

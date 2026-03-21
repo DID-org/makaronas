@@ -73,7 +73,11 @@ _IMAGE_MEDIA_TYPES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 TRANSITION_TOOL: dict[str, Any] = {
     "name": "transition_phase",
-    "description": "Signal that the conversation phase should transition.",
+    "description": (
+        "Signal that the conversation phase should transition. "
+        "Include your final response to the student in response_text — "
+        "this is the last message they will see before the transition."
+    ),
     "parameters": {
         "type": "object",
         "properties": {
@@ -82,8 +86,16 @@ TRANSITION_TOOL: dict[str, Any] = {
                 "enum": ["understood", "partial", "max_reached"],
                 "description": "The transition signal.",
             },
+            "response_text": {
+                "type": "string",
+                "description": (
+                    "Your final message to the student in Lithuanian. "
+                    "This text will be displayed to them. Write your "
+                    "closing remark, acknowledgment, or reveal here."
+                ),
+            },
         },
-        "required": ["signal"],
+        "required": ["signal", "response_text"],
     },
 }
 
@@ -509,17 +521,24 @@ class ContextManager:
         layers: list[str],
         prompts: TricksterPrompts,
     ) -> None:
-        """Appends non-None prompt layers 1-4 to the layers list."""
+        """Appends non-None prompt layers to the layers list.
+
+        Order optimized for small model attention (recency bias):
+        persona + mode + safety first (stable context), then task-specific
+        content + behaviour rules (including tool instructions) last —
+        closest to the conversation history where the model pays most
+        attention.
+        """
         if prompts.persona is not None:
             layers.append(prompts.persona)
         if prompts.mode_behaviour is not None:
             layers.append(prompts.mode_behaviour)
-        if prompts.behaviour is not None:
-            layers.append(prompts.behaviour)
         if prompts.safety is not None:
             layers.append(prompts.safety)
         if prompts.task_override is not None:
             layers.append(prompts.task_override)
+        if prompts.behaviour is not None:
+            layers.append(prompts.behaviour)
 
     def _build_task_context(
         self,

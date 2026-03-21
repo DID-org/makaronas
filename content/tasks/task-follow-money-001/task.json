@@ -2,37 +2,46 @@
   "task_id": "task-follow-money-001",
   "task_type": "hybrid",
   "title": "Sek pinigus",
-  "description": "Du fiktyvūs naujienų portalai rašo apie tą patį įvykį visiškai priešingai. Mokinys tiria, kas stovi už kiekvieno portalo — seka finansinius ryšius per tyrimo medį, kol atranda, kodėl kiekvienas rašo būtent taip. Tai ne ideologija — tai pinigai.",
-  "version": "1.0.0",
+  "description": "Du fiktyvūs naujienų portalai rašo apie tą patį įvykį visiškai priešingai. Mokinys tiria kiekvieną portalą atskirai — seka finansinius ryšius per tyrimo medį, aptaria atradimus su Makaronu, ir galiausiai suvokia: nė vienas nemeluoja — abu pasakoja tą tiesą, kuri moka jų sąskaitas.",
+  "version": "2.0.0",
   "trigger": "cynicism",
   "technique": "omission",
   "medium": "investigation",
   "learning_objectives": [
-    "Suprasti, kaip žiniasklaidos nuosavybė ir finansavimas veikia turinio rėminimą",
-    "Mokėti atsekti finansinius ryšius tarp leidinių ir suinteresuotų šalių",
-    "Atpažinti selektyvų nutylėjimą kaip manipuliacijos formą"
+    "Suprasti, kodėl skirtingi portalai tą patį įvykį pateikia skirtingai — finansiniai interesai, nuosavybė, reklamos davėjai",
+    "Mokėti atsekti finansinius ryšius tarp leidinių ir suinteresuotų šalių per tyrimą",
+    "Atpažinti, kad selektyvus nutylėjimas yra tokia pat manipuliacija kaip ir fabricavimas",
+    "Suvokti, kad abu šaltiniai gali sakyti tiesą — ir abu būti šališki"
   ],
   "difficulty": 4,
-  "time_minutes": 20,
+  "time_minutes": 15,
   "is_evergreen": true,
   "is_clean": false,
-  "tags": ["tyrimas", "žiniasklaida", "nuosavybė", "šališkumas"],
+  "tags": [
+    "tyrimas",
+    "žiniasklaida",
+    "nuosavybė",
+    "šališkumas",
+    "rėminimas"
+  ],
   "status": "active",
   "prerequisites": [],
   "language": "lt",
-  "available_languages": ["lt"],
+  "available_languages": [
+    "lt"
+  ],
   "presentation_blocks": [
     {
       "id": "article-green-herald",
       "type": "text",
       "text": "ŽALIASIS HEROLDAS\n\nBendruomenė kovoja dėl paskutinės žaliosios erdvės prieš korporacinį žemės grobimą\n\nŽalgirio parkas — paskutinė didelė žalioji zona miesto širdyje — atsidūrė po grėsme. Savivaldybės taryba kitą mėnesį balsuos dėl leidimo technologijų įmonei „NovaTech Solutions“ čia statyti regioninį duomenų centrą. Aplinkosaugininkai perspėja, kad projektas sunaikintų unikalią ekosistemą, kurioje gyvena retos paukščių rūšys ir kuri yra vienintelė poilsio erdvė tankiai apgyvendintame rajone.\n\n„Tai nėra pažanga — tai pelno siekimas žmonių sąskaita“, — sako bendruomenės iniciatyvos „Išsaugokime Žalgirio parką“ koordinatorė. Peticija prieš projektą jau surinko per 3 000 parašų.\n\nProjekto šalininkai kalba apie darbo vietas, tačiau tyrimai rodo, kad duomenų centrai sukuria mažai ilgalaikių darbo vietų lyginant su jų užimamu plotu. Didžioji dalis lėšų ir pelno keliauja už miesto ribų.",
-      "style": "article"
+      "style": "article-a"
     },
     {
       "id": "article-progress-report",
       "type": "text",
-      "text": "MIESTO PAŽANGOS ŽINIOS\n\nTaryba pritaria planui sukurti 2 000 darbo vietų apleistame rajone\n\nSavivaldybės taryba artėja prie istorinio sprendimo, kuris galėtų iš esmės pakeisti ilgus metus ekonominiu atžvilgiu kenčiančio rajono ateitį. „NovaTech Solutions“ siūlo investuoti 45 mln. eurų į modernų duomenų centrą, kuris sukurtų per 2 000 tiesioginių ir netiesioginių darbo vietų.\n\n„Tai didžiausia investicija per pastaruosius du dešimtmečius“, — teigia rajono ekonomikos skyriaus vadovas. Nedarbo lygis rajone siekia 18 % — beveik tris kartus daugiau nei šalies vidurkis.\n\nProjektas apima infrastruktūros modernizavimą, naujų kelių tiesimą ir mokymų programas vietiniams gyventojams. Statybos galėtų prasidėti dar šiais metais, jei taryba pritars.",
-      "style": "article"
+      "text": "MIESTO PAŽANGOS ŽINIOS\n\nTaryba pritaria planui sukurti 2 000 darbo vietų apleistame rajone\n\nSavivaldybės taryba artėja prie istorinio sprendimo, kuris galėtų iš esmės pakeisti ilgus metus ekonominiu atžvilgiu kenčiančio rajono ateitį. „NovaTech Solutions“ siūlo investuoti 45 mln. eurų į modernų duomenų centrą, kuris sukurtų per 2 000 tiesioginių ir netiesioginių darbo vietų.\n\n„Tai didžiausia investicija per pastarąjį du dešimtmečius“, — teigia rajono ekonomikos skyriaus vadovas. Nedarbo lygis rajone siekia 18 % — beveik tris kartus daugiau nei šalies vidurkis.\n\nProjektas apima infrastruktūros modernizavimą, naujų kelių tiesimą ir mokymų programas vietiniams gyventojams. Statybos galėtų prasidėti dar šiais metais, jei taryba pritars.",
+      "style": "article-b"
     },
     {
       "id": "sr-gh-main",
@@ -40,7 +49,11 @@
       "query": "Žaliasis Heroldas",
       "title": "Žaliasis Heroldas — apie mus",
       "snippet": "Nepriklausomas aplinkosaugos naujienų portalas. Veikia nuo 2018 m. Kas mėnesį pasiekia per 50 000 skaitytojų. Apdovanotas už klimato žurnalistiką.",
-      "child_queries": ["Žaliojo Heroldo reklamos davėjai", "Žaliojo Heroldo finansavimas", "Žaliojo Heroldo redakcija"]
+      "child_queries": [
+        "Žaliojo Heroldo reklamos davėjai",
+        "Žaliojo Heroldo finansavimas",
+        "Žaliojo Heroldo redakcija"
+      ]
     },
     {
       "id": "sr-gh-advertisers",
@@ -48,7 +61,10 @@
       "query": "Žaliojo Heroldo reklamos davėjai",
       "title": "Žaliojo Heroldo reklamos partneriai",
       "snippet": "Pagrindiniai reklamos partneriai: „TrailBound Outdoor“ (lauko renginių organizatorius), „GreenLeaf Draudimas“ (ekologiškų paslaugų draudikas), Žalgirio rajono kredito unija.",
-      "child_queries": ["TrailBound Outdoor", "GreenLeaf Draudimas"]
+      "child_queries": [
+        "TrailBound Outdoor",
+        "GreenLeaf Draudimas"
+      ]
     },
     {
       "id": "sr-gh-funding",
@@ -63,7 +79,7 @@
       "type": "search_result",
       "query": "Žaliojo Heroldo redakcija",
       "title": "Žaliojo Heroldo redakcijos komanda",
-      "snippet": "Vyriausioji redaktorė — buvusi aplinkosaugos žurnalistė. Komandą sudaro 5 redaktoriai. Portalas deklaruoja standartinę redakcinės nepriklausomybės politiką.",
+      "snippet": "Vyriausio ji redaktorė — buvusi aplinkosaugos žurnalistė. Komandą sudaro 5 redaktoriai. Portalas deklaruoja standartinę redakcinės nepriklausomybės politiką.",
       "is_dead_end": true
     },
     {
@@ -88,7 +104,11 @@
       "query": "Miesto Pažangos Žinios",
       "title": "Miesto Pažangos Žinios — apie portalą",
       "snippet": "Vietinis verslo ir plėtros naujienų portalas. Veikia nuo 2020 m. Priklauso „Meridian Media Group“ tinklui.",
-      "child_queries": ["Meridian Media Group", "Miesto Pažangos Žinių istorija", "Miesto Pažangos Žinių redakcija"]
+      "child_queries": [
+        "Meridian Media Group",
+        "Miesto Pažangos Žinių istorija",
+        "Miesto Pažangos Žinių redakcija"
+      ]
     },
     {
       "id": "sr-cpr-history",
@@ -112,13 +132,16 @@
       "query": "Meridian Media Group",
       "title": "Meridian Media Group — įmonės profilis",
       "snippet": "Regioninė žiniasklaidos kompanija, valdanti 12 vietinių naujienų portalų. Priklauso investicinei bendrovei „Harland Ventures“.",
-      "child_queries": ["Harland Ventures", "Meridian Media kiti leidiniai"]
+      "child_queries": [
+        "Harland Ventures",
+        "Meridian Media kiti leidiniai"
+      ]
     },
     {
       "id": "sr-meridian-outlets",
       "type": "search_result",
       "query": "Meridian Media kiti leidiniai",
-      "title": "Meridian Media Group leidinių tinklas",
+      "title": "Meridian Media Group leidiniu tinklas",
       "snippet": "„Meridian Media Group“ valdo 12 vietinių portalų skirtinguose regionuose. Visi specializuojasi verslo ir plėtros tematikoje. Bendras mėnesinis auditorijos pasiekimas — per 200 000 skaitytojų.",
       "is_dead_end": true
     },
@@ -136,7 +159,10 @@
       "query": "Žalgirio parko duomenų centras",
       "title": "Žalgirio parko duomenų centro projektas",
       "snippet": "„NovaTech Solutions“ laimėjo konkursą statyti regioninį duomenų centrą. Planuojama investicija — 45 mln. eurų, 2 000 darbo vietų. Aplinkosaugos vertinimas dar vyksta.",
-      "child_queries": ["NovaTech Solutions", "Aplinkosaugos vertinimas"]
+      "child_queries": [
+        "NovaTech Solutions",
+        "Aplinkosaugos vertinimas"
+      ]
     },
     {
       "id": "sr-novatech",
@@ -160,7 +186,10 @@
       "query": "Savivaldybės plėtros balsavimas",
       "title": "Savivaldybės tarybos balsavimas dėl duomenų centro",
       "snippet": "Savivaldybės taryba artimiausiu metu balsuos dėl leidimo „NovaTech Solutions“ statyti duomenų centrą Žalgirio parko teritorijoje. Sprendimas priimamas paprasta balsų dauguma.",
-      "child_queries": ["Balsavimo detalės", "Rajono nedarbo statistika"]
+      "child_queries": [
+        "Balsavimo detalės",
+        "Rajono nedarbo statistika"
+      ]
     },
     {
       "id": "sr-vote-details",
@@ -181,26 +210,29 @@
   ],
   "phases": [
     {
-      "id": "intro",
-      "title": "Du straipsniai — vienas įvykis",
-      "visible_blocks": ["article-green-herald", "article-progress-report"],
-      "trickster_content": "Štai du straipsniai apie tą patį įvykį. Vienas sako „korporacinis žemės grobimas“. Kitas sako „2 000 darbo vietų“. Abu šališki — bet tai lengvas atsakymas. Aš noriu žinoti KODĖL. Kas nuo to laimi? Pradėk tyrimą.",
-      "is_ai_phase": false,
+      "id": "discuss_framing",
+      "title": "Kodėl skirtingas rėminimas?",
+      "visible_blocks": [
+        "article-green-herald",
+        "article-progress-report"
+      ],
+      "is_ai_phase": true,
       "interaction": {
-        "type": "button",
-        "choices": [
-          {
-            "label": "Pradėti tyrimą",
-            "target_phase": "investigation",
-            "context_label": "Mokinys pradėjo tyrimą — perskaitė abu straipsnius ir nusprendė tirti"
-          }
-        ]
+        "type": "freeform",
+        "trickster_opening": "Perskaityk abu straipsnius. Du portalai, vienas įvykis. Ką tu čia matai?",
+        "min_exchanges": 2,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "investigate_herald",
+        "on_partial": "investigate_herald",
+        "on_max_exchanges": "investigate_herald"
       },
       "is_terminal": false
     },
     {
-      "id": "investigation",
-      "title": "Tyrimas",
+      "id": "investigate_herald",
+      "title": "Tyrimas: Žaliasis Heroldas",
       "visible_blocks": [
         "article-green-herald",
         "article-progress-report",
@@ -209,7 +241,53 @@
         "sr-gh-funding",
         "sr-gh-editorial",
         "sr-trailbound",
-        "sr-greenleaf",
+        "sr-greenleaf"
+      ],
+      "trickster_content": "Gerai — tai išsiaiškinkime. Pradėkime nuo Žaliojo Heroldo. Kas juos motyvuoja rėminti šią istoriją būtent taip? Tyrinėk.",
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "investigation",
+        "starting_queries": [
+          "Žaliasis Heroldas"
+        ],
+        "submit_target": "discuss_herald",
+        "min_key_findings": 1
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "discuss_herald",
+      "title": "Žaliojo Heroldo motyvacija",
+      "visible_blocks": [
+        "article-green-herald",
+        "article-progress-report",
+        "sr-gh-main",
+        "sr-gh-advertisers",
+        "sr-gh-funding",
+        "sr-gh-editorial",
+        "sr-trailbound",
+        "sr-greenleaf"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Radai kai ką. Tai pasakyk — kodėl, tavo manymu, Žaliasis Heroldas rėmina šią istoriją būtent taip? Kas juos motyvuoja?",
+        "min_exchanges": 1,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "investigate_progress",
+        "on_partial": "investigate_progress",
+        "on_max_exchanges": "investigate_progress"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "investigate_progress",
+      "title": "Tyrimas: Miesto Pažangos Žinios",
+      "visible_blocks": [
+        "article-green-herald",
+        "article-progress-report",
         "sr-cpr-main",
         "sr-cpr-history",
         "sr-cpr-staff",
@@ -223,68 +301,65 @@
         "sr-vote-details",
         "sr-unemployment"
       ],
-      "trickster_content": "Tau prieinami paieškos rezultatai. Sek nuorodas, tyrinėk šakas — kai kurios bus aklavietės, kai kurios atves prie svarbių atradimų. Kai manai, kad radai atsakymą, pateik savo išvadas.",
+      "trickster_content": "Vieną giją radai. Dabar — Miesto Pažangos Žinios. Kas stovi už jų?",
       "is_ai_phase": false,
       "interaction": {
         "type": "investigation",
         "starting_queries": [
-          "Žaliasis Heroldas",
-          "Miesto Pažangos Žinios",
-          "Žalgirio parko duomenų centras",
-          "Savivaldybės plėtros balsavimas"
+          "Miesto Pažangos Žinios"
         ],
-        "submit_target": "evaluate",
-        "min_key_findings": 2
+        "submit_target": "discuss_progress",
+        "min_key_findings": 1
       },
       "is_terminal": false
     },
     {
-      "id": "evaluate",
-      "title": "Išvadų aptarimas",
-      "visible_blocks": ["article-green-herald", "article-progress-report"],
+      "id": "discuss_progress",
+      "title": "Miesto Pažangos Žinių motyvacija",
+      "visible_blocks": [
+        "article-green-herald",
+        "article-progress-report",
+        "sr-cpr-main",
+        "sr-cpr-history",
+        "sr-cpr-staff",
+        "sr-meridian",
+        "sr-meridian-outlets",
+        "sr-harland",
+        "sr-datacenter",
+        "sr-novatech",
+        "sr-env-review",
+        "sr-council-vote",
+        "sr-vote-details",
+        "sr-unemployment"
+      ],
       "is_ai_phase": true,
       "interaction": {
         "type": "freeform",
-        "trickster_opening": "Abu portalai šališki — tai lengvas atsakymas. Pasakyk man KODĖL. Ką radai tyrimo metu? Kas laimi nuo kiekvieno straipsnio versijos?",
-        "min_exchanges": 2,
-        "max_exchanges": 8
+        "trickster_opening": "Ir vėl radai kažką. Tai kas motyvuoja Miesto Pažangos Žinias? Iš kur ateina pinigai?",
+        "min_exchanges": 1,
+        "max_exchanges": 16
       },
       "ai_transitions": {
-        "on_success": "reveal_win",
-        "on_partial": "reveal_partial",
-        "on_max_exchanges": "reveal_timeout"
+        "on_success": "reveal",
+        "on_partial": "reveal",
+        "on_max_exchanges": "reveal"
       },
       "is_terminal": false
     },
     {
-      "id": "reveal_win",
-      "title": "Atskleidimas — Sukčius pralaimi",
-      "visible_blocks": ["article-green-herald", "article-progress-report"],
-      "trickster_content": "Na ką gi... Nemaniau, kad rasi abu siūlus. Dauguma žmonių sustoja ties „abu šališki“ ir jaučiasi protingi.\n\nTu iš tikrųjų sekei pinigus. Du kartus.\n\n• „Žaliasis Heroldas“ — jų didžiausias reklamos davėjas „TrailBound Outdoor“ rengia kasmetinius festivalius Žalgirio parke. Jei parkas bus užstatytas — jie praras savo pagrindinę renginių vietą. Heroldo „žaliasis“ rėminimas gina jų reklamos davėjo verslą.\n\n• „Miesto Pažangos Žinios“ — priklauso „Meridian Media Group“, kurios patronuojanti bendrovė „Harland Ventures“ turi 15 % „NovaTech“ akcijų — tos pačios įmonės, kuri stato duomenų centrą. „Pažangos“ rėminimas gina savininko investiciją.\n\nNė vienas portalas nemeluoja. Abu pasakoja tą tiesą, kuri moka jų sąskaitas. Neturiu ką pridėti.",
+      "id": "reveal",
+      "title": "Atskleidimas",
+      "visible_blocks": [
+        "article-green-herald",
+        "article-progress-report"
+      ],
+      "trickster_content": "Nė vienas nemeluoja. Abu pasakoja tą tiesą, kuri moka jų sąskaitas.\n\n• „Žaliasis Heroldas“ — jų didžiausias reklamos davėjas „TrailBound Outdoor“ rengia kasmetinius festivalius Žalgirio parke. Parkas dingsta — verslas dingsta. Heroldo „žaliasis“ rėminimas gina reklamos davėjo interesus.\n\n• „Miesto Pažangos Žinios“ — priklauso „Meridian Media Group“, kuri priklauso „Harland Ventures“. O „Harland Ventures“ turi 15 % „NovaTech“ akcijų — bendrovės, kuri stato duomenų centrą. „Pažangos“ rėminimas gina savininko investiciją.\n\nKai du šaltiniai nesutaria — neklausk „kuris teisus?“ Klausk „kas laimi nuo kiekvienos versijos?“\n\nŽiniasklaidos šališkumas nėra ideologijos klausimas. Tai pinigų klausimas.",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
-    },
-    {
-      "id": "reveal_partial",
-      "title": "Atskleidimas — dalinai",
-      "visible_blocks": ["article-green-herald", "article-progress-report"],
-      "trickster_content": "Tu radai vieną siūlą — bet yra ir kitas. Pažiūrėk į visą paveikslą:\n\n• „Žaliasis Heroldas“ — jų didžiausias reklamos davėjas „TrailBound Outdoor“ rengia kasmetinius festivalius Žalgirio parke. Parkas dingsta — verslas dingsta. Heroldo „žaliasis“ rėminimas gina reklamos davėjo interesus.\n\n• „Miesto Pažangos Žinios“ — priklauso „Meridian Media Group“, kuri priklauso „Harland Ventures“. O „Harland Ventures“ turi 15 % „NovaTech“ akcijų. „Pažangos“ rėminimas gina savininko investiciją.\n\nŽiniasklaidos šališkumas nėra ideologijos klausimas. Tai pinigų klausimas. Kai du šaltiniai nesutaria — neklausk, kuris teisus. Klausk, kas laimi nuo kiekvienos versijos.",
-      "is_ai_phase": false,
-      "is_terminal": true,
-      "evaluation_outcome": "partial"
-    },
-    {
-      "id": "reveal_timeout",
-      "title": "Atskleidimas — laikas baigėsi",
-      "visible_blocks": ["article-green-herald", "article-progress-report"],
-      "trickster_content": "Mūsų pokalbis baigėsi, bet leisk man parodyti, ko ieškojau:\n\n• „Žaliasis Heroldas“ — jų didžiausias reklamos davėjas „TrailBound Outdoor“ rengia kasmetinius festivalius Žalgirio parke. Parkas dingsta — verslas dingsta. Tai kodėl Heroldas taip aistringai gina parką.\n\n• „Miesto Pažangos Žinios“ — priklauso „Meridian Media Group“, kuri priklauso „Harland Ventures“. „Harland Ventures“ turi 15 % „NovaTech“ akcijų — tos pačios įmonės, kuri stato duomenų centrą. Tai kodėl „Pažangos Žinios“ taip entuziastingai rašo apie darbo vietas.\n\nKitą kartą, kai du šaltiniai prieštarauja vienas kitam, neklausk „kuris teisus?“ — klausk „kas laimi?“",
-      "is_ai_phase": false,
-      "is_terminal": true,
-      "evaluation_outcome": "partial"
     }
   ],
-  "initial_phase": "intro",
+  "initial_phase": "discuss_framing",
   "evaluation": {
     "patterns_embedded": [
       {
@@ -314,41 +389,50 @@
     ],
     "checklist": [
       {
+        "id": "cl-understands-framing-reasons",
+        "description": "Mokinys gali paaiškinti bendras priežastis, kodėl skirtingi portalai tą patį įvykį pateikia skirtingai — pinigai, nuosavybė, ideologija, reklamos davėjai",
+        "pattern_refs": [
+          "p-selective-framing"
+        ],
+        "is_mandatory": false
+      },
+      {
         "id": "cl-green-herald-connection",
-        "description": "Mokinys atranda Žaliojo Heroldo finansinį ryšį su „TrailBound Outdoor“ — reklamos davėjas priklauso nuo žaliosios erdvės",
-        "pattern_refs": ["p-financial-incentive-a"],
+        "description": "Mokinys atranda ir paaiškina Žaliojo Heroldo finansinį ryšį: TrailBound Outdoor rengia festivalius Žalgirio parke, todėl Heroldas gina parką",
+        "pattern_refs": [
+          "p-financial-incentive-a"
+        ],
         "is_mandatory": true
       },
       {
         "id": "cl-progress-report-connection",
-        "description": "Mokinys atranda Miesto Pažangos Žinių nuosavybės grandinę iki „NovaTech“ — „Harland Ventures“ turi akcijų duomenų centro statytojuje",
-        "pattern_refs": ["p-financial-incentive-b"],
+        "description": "Mokinys atranda ir paaiškina Miesto Pažangos Žinių nuosavybės grandinę: Meridian Media → Harland Ventures → 15 % NovaTech akcijų",
+        "pattern_refs": [
+          "p-financial-incentive-b"
+        ],
         "is_mandatory": true
       },
       {
-        "id": "cl-explains-framing",
-        "description": "Mokinys paaiškina, KODĖL kiekvienas portalas rėmina istoriją būtent taip — susieja rėminimo pasirinkimus su finansiniais interesais",
-        "pattern_refs": ["p-selective-framing", "p-omission"],
-        "is_mandatory": false
-      },
-      {
-        "id": "cl-connects-omissions",
-        "description": "Mokinys susieja nutylėjimus su finansiniais interesais — kiekvienas portalas nutyli tai, kas pakenktų jo finansuotojo interesams",
-        "pattern_refs": ["p-omission", "p-financial-incentive-a", "p-financial-incentive-b"],
+        "id": "cl-neither-is-lying",
+        "description": "Mokinys suvokia, kad nė vienas portalas nemeluoja — abu sako tiesą, tik ne visą — ir tai yra manipuliacijos esmė",
+        "pattern_refs": [
+          "p-selective-framing",
+          "p-omission"
+        ],
         "is_mandatory": false
       }
     ],
     "pass_conditions": {
-      "trickster_wins": "Mokinys teigia, kad abu portalai šališki, bet nepateikia jokių konkrečių įrodymų iš tyrimo — nerado finansinių ryšių",
-      "partial": "Mokinys rado vieną finansinį ryšį (arba Heroldo, arba Pažangos Žinių) ir gali paaiškinti jo reikšmę, bet nepilnai atskleidė visą paveikslą",
-      "trickster_loses": "Mokinys atsekė abu finansinius ryšius su konkrečiais įrodymais — TrailBound Outdoor ir Žaliasis Heroldas, Harland Ventures ir Miesto Pažangos Žinios per NovaTech — ir paaiškina, kodėl kiekvienas portalas rėmina istoriją būtent taip"
+      "trickster_wins": "Mokinys nesugeba paaiškinti konkrečių finansinių motyvų nė vienam portalui — lieka ties bendru „abu šališki“ be įrodymų",
+      "partial": "Mokinys randa ir paaiškina vieną finansinę grandinę, bet antrą paaiškina nepakankamai tiksliai — pvz., sako „pinigai“ be konkrečios grandinės",
+      "trickster_loses": "Mokinys atseka abi finansines grandines su konkrečiais įrodymais ir savo žodžiais paaiškina, kaip kiekvieno portalo finansiniai interesai formuoja jo rėminimą"
     }
   },
   "ai_config": {
     "model_preference": "standard",
     "prompt_directory": "prompts/tasks/task-follow-money-001",
     "persona_mode": "narrator",
-    "has_static_fallback": true,
+    "has_static_fallback": false,
     "context_requirements": "session_only"
   },
   "reveal": {
@@ -356,7 +440,11 @@
     "additional_resources": []
   },
   "safety": {
-    "content_boundaries": ["no_real_harm", "no_real_institutions", "no_real_financial_data"],
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions",
+      "no_real_financial_data"
+    ],
     "intensity_ceiling": 3,
     "cold_start_safe": true
   }
