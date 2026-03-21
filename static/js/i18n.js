@@ -54,6 +54,7 @@ window.I18n = {
   error_rate_limit: 'Palauk truput\u012F.',
   error_network: 'Tinklo klaida. Patikrinkite interneto ry\u0161\u012F.',
   error_unauthorized: 'Prisijungimas nebegaliojas. Prad\u0117kite i\u0161 naujo.',
+  error_asset: 'Turinys nepasiekiamas',
 
   // ---------------------------------------------------------------------------
   // Generation (Phase 7c)
