@@ -1058,6 +1058,48 @@ button,
   background-color: var(--color-error-bg);
 }
 
+/* Phase 7b: Error action buttons */
+.dialogue-error-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.dialogue-error-actions__btn {
+  background: none;
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.dialogue-error-actions__btn:hover {
+  background-color: var(--color-error-bg);
+}
+
+/* Phase 7b: Status notice (rate limit cooldown — informational, not alarming) */
+.dialogue-status {
+  align-self: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-platform-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+/* Phase 7b: System notice bubble (fallback notice — Framework P10, P2) */
+.dialogue-message--notice {
+  align-self: center;
+  text-align: center;
+  color: var(--color-platform-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-sm) 0;
+}
+
 /* --------------------------------------------------------------------------
    Investigation (Phase 5c — Tree Controls in Interaction Panel)
    -------------------------------------------------------------------------- */

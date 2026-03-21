@@ -15,6 +15,7 @@
   var exchanges = [];       // {role, content} pairs for the current phase
   var currentAbort = null;  // Abort handle from streamRespond
   var lastStudentMessage = null; // For retry on error
+  var rateLimitRetryCount = 0;   // Rate limit auto-retry tracker (Phase 7b)
 
   // DOM references (set during render, cleared on cleanup)
   var dialogueArea = null;
@@ -296,6 +297,27 @@
     streamDisplay = createStreamingDisplay(dialogueArea, {
       onComplete: function (fullText, data) {
         currentAbort = null;
+        rateLimitRetryCount = 0;
+
+        // Static fallback detection (Phase 7b — Framework P10)
+        if (data && data.fallback === true) {
+          // Show notice bubble — honest about AI being unavailable
+          showNoticeBubble(
+            (window.I18n && window.I18n.ai_fallback_notice) ||
+            'AI temporarily unavailable'
+          );
+          // If backend included next phase content (future-proof), transition
+          if (data.next_phase_content) {
+            window.App.handlePhaseTransition(data.next_phase_content);
+          } else {
+            // Re-enable input so student can retry or skip
+            setInputDisabled(false);
+            if (textarea) textarea.focus();
+          }
+          scrollToBottom();
+          return;
+        }
+
         exchanges.push({ role: 'trickster', content: fullText });
 
         // Update exchange counter from backend authority
@@ -321,9 +343,54 @@
       },
       onError: function (code, msg, partial) {
         currentAbort = null;
+
+        // Session-fatal errors — route to full error section (Plan §6.2)
+        if (code === 'UNAUTHORIZED' || code === 'SESSION_NOT_FOUND') {
+          window.App.updateState({ error: { message: msg } });
+          return;
+        }
+
+        // Rate limit — auto-retry once after cooldown (Plan §6.2)
+        if (code === 'RATE_LIMITED' && rateLimitRetryCount < 1) {
+          rateLimitRetryCount++;
+          showStatusNotice(
+            (window.I18n && window.I18n.rate_limit_retry) ||
+            'Please wait \u2014 retrying\u2026'
+          );
+          // Keep input disabled during cooldown
+          setTimeout(function () {
+            removeStatusNotice();
+            retryLastMessage();
+          }, 5000);
+          scrollToBottom();
+          return;
+        }
+
+        // Rate limit exhausted — show as normal error, re-enable input
+        if (code === 'RATE_LIMITED') {
+          rateLimitRetryCount = 0;
+          showErrorDisplay(msg ||
+            ((window.I18n && window.I18n.error_rate_limit) || 'Please wait.'));
+          setInputDisabled(false);
+          scrollToBottom();
+          return;
+        }
+
+        // All other errors — show with retry + skip actions (Plan §6.3)
         showErrorDisplay(msg ||
           ((window.I18n && window.I18n.dialogue_error_partial) ||
-           'Response interrupted.'));
+           'Response interrupted.'), {
+          actions: [
+            {
+              label: (window.I18n && window.I18n.dialogue_error_retry) || 'Retry',
+              handler: function () { retryLastMessage(); }
+            },
+            {
+              label: (window.I18n && window.I18n.error_skip_task) || 'Skip task',
+              handler: function () { window.App.skipCurrentTask(); }
+            }
+          ]
+        });
         setInputDisabled(false);
         scrollToBottom();
       }
@@ -438,6 +505,7 @@
   function clearDialogue() {
     exchanges = [];
     lastStudentMessage = null;
+    rateLimitRetryCount = 0;
 
     if (currentAbort) {
       currentAbort.abort();
@@ -631,27 +699,49 @@
   }
 
   /**
-   * Shows an inline error message with a retry button below the last message.
+   * Shows an inline error/status message in the dialogue area.
+   *
+   * @param {string} message - Display text
+   * @param {Object} [options] - Configuration
+   * @param {Array} [options.actions] - [{label: string, handler: function}]
+   * @param {boolean} [options.isStatus] - Use status styling instead of error
    */
-  function showErrorDisplay(message) {
+  function showErrorDisplay(message, options) {
     removeErrorDisplay();
     if (!dialogueArea) return;
 
+    options = options || {};
+    var cssClass = options.isStatus ? 'dialogue-status' : 'dialogue-error';
+
     var errorEl = document.createElement('div');
-    errorEl.className = 'dialogue-error';
+    errorEl.className = cssClass;
 
     var msgSpan = document.createElement('span');
     msgSpan.textContent = message;
     errorEl.appendChild(msgSpan);
 
-    var retryBtn = document.createElement('button');
-    retryBtn.className = 'dialogue-error__retry';
-    retryBtn.type = 'button';
-    retryBtn.textContent = (window.I18n && window.I18n.dialogue_error_retry) || 'Retry';
-    retryBtn.addEventListener('click', function () {
-      retryLastMessage();
-    });
-    errorEl.appendChild(retryBtn);
+    // Action buttons — custom or default retry
+    var actions = options.actions;
+    if (!actions && !options.isStatus) {
+      actions = [{
+        label: (window.I18n && window.I18n.dialogue_error_retry) || 'Retry',
+        handler: function () { retryLastMessage(); }
+      }];
+    }
+
+    if (actions && actions.length > 0) {
+      var actionsDiv = document.createElement('div');
+      actionsDiv.className = 'dialogue-error-actions';
+      for (var i = 0; i < actions.length; i++) {
+        var btn = document.createElement('button');
+        btn.className = 'dialogue-error-actions__btn';
+        btn.type = 'button';
+        btn.textContent = actions[i].label;
+        btn.addEventListener('click', actions[i].handler);
+        actionsDiv.appendChild(btn);
+      }
+      errorEl.appendChild(actionsDiv);
+    }
 
     // Insert before typing indicator
     if (typingIndicator && typingIndicator.parentNode === dialogueArea) {
@@ -661,11 +751,14 @@
     }
   }
 
+  /**
+   * Removes error and status displays to prevent stacking (Plan §8.6).
+   */
   function removeErrorDisplay() {
     if (!dialogueArea) return;
-    var existing = dialogueArea.querySelector('.dialogue-error');
-    if (existing) {
-      existing.parentNode.removeChild(existing);
+    var existing = dialogueArea.querySelectorAll('.dialogue-error, .dialogue-status');
+    for (var i = 0; i < existing.length; i++) {
+      existing[i].parentNode.removeChild(existing[i]);
     }
   }
 
@@ -698,6 +791,55 @@
     });
 
     currentAbort = result;
+  }
+
+  // --------------------------------------------------------------------------
+  // Notice / Status Helpers (Phase 7b)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Shows a system notice bubble in the dialogue area — not from trickster
+   * or student. Used for fallback notices (Framework P10, P2).
+   */
+  function showNoticeBubble(text) {
+    if (!dialogueArea) return;
+    var notice = document.createElement('div');
+    notice.className = 'dialogue-message dialogue-message--notice';
+    notice.textContent = text;
+    if (typingIndicator && typingIndicator.parentNode === dialogueArea) {
+      dialogueArea.insertBefore(notice, typingIndicator);
+    } else {
+      dialogueArea.appendChild(notice);
+    }
+  }
+
+  /**
+   * Shows a transient status notice in the dialogue area (rate limit cooldown).
+   */
+  function showStatusNotice(text) {
+    removeStatusNotice();
+    if (!dialogueArea) return;
+    var notice = document.createElement('div');
+    notice.className = 'dialogue-status';
+    var span = document.createElement('span');
+    span.textContent = text;
+    notice.appendChild(span);
+    if (typingIndicator && typingIndicator.parentNode === dialogueArea) {
+      dialogueArea.insertBefore(notice, typingIndicator);
+    } else {
+      dialogueArea.appendChild(notice);
+    }
+  }
+
+  /**
+   * Removes status notices from the dialogue area.
+   */
+  function removeStatusNotice() {
+    if (!dialogueArea) return;
+    var existing = dialogueArea.querySelectorAll('.dialogue-status');
+    for (var i = 0; i < existing.length; i++) {
+      existing[i].parentNode.removeChild(existing[i]);
+    }
   }
 
   // --------------------------------------------------------------------------

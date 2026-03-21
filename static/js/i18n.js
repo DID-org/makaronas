@@ -101,6 +101,14 @@ window.I18n = {
   // ---------------------------------------------------------------------------
   skip_to_content: 'Pereiti prie turinio',
   search_key_finding: 'Svarbus radinys',
-  search_dead_end: 'Aklavi\u0117t\u0117'
+  search_dead_end: 'Aklavi\u0117t\u0117',
+
+  // ---------------------------------------------------------------------------
+  // Fallback / Error Recovery (Phase 7b)
+  // ---------------------------------------------------------------------------
+  ai_fallback_notice: 'AI \u0161iuo metu nepasiekiamas \u2014 t\u0119siame supaprastint\u0105 versij\u0105',
+  ai_unavailable_skip: 'Praleisti ir pereiti prie kito u\u017Edavinio',
+  rate_limit_retry: 'Palauk truput\u012F \u2014 bandome dar kart\u0105\u2026',
+  error_skip_task: 'Praleisti \u0161\u012F u\u017Edavin\u012F'
 
 };

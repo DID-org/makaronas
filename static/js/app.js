@@ -253,6 +253,15 @@
   }
 
   /**
+   * Skips the current task and loads the next one in TASK_SEQUENCE.
+   * Called by dialogue error handlers when the student chooses to skip (Phase 7b).
+   * Delegates to loadNextTask() for full cleanup and next-task logic.
+   */
+  function skipCurrentTask() {
+    loadNextTask();
+  }
+
+  /**
    * Shows the session end screen with reflective prompt and start-new option.
    * Called when all tasks in TASK_SEQUENCE have been completed.
    */
@@ -377,37 +386,64 @@
       return;
     }
 
-    // Create streaming display inside the debrief section
-    var display = window.Dialogue.createStreamingDisplay(debriefSection, {
-      bubbleClass: 'debrief-content',
-      showTypingIndicator: true,
-      onComplete: function () {
-        // Focus the debrief heading after streaming completes
-        setTimeout(function () { heading.focus(); }, 0);
-        if (onComplete) onComplete();
-      },
-      onError: function () {
-        showDebriefSkipNotice(debriefSection);
-        if (onComplete) onComplete();
-      }
-    });
-
-    // Show typing indicator before the stream starts
-    display.showTyping(true);
-
-    // Start the debrief stream
+    var debriefRetryCount = 0;
     var debriefSkipNotice = (window.I18n && window.I18n.debrief_skip_notice) || 'AI nepasiekiamas';
-    var result = window.Api.streamDebrief(sessionId, {
-      onToken: display.handleToken,
-      onDone: display.handleDone,
-      onRedact: function (fallbackText) {
-        // Debrief redaction degrades to error flow (skip to reveal)
-        display.handleError('REDACTED', debriefSkipNotice, '');
-      },
-      onError: display.handleError
-    });
 
-    debriefAbort = result && result.abort;
+    /**
+     * Starts (or restarts) the debrief stream.
+     * On retry: clears section content (except heading), creates fresh display.
+     */
+    function startDebriefStream() {
+      // Clear section content except heading (for retry)
+      var children = debriefSection.childNodes;
+      for (var i = children.length - 1; i >= 0; i--) {
+        if (children[i] !== heading) {
+          debriefSection.removeChild(children[i]);
+        }
+      }
+
+      var display = window.Dialogue.createStreamingDisplay(debriefSection, {
+        bubbleClass: 'debrief-content',
+        showTypingIndicator: true,
+        onComplete: function () {
+          setTimeout(function () { heading.focus(); }, 0);
+          if (onComplete) onComplete();
+        },
+        onError: function (code, msg, partial) {
+          // Rate limit — retry once after cooldown (Phase 7b)
+          if (code === 'RATE_LIMITED' && debriefRetryCount < 1) {
+            debriefRetryCount++;
+            var retryNotice = document.createElement('p');
+            retryNotice.className = 'debrief-skip-notice';
+            retryNotice.textContent = (window.I18n && window.I18n.rate_limit_retry) ||
+              'Please wait \u2014 retrying\u2026';
+            debriefSection.appendChild(retryNotice);
+            setTimeout(function () {
+              startDebriefStream();
+            }, 5000);
+            return;
+          }
+          // All other errors or retry exhausted — skip to reveal
+          showDebriefSkipNotice(debriefSection);
+          if (onComplete) onComplete();
+        }
+      });
+
+      display.showTyping(true);
+
+      var result = window.Api.streamDebrief(sessionId, {
+        onToken: display.handleToken,
+        onDone: display.handleDone,
+        onRedact: function (fallbackText) {
+          display.handleError('REDACTED', debriefSkipNotice, '');
+        },
+        onError: display.handleError
+      });
+
+      debriefAbort = result || null;
+    }
+
+    startDebriefStream();
   }
 
   /**
@@ -703,7 +739,8 @@
     handlePhaseTransition: handlePhaseTransition,
     startPostTaskFlow: startPostTaskFlow,
     renderDebrief: renderDebrief,
-    renderReveal: renderReveal
+    renderReveal: renderReveal,
+    skipCurrentTask: skipCurrentTask
   };
 
   // --------------------------------------------------------------------------
