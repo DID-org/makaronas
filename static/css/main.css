@@ -153,8 +153,6 @@ a:hover {
 
 [data-active-section="welcome"] #section-welcome,
 [data-active-section="task"] #section-task,
-[data-active-section="debrief"] #section-debrief,
-[data-active-section="reveal"] #section-reveal,
 [data-active-section="end"] #section-end,
 [data-active-section="error"] #section-error {
   display: flex;
@@ -242,35 +240,6 @@ a:hover {
   flex: 0 0 40%;
 }
 
-/* --------------------------------------------------------------------------
-   Debrief & Reveal Sections
-   -------------------------------------------------------------------------- */
-
-#section-debrief {
-  flex-direction: column;
-  min-height: calc(100vh - var(--header-height));
-  padding: var(--space-xl);
-  background-color: var(--color-debrief-bg);
-  color: var(--color-debrief-text);
-}
-
-#section-debrief h2 {
-  color: var(--color-debrief-heading);
-  margin-bottom: var(--space-md);
-}
-
-#section-reveal {
-  flex-direction: column;
-  min-height: calc(100vh - var(--header-height));
-  padding: var(--space-xl);
-  background-color: var(--color-reveal-bg);
-  color: var(--color-reveal-text);
-}
-
-#section-reveal h2 {
-  color: var(--color-reveal-heading);
-  margin-bottom: var(--space-md);
-}
 
 /* --------------------------------------------------------------------------
    Buttons
@@ -1043,20 +1012,6 @@ button,
   gap: var(--space-sm);
 }
 
-.dialogue-error__retry {
-  background: none;
-  border: 1px solid var(--color-error);
-  color: var(--color-error);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: 4px;
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-
-.dialogue-error__retry:hover {
-  background-color: var(--color-error-bg);
-}
 
 /* Phase 7b: Error action buttons */
 .dialogue-error-actions {

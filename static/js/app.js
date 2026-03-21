@@ -18,7 +18,8 @@
     task: null,            // Full phase data dict from API (_derive_phase_response)
     phase: null,           // Current phase ID string (shorthand for task.current_phase)
     taskSequenceIndex: 0,  // Position in TASK_SEQUENCE array
-    terminal: null         // { evaluation_outcome, reveal } when is_terminal, null otherwise
+    terminal: null,        // { evaluation_outcome, reveal } when is_terminal, null otherwise
+    dialogueHistory: []    // Exchange history for dialogue recovery
   };
 
   // --------------------------------------------------------------------------
@@ -625,7 +626,7 @@
       }
 
       // Store dialogue history for potential recovery
-      state.dialogueHistory = data.dialogue_history || [];
+      updateState({ dialogueHistory: data.dialogue_history || [] });
 
       // Terminal phase recovery: route through handlePhaseTransition
       // which calls startPostTaskFlow (debrief restarts from scratch)
