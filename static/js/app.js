@@ -13,7 +13,18 @@
   var state = {
     section: 'welcome',   // which section is visible
     error: null,           // { message: string } | null
-    locked: false          // UI lockout during API calls (Phase 3a)
+    locked: false,         // UI lockout during API calls (Phase 3a)
+    session: null          // { session_id: string, auth_token: string } | null
+  };
+
+  // --------------------------------------------------------------------------
+  // Session Storage Keys (namespaced to avoid collisions)
+  // --------------------------------------------------------------------------
+
+  var STORAGE_KEYS = {
+    sessionId: 'makaronas_session_id',
+    authToken: 'makaronas_auth_token',
+    interactionState: 'makaronas_interaction_state'
   };
 
   // --------------------------------------------------------------------------
@@ -99,23 +110,108 @@
   }
 
   // --------------------------------------------------------------------------
+  // Session Helpers
+  // --------------------------------------------------------------------------
+
+  /**
+   * Clears all session data from sessionStorage and state.
+   * Safe to call even when no session exists (no-op for missing keys).
+   */
+  function clearSession() {
+    sessionStorage.removeItem(STORAGE_KEYS.sessionId);
+    sessionStorage.removeItem(STORAGE_KEYS.authToken);
+    sessionStorage.removeItem(STORAGE_KEYS.interactionState);
+    updateState({ session: null });
+  }
+
+  /**
+   * Creates a new backend session and persists credentials.
+   * Called by the start button click handler.
+   */
+  function createSessionFlow() {
+    if (state.locked) return;
+
+    var authToken = crypto.randomUUID();
+
+    Api.createSession(authToken).then(function (data) {
+      sessionStorage.setItem(STORAGE_KEYS.sessionId, data.session_id);
+      sessionStorage.setItem(STORAGE_KEYS.authToken, authToken);
+      updateState({ session: { session_id: data.session_id, auth_token: authToken } });
+      console.log('[Makaronas] Session created:', data.session_id);
+      // Phase 5a will chain task loading here. For now, session exists but
+      // we stay on welcome — the student will see the full flow once task
+      // loading is wired.
+    }).catch(function (err) {
+      updateState({ error: { message: err.message } });
+    });
+  }
+
+  /**
+   * Attempts to recover an existing session from sessionStorage.
+   * Called once during init() — if credentials exist, queries the backend
+   * for current session state and restores it.
+   */
+  function recoverSession() {
+    var sessionId;
+    var authToken;
+
+    try {
+      sessionId = sessionStorage.getItem(STORAGE_KEYS.sessionId);
+      authToken = sessionStorage.getItem(STORAGE_KEYS.authToken);
+    } catch (e) {
+      // sessionStorage unavailable (rare: old Safari private browsing, quota)
+      // Fall through to welcome screen
+      return;
+    }
+
+    if (!sessionId || !authToken) return;
+
+    // Populate state BEFORE API call — getCurrentSession reads
+    // state.session.auth_token for the Bearer header (see IMPL_NOTES 3a)
+    updateState({ session: { session_id: sessionId, auth_token: authToken } });
+
+    Api.getCurrentSession(sessionId).then(function (data) {
+      if (data.current_task === null) {
+        // Session alive but no active task — show welcome
+        console.log('[Makaronas] Recovery: session alive, no active task');
+        return;
+      }
+      // Active task — store data for future rendering (Phase 5a+)
+      updateState({
+        section: 'task',
+        task: data,
+        dialogueHistory: data.dialogue_history || []
+      });
+      console.log('[Makaronas] Recovery: restored active task');
+    }).catch(function (err) {
+      if (err.code === 'SESSION_NOT_FOUND' || err.code === 'TASK_CONTENT_UPDATED') {
+        // Session expired or task changed — clean start
+        clearSession();
+        console.log('[Makaronas] Recovery:', err.code, '— cleared session');
+        return;
+      }
+      // Network or unexpected error — clear session, show error
+      clearSession();
+      updateState({ error: { message: err.message } });
+    });
+  }
+
+  // --------------------------------------------------------------------------
   // Event Binding
   // --------------------------------------------------------------------------
 
   function init() {
-    // Welcome: start button (placeholder — Phase 3c wires session creation)
+    // Welcome: start button — creates backend session
     var startBtn = document.getElementById('btn-start');
     if (startBtn) {
-      startBtn.addEventListener('click', function () {
-        // Placeholder: log to console, actual session creation is Phase 3c
-        console.log('[Makaronas] Start button clicked — session creation wired in Phase 3c');
-      });
+      startBtn.addEventListener('click', createSessionFlow);
     }
 
-    // Error: retry button — return to welcome, clear error
+    // Error: retry button — return to welcome, clear session + error
     var retryBtn = document.getElementById('btn-retry');
     if (retryBtn) {
       retryBtn.addEventListener('click', function () {
+        clearSession();
         updateState({ section: 'welcome', error: null });
       });
     }
@@ -123,11 +219,16 @@
     // Keyboard: Escape dismisses error section, returns to welcome
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && state.section === 'error') {
+        clearSession();
         updateState({ section: 'welcome', error: null });
       }
     });
 
-    // Initial render
+    // Attempt session recovery from sessionStorage before first render
+    recoverSession();
+
+    // Initial render (recoverSession may have already triggered renders
+    // via updateState, but this ensures welcome is shown if no recovery)
     render();
   }
 
