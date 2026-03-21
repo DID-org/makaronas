@@ -38,7 +38,12 @@
           window.Dialogue.renderFreeformInteraction(panel, interaction, phaseData);
         }
         break;
-      // Phase 5c: case 'investigation'
+      case 'investigation':
+        if (window.Investigation) {
+          var contentPanel = document.querySelector('.content-panel');
+          window.Investigation.renderInvestigation(contentPanel, panel, interaction, phaseData);
+        }
+        break;
       default:
         renderUnsupportedInteraction(panel, interaction.type);
         break;

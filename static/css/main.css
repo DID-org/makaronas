@@ -1013,3 +1013,126 @@ button,
 .dialogue-error__retry:hover {
   background-color: var(--color-error-bg);
 }
+
+/* --------------------------------------------------------------------------
+   Investigation (Phase 5c — Tree Controls in Interaction Panel)
+   -------------------------------------------------------------------------- */
+
+/* Tree container in content panel */
+.investigation-tree {
+  margin-top: var(--space-md);
+}
+
+/* Clickable search result cards in investigation mode (aria-expanded is on expandable cards) */
+.investigation-tree .block-search-result[aria-expanded] {
+  cursor: pointer;
+}
+
+.investigation-tree .block-search-result[aria-expanded]:hover {
+  border-color: var(--color-platform-accent);
+}
+
+/* Marked finding visual state — subtle gold background tint */
+.block-search-result--marked {
+  background-color: rgba(212, 168, 67, 0.08);
+  border-left: 3px solid #d4a843;
+}
+
+/* Mark button inside search result cards */
+.investigation-mark-btn {
+  display: inline-block;
+  margin-top: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  background-color: transparent;
+  color: #d4a843;
+  border: 1px solid #d4a843;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.investigation-mark-btn:hover {
+  background-color: rgba(212, 168, 67, 0.1);
+}
+
+.investigation-mark-btn--marked {
+  background-color: #d4a843;
+  color: #1a1a2e;
+}
+
+.investigation-mark-btn--marked:hover {
+  background-color: #c49a38;
+}
+
+/* Interaction panel controls */
+.investigation-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+}
+
+.investigation-findings__label {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0 0 var(--space-sm) 0;
+  color: var(--color-platform-text);
+}
+
+.investigation-findings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.investigation-findings-list__item {
+  padding: var(--space-xs) var(--space-sm);
+  background-color: rgba(212, 168, 67, 0.08);
+  border-left: 2px solid #d4a843;
+  border-radius: 0 4px 4px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text);
+}
+
+.investigation-findings-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-disabled);
+  font-style: italic;
+  margin: 0;
+}
+
+.investigation-progress {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-platform-text);
+  padding: var(--space-sm) 0;
+}
+
+/* Submit button — same card-like style as choice buttons (5a) */
+.investigation-submit-btn {
+  display: block;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  background-color: var(--color-platform-bg-alt);
+  color: var(--color-platform-text);
+  border: 1px solid var(--color-platform-border);
+  border-radius: 8px;
+  text-align: center;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.investigation-submit-btn:hover:not(:disabled) {
+  border-color: var(--color-platform-accent);
+  color: var(--color-platform-accent);
+}
+
+.investigation-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

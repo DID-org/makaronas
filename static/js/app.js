@@ -136,9 +136,12 @@
       section: 'task'
     });
 
-    // Clear dialogue state from previous phase (Phase 5b)
+    // Clear interaction state from previous phase
     if (window.Dialogue) {
       window.Dialogue.clearDialogue();
+    }
+    if (window.Investigation) {
+      window.Investigation.clearInvestigation();
     }
 
     // Content panel: preserve heading, render presentation blocks
@@ -293,6 +296,15 @@
         var recoveryPanel = document.querySelector('.interaction-panel');
         if (recoveryPanel) {
           window.Dialogue.renderDialogueHistory(recoveryPanel, state.dialogueHistory);
+        }
+      }
+
+      // Restore investigation state if the current phase is an investigation interaction (Phase 5c)
+      if (data.interaction && data.interaction.type === 'investigation' && window.Investigation) {
+        var recoveryContent = document.querySelector('.content-panel');
+        var recoveryInteraction = document.querySelector('.interaction-panel');
+        if (recoveryContent && recoveryInteraction) {
+          window.Investigation.recoverInvestigation(recoveryContent, recoveryInteraction, data);
         }
       }
 

@@ -73,6 +73,17 @@ window.I18n = {
   task_load_error: 'Nepavyko u\u017Ekrauti u\u017Eduoties',
 
   // ---------------------------------------------------------------------------
+  // Investigation (Phase 5c)
+  // ---------------------------------------------------------------------------
+  investigation_heading: 'Tyrimas',
+  investigation_no_findings: 'Dar neradote svarbi\u0173 radini\u0173',
+  investigation_progress: 'Surasti radiniai',
+  investigation_submit: 'Pateikti radinius',
+  investigation_mark: 'Pa\u017Eym\u0117ti kaip radin\u012F',
+  investigation_marked: 'Pa\u017Eym\u0117ta \u2713',
+  investigation_submit_disabled: 'Raskite daugiau svarbi\u0173 radini\u0173',
+
+  // ---------------------------------------------------------------------------
   // Loading / Status
   // ---------------------------------------------------------------------------
   loading: 'Kraunama\u2026',
