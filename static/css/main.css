@@ -538,3 +538,151 @@ button,
   font-size: var(--font-size-sm);
   font-style: italic;
 }
+
+/* --------------------------------------------------------------------------
+   Social / Media Blocks (Phase 4b)
+   -------------------------------------------------------------------------- */
+
+/* --- Chat Message Block --- */
+
+.block-chat-message {
+  background: var(--color-content-bg);
+  border-radius: 12px 12px 12px 2px;
+  padding: var(--space-sm) var(--space-md);
+  max-width: 85%;
+}
+
+.block-chat-message--highlighted {
+  border-left: 3px solid var(--color-content-heading);
+  background: rgba(112, 168, 224, 0.08);
+}
+
+.block-chat-message__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.block-chat-message__username {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-content-heading);
+}
+
+.block-chat-message__timestamp {
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+}
+
+.block-chat-message__text {
+  color: var(--color-content-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+}
+
+/* Adjacent chat messages tighten into a thread */
+.block-chat-message + .block-chat-message {
+  margin-top: var(--space-xs);
+}
+
+/* --- Social Post Block --- */
+
+.block-social-post {
+  background: var(--color-content-bg);
+  border: 1px solid var(--color-content-border);
+  border-radius: 8px;
+  padding: var(--space-md);
+}
+
+.block-social-post__author {
+  font-weight: 600;
+  color: var(--color-content-heading);
+  margin-bottom: var(--space-sm);
+}
+
+.block-social-post__text {
+  color: var(--color-content-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+  margin-bottom: var(--space-sm);
+}
+
+.block-social-post__text p:last-child {
+  margin-bottom: 0;
+}
+
+.block-social-post__engagement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-content-border);
+}
+
+.block-social-post__source {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  font-style: italic;
+}
+
+/* Microblog hint: more compact */
+.block-social-post--microblog {
+  padding: var(--space-sm) var(--space-md);
+}
+
+/* Forum hint: wider feel */
+.block-social-post--forum {
+  border-left: 3px solid var(--color-content-border);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Adjacent social posts tighten into a feed */
+.block-social-post + .block-social-post {
+  margin-top: var(--space-sm);
+}
+
+/* --- Meme Block --- */
+
+.block-meme {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.block-meme__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.block-meme__text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: var(--space-sm) var(--space-md);
+  font-family: Impact, 'Arial Black', sans-serif;
+  font-size: var(--font-size-xl);
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow:
+    2px 2px 0 #000,
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000;
+  line-height: 1.2;
+}
+
+.block-meme__text--top {
+  top: 0;
+}
+
+.block-meme__text--bottom {
+  bottom: 0;
+}

@@ -169,6 +169,122 @@
   }
 
   // --------------------------------------------------------------------------
+  // Social / Media Block Renderers (Phase 4b)
+  // --------------------------------------------------------------------------
+
+  function renderChatMessageBlock(block) {
+    var el = document.createElement('div');
+    el.className = 'block block-chat-message';
+    if (block.is_highlighted) {
+      el.className += ' block-chat-message--highlighted';
+    }
+    el.id = 'block-' + block.id;
+
+    var header = document.createElement('div');
+    header.className = 'block-chat-message__header';
+
+    var username = document.createElement('span');
+    username.className = 'block-chat-message__username';
+    username.textContent = block.username;
+    header.appendChild(username);
+
+    if (block.timestamp) {
+      var ts = document.createElement('span');
+      ts.className = 'block-chat-message__timestamp';
+      ts.textContent = block.timestamp;
+      header.appendChild(ts);
+    }
+
+    el.appendChild(header);
+
+    var body = document.createElement('div');
+    body.className = 'block-chat-message__text';
+    body.textContent = block.text;
+    el.appendChild(body);
+
+    return el;
+  }
+
+  function renderSocialPostBlock(block) {
+    var el = document.createElement('div');
+    el.className = 'block block-social-post';
+    if (block.platform_hint) {
+      el.className += ' block-social-post--' + block.platform_hint;
+    }
+    el.id = 'block-' + block.id;
+
+    var author = document.createElement('div');
+    author.className = 'block-social-post__author';
+    author.textContent = block.author;
+    el.appendChild(author);
+
+    var body = document.createElement('div');
+    body.className = 'block-social-post__text';
+    body.innerHTML = renderMarkdown(block.text);
+    el.appendChild(body);
+
+    if (block.engagement) {
+      var metrics = document.createElement('div');
+      metrics.className = 'block-social-post__engagement';
+      var entries = Object.entries(block.engagement);
+      for (var i = 0; i < entries.length; i++) {
+        var metric = document.createElement('span');
+        metric.className = 'block-social-post__metric';
+        metric.textContent = entries[i][0] + ': ' + entries[i][1];
+        metrics.appendChild(metric);
+      }
+      el.appendChild(metrics);
+    }
+
+    if (block.cited_source) {
+      var source = document.createElement('div');
+      source.className = 'block-social-post__source';
+      source.textContent = block.cited_source;
+      el.appendChild(source);
+    }
+
+    return el;
+  }
+
+  function renderMemeBlock(block, taskId) {
+    var el = document.createElement('div');
+    el.className = 'block block-meme';
+    el.id = 'block-' + block.id;
+
+    var img = document.createElement('img');
+    img.className = 'block-meme__image';
+    img.src = window.Api.assetUrl(taskId, block.image_src);
+    img.alt = block.alt_text || '';
+    img.onerror = function () {
+      handleAssetError(img, block.alt_text || window.I18n.error_asset);
+    };
+    el.appendChild(img);
+
+    if (block.top_text) {
+      var top = document.createElement('div');
+      top.className = 'block-meme__text block-meme__text--top';
+      top.textContent = block.top_text;
+      el.appendChild(top);
+    }
+
+    if (block.bottom_text) {
+      var bottom = document.createElement('div');
+      bottom.className = 'block-meme__text block-meme__text--bottom';
+      bottom.textContent = block.bottom_text;
+      el.appendChild(bottom);
+    }
+
+    if (block.audio_description) {
+      var desc = document.createElement('span');
+      desc.className = 'sr-only';
+      desc.textContent = block.audio_description;
+      el.appendChild(desc);
+    }
+
+    return el;
+  }
+
+  // --------------------------------------------------------------------------
   // Generic Fallback — for unknown block types
   // --------------------------------------------------------------------------
 
@@ -200,8 +316,10 @@
     image: renderImageBlock,
     audio: renderAudioBlock,
     video: renderVideoBlock,
-    video_transcript: renderVideoTranscriptBlock
-    // 4b adds: chat_message, social_post, meme
+    video_transcript: renderVideoTranscriptBlock,
+    chat_message: renderChatMessageBlock,
+    social_post: renderSocialPostBlock,
+    meme: renderMemeBlock
     // 4c adds: search_result (+ replaces generic fallback)
   };
 
