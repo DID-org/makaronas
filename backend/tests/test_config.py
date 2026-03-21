@@ -1,5 +1,7 @@
 """Tests for backend.config — Typed configuration from environment."""
 
+from pathlib import Path
+
 import backend.config as config_module
 import pytest
 from backend.config import Settings, get_settings
@@ -12,7 +14,7 @@ def _reset_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture()
-def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _clean_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Removes all Makaronas-related env vars so defaults are tested cleanly."""
     env_vars = [
         "APP_ENV", "APP_PORT", "LOG_LEVEL", "CORS_ORIGINS",
@@ -21,6 +23,8 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     ]
     for var in env_vars:
         monkeypatch.delenv(var, raising=False)
+    # Prevent load_dotenv from re-populating vars from the real .env file.
+    monkeypatch.setattr(config_module, "_DOTENV_PATH", tmp_path / ".env")
 
 
 class TestDefaults:

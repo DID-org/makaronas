@@ -153,6 +153,8 @@ class GeminiProvider(AIProvider):
     """
 
     def __init__(self, api_key: str) -> None:
+        if not api_key:
+            raise ValueError("API key must not be empty for Gemini provider")
         self._client = genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(

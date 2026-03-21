@@ -39,6 +39,8 @@ window.I18n = {
   debrief_heading: 'Aptarimas',
   reveal_heading: 'I\u0161vados',
   btn_next_task: 'Kitas u\u017Edavinys',
+  debrief_skip_notice: 'AI nepasiekiamas \u2014 \u0161tai svarbiausia pamoka',
+  reveal_resources_heading: 'Papildomi \u0161altiniai',
 
   // ---------------------------------------------------------------------------
   // Session End

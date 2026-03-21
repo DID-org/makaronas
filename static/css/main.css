@@ -1173,3 +1173,121 @@ button,
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* --------------------------------------------------------------------------
+   Post-Task Flow (Phase 6b — Debrief + Reveal)
+   -------------------------------------------------------------------------- */
+
+/* --- Separator between dialogue and debrief --- */
+
+.post-task-separator {
+  border: none;
+  border-top: 1px solid var(--color-debrief-border);
+  margin: var(--space-lg) 0;
+}
+
+/* --- Debrief Section (Layer 2 — fourth wall break) --- */
+
+.debrief-section {
+  background-color: var(--color-debrief-bg);
+  color: var(--color-debrief-text);
+  border-left: 3px solid var(--color-debrief-border);
+  border-radius: 8px;
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.debrief-section h3 {
+  color: var(--color-debrief-heading);
+  margin-bottom: var(--space-sm);
+}
+
+/* Streaming "bubble" for debrief — block text, not chat bubble */
+.debrief-content {
+  color: var(--color-debrief-text);
+  line-height: 1.6;
+}
+
+.debrief-content p {
+  margin-bottom: var(--space-sm);
+}
+
+.debrief-content p:last-child {
+  margin-bottom: 0;
+}
+
+.debrief-content strong {
+  font-weight: 600;
+  color: var(--color-debrief-heading);
+}
+
+.debrief-content a {
+  color: var(--color-debrief-heading);
+  text-decoration: underline;
+}
+
+/* Skip notice when debrief stream fails */
+.debrief-skip-notice {
+  color: var(--color-debrief-text);
+  opacity: 0.7;
+  font-style: italic;
+  padding: var(--space-sm) 0;
+}
+
+/* Typing indicator dots inherit debrief purple */
+.debrief-section .dialogue-typing__dot {
+  background-color: var(--color-debrief-border);
+}
+
+/* --- Reveal Section (Layer 3 — verified facts) --- */
+
+.reveal-section {
+  background-color: var(--color-reveal-bg);
+  color: var(--color-reveal-text);
+  border-left: 3px solid var(--color-reveal-border);
+  border-radius: 8px;
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.reveal-section h3 {
+  color: var(--color-reveal-heading);
+  margin-bottom: var(--space-sm);
+}
+
+.reveal-lesson {
+  line-height: 1.6;
+}
+
+.reveal-lesson a {
+  color: var(--color-reveal-heading);
+  text-decoration: underline;
+}
+
+.reveal-resources {
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--color-reveal-border);
+  padding-top: var(--space-sm);
+}
+
+.reveal-resources h4 {
+  color: var(--color-reveal-heading);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--space-sm);
+}
+
+.reveal-resource-item {
+  padding: var(--space-xs) 0;
+}
+
+.reveal-resource-item a {
+  color: var(--color-reveal-heading);
+  text-decoration: underline;
+}
+
+/* --- Next Task Button --- */
+
+.post-task-next-btn {
+  margin-top: var(--space-lg);
+  width: 100%;
+}

@@ -199,27 +199,245 @@
     });
   }
 
+  // --------------------------------------------------------------------------
+  // Post-Task Flow (Phase 6b — Debrief + Reveal)
+  // --------------------------------------------------------------------------
+
+  // Track debrief abort handle so it can be cleaned up on navigation (Phase 7a)
+  var debriefAbort = null;
+
+  /**
+   * Orchestrates the post-task experience when a terminal phase is reached.
+   * Preserves dialogue history, appends debrief (streamed) + reveal (static) +
+   * "Kitas uždavinys" button — all as siblings inside the interaction panel.
+   */
+  function startPostTaskFlow(phaseData) {
+    // Update state to stay on 'task' section with the terminal phase data
+    updateState({
+      task: phaseData,
+      phase: phaseData.current_phase,
+      section: 'task'
+    });
+
+    var interactionPanel = document.querySelector('.interaction-panel');
+    if (!interactionPanel) return;
+
+    // 1. Remove the chat input area (keep dialogue history)
+    var inputArea = interactionPanel.querySelector('.dialogue-input-area');
+    if (inputArea) {
+      inputArea.parentNode.removeChild(inputArea);
+    }
+
+    // 2. Switch overflow model — remove flex column layout so the panel
+    //    scrolls all layers (dialogue + debrief + reveal) together.
+    interactionPanel.classList.remove('interaction-panel--dialogue');
+
+    // 3. Handle case where there's no dialogue area (terminal reached via buttons).
+    //    Clear the panel of button choices, but keep the heading.
+    var dialogueArea = interactionPanel.querySelector('.dialogue-area');
+    if (!dialogueArea) {
+      var heading = interactionPanel.querySelector('h2');
+      interactionPanel.innerHTML = '';
+      if (heading) {
+        interactionPanel.appendChild(heading);
+      }
+    }
+
+    // 4. Update content panel if terminal phase has content blocks
+    if (phaseData.content && phaseData.content.length > 0) {
+      var contentPanel = document.querySelector('.content-panel');
+      if (contentPanel && window.Renderer) {
+        var contentHeading = contentPanel.querySelector('h2');
+        window.Renderer.renderBlocksInto(contentPanel, phaseData.content, phaseData.task_id);
+        if (contentHeading) {
+          contentHeading.textContent = phaseData.title || ((window.I18n && window.I18n.content_heading) || 'Turinys');
+          contentPanel.insertBefore(contentHeading, contentPanel.firstChild);
+        }
+      }
+    }
+
+    // 5. Scroll dialogue to end (if present) so student sees last exchange
+    if (dialogueArea) {
+      dialogueArea.scrollTop = dialogueArea.scrollHeight;
+    }
+
+    // 6. Add visual separator
+    var separator = document.createElement('hr');
+    separator.className = 'post-task-separator';
+    separator.setAttribute('aria-hidden', 'true');
+    interactionPanel.appendChild(separator);
+
+    // 7. Start debrief, then reveal + button on completion
+    var sessionId = state.session && state.session.session_id;
+    renderDebrief(interactionPanel, sessionId, function () {
+      // onComplete: render reveal and next task button
+      if (state.terminal && state.terminal.reveal) {
+        renderReveal(interactionPanel, state.terminal.reveal);
+      }
+
+      // "Kitas uždavinys" button
+      var nextBtn = document.createElement('button');
+      nextBtn.className = 'btn btn-primary post-task-next-btn';
+      nextBtn.textContent = (window.I18n && window.I18n.btn_next_task) || 'Kitas u\u017Edavinys';
+      nextBtn.id = 'btn-next-task';
+      interactionPanel.appendChild(nextBtn);
+
+      // Focus management: move to next task button after reveal appears
+      setTimeout(function () { nextBtn.focus(); }, 0);
+    });
+  }
+
+  /**
+   * Creates a debrief container and streams the debrief into it.
+   * On completion or error, calls onComplete so the caller can render reveal.
+   */
+  function renderDebrief(container, sessionId, onComplete) {
+    // Create debrief wrapper
+    var debriefSection = document.createElement('div');
+    debriefSection.className = 'debrief-section';
+    debriefSection.setAttribute('aria-label', (window.I18n && window.I18n.debrief_heading) || 'Aptarimas');
+
+    var heading = document.createElement('h3');
+    heading.textContent = (window.I18n && window.I18n.debrief_heading) || 'Aptarimas';
+    heading.setAttribute('tabindex', '-1');
+    debriefSection.appendChild(heading);
+
+    container.appendChild(debriefSection);
+
+    // Smooth-scroll so the debrief heading is visible
+    debriefSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Guard: if no session or no streaming infrastructure, skip to reveal
+    if (!sessionId || !window.Dialogue || !window.Api) {
+      showDebriefSkipNotice(debriefSection);
+      if (onComplete) onComplete();
+      return;
+    }
+
+    // Create streaming display inside the debrief section
+    var display = window.Dialogue.createStreamingDisplay(debriefSection, {
+      bubbleClass: 'debrief-content',
+      showTypingIndicator: true,
+      onComplete: function () {
+        // Focus the debrief heading after streaming completes
+        setTimeout(function () { heading.focus(); }, 0);
+        if (onComplete) onComplete();
+      },
+      onError: function () {
+        showDebriefSkipNotice(debriefSection);
+        if (onComplete) onComplete();
+      }
+    });
+
+    // Show typing indicator before the stream starts
+    display.showTyping(true);
+
+    // Start the debrief stream
+    var debriefSkipNotice = (window.I18n && window.I18n.debrief_skip_notice) || 'AI nepasiekiamas';
+    var result = window.Api.streamDebrief(sessionId, {
+      onToken: display.handleToken,
+      onDone: display.handleDone,
+      onRedact: function (fallbackText) {
+        // Debrief redaction degrades to error flow (skip to reveal)
+        display.handleError('REDACTED', debriefSkipNotice, '');
+      },
+      onError: display.handleError
+    });
+
+    debriefAbort = result && result.abort;
+  }
+
+  /**
+   * Shows a brief notice when the debrief stream fails or is unavailable.
+   */
+  function showDebriefSkipNotice(debriefSection) {
+    var notice = document.createElement('p');
+    notice.className = 'debrief-skip-notice';
+    notice.textContent = (window.I18n && window.I18n.debrief_skip_notice) ||
+      'AI nepasiekiamas \u2014 \u0161tai svarbiausia pamoka';
+    debriefSection.appendChild(notice);
+  }
+
+  /**
+   * Renders reveal content (key lesson + additional resources) as static HTML.
+   * revealData shape: { key_lesson: string, additional_resources: [string, ...] }
+   */
+  function renderReveal(container, revealData) {
+    if (!revealData) return;
+
+    var revealSection = document.createElement('div');
+    revealSection.className = 'reveal-section';
+    revealSection.setAttribute('aria-label', (window.I18n && window.I18n.reveal_heading) || 'I\u0161vados');
+
+    var heading = document.createElement('h3');
+    heading.textContent = (window.I18n && window.I18n.reveal_heading) || 'I\u0161vados';
+    heading.setAttribute('tabindex', '-1');
+    revealSection.appendChild(heading);
+
+    // Key lesson — rendered through markdown pipeline (trusted cartridge content)
+    if (revealData.key_lesson) {
+      var lessonDiv = document.createElement('div');
+      lessonDiv.className = 'reveal-lesson';
+      if (window.Renderer) {
+        lessonDiv.innerHTML = window.Renderer.renderMarkdown(revealData.key_lesson);
+      } else {
+        lessonDiv.textContent = revealData.key_lesson;
+      }
+      revealSection.appendChild(lessonDiv);
+    }
+
+    // Additional resources
+    if (revealData.additional_resources && revealData.additional_resources.length > 0) {
+      var resourcesDiv = document.createElement('div');
+      resourcesDiv.className = 'reveal-resources';
+
+      var resourcesHeading = document.createElement('h4');
+      resourcesHeading.textContent = (window.I18n && window.I18n.reveal_resources_heading) || 'Papildomi \u0161altiniai';
+      resourcesDiv.appendChild(resourcesHeading);
+
+      for (var i = 0; i < revealData.additional_resources.length; i++) {
+        var item = document.createElement('div');
+        item.className = 'reveal-resource-item';
+        if (window.Renderer) {
+          item.innerHTML = window.Renderer.renderMarkdown(revealData.additional_resources[i]);
+        } else {
+          item.textContent = revealData.additional_resources[i];
+        }
+        resourcesDiv.appendChild(item);
+      }
+
+      revealSection.appendChild(resourcesDiv);
+    }
+
+    container.appendChild(revealSection);
+
+    // Smooth-scroll and focus management
+    revealSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function () { heading.focus(); }, 0);
+  }
+
   /**
    * Unified entry point for all phase transitions.
    * Both button clicks (5a) and SSE done events (5b) route here.
    */
   function handlePhaseTransition(phaseData) {
     if (phaseData.is_terminal) {
-      // Store terminal data for Phase 6b debrief/reveal
+      // Store terminal data for debrief/reveal
       updateState({
         terminal: {
           evaluation_outcome: phaseData.evaluation_outcome,
           reveal: phaseData.reveal
         }
       });
+      // Terminal fork: preserve dialogue, start post-task flow
+      startPostTaskFlow(phaseData);
     } else {
       // Clear stale terminal data from previous phases
       if (state.terminal !== null) {
         updateState({ terminal: null });
       }
+      renderPhase(phaseData);
     }
-    // Always render the phase content (even terminal — shows final content)
-    renderPhase(phaseData);
   }
 
   // --------------------------------------------------------------------------
@@ -368,7 +586,10 @@
     render: render,
     renderPhase: renderPhase,
     loadFirstTask: loadFirstTask,
-    handlePhaseTransition: handlePhaseTransition
+    handlePhaseTransition: handlePhaseTransition,
+    startPostTaskFlow: startPostTaskFlow,
+    renderDebrief: renderDebrief,
+    renderReveal: renderReveal
   };
 
   // --------------------------------------------------------------------------
