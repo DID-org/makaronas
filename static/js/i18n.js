@@ -47,6 +47,8 @@ window.I18n = {
   // ---------------------------------------------------------------------------
   session_end_title: 'Sesija baigta',
   session_end_message: 'A\u010Di\u016B, kad dalyvavai.',
+  session_end_reflection: 'Kas tave nustebino?',
+  btn_start_new: 'Prad\u0117ti i\u0161 naujo',
 
   // ---------------------------------------------------------------------------
   // Error

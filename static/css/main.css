@@ -186,6 +186,13 @@ a:hover {
   margin-bottom: var(--space-lg);
 }
 
+.session-end-reflection {
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--color-platform-text);
+  margin-bottom: var(--space-lg);
+}
+
 #section-error {
   flex-direction: column;
   align-items: center;

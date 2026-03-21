@@ -34,7 +34,8 @@
   var STORAGE_KEYS = {
     sessionId: 'makaronas_session_id',
     authToken: 'makaronas_auth_token',
-    interactionState: 'makaronas_interaction_state'
+    interactionState: 'makaronas_interaction_state',
+    taskSequenceIndex: 'makaronas_task_sequence_index'
   };
 
   // --------------------------------------------------------------------------
@@ -193,10 +194,71 @@
 
     Api.loadTask(state.session.session_id, taskId).then(function (data) {
       renderPhase(data);
+      // Persist index on successful load
+      sessionStorage.setItem(STORAGE_KEYS.taskSequenceIndex, String(state.taskSequenceIndex));
       console.log('[Makaronas] Task loaded:', taskId);
     }).catch(function (err) {
       updateState({ error: { message: err.message || (window.I18n && window.I18n.task_load_error) || 'Task load error' } });
     });
+  }
+
+  /**
+   * Loads the next task from TASK_SEQUENCE after post-task flow completes.
+   * Called by the "Kitas uždavinys" button click handler.
+   */
+  function loadNextTask() {
+    if (state.locked) return;
+
+    // Abort any in-flight debrief stream
+    if (debriefAbort) {
+      debriefAbort.abort();
+      debriefAbort = null;
+    }
+
+    // Increment sequence index
+    var nextIndex = state.taskSequenceIndex + 1;
+
+    // End of sequence — show session end screen
+    if (nextIndex >= TASK_SEQUENCE.length) {
+      updateState({ taskSequenceIndex: nextIndex, terminal: null });
+      // Persist exhausted index so refresh shows end screen, not last task
+      sessionStorage.setItem(STORAGE_KEYS.taskSequenceIndex, String(nextIndex));
+      showSessionEnd();
+      return;
+    }
+
+    // Clean up post-task DOM elements from the interaction panel
+    var interactionPanel = document.querySelector('.interaction-panel');
+    if (interactionPanel) {
+      var postTaskEls = interactionPanel.querySelectorAll(
+        '.debrief-section, .reveal-section, .post-task-separator, .post-task-next-btn'
+      );
+      for (var i = 0; i < postTaskEls.length; i++) {
+        postTaskEls[i].parentNode.removeChild(postTaskEls[i]);
+      }
+    }
+
+    // Reset terminal state before loading new task
+    updateState({ taskSequenceIndex: nextIndex, terminal: null });
+
+    var taskId = TASK_SEQUENCE[nextIndex];
+    Api.loadTask(state.session.session_id, taskId).then(function (data) {
+      renderPhase(data);
+      // Persist index on successful load
+      sessionStorage.setItem(STORAGE_KEYS.taskSequenceIndex, String(nextIndex));
+      console.log('[Makaronas] Next task loaded:', taskId);
+    }).catch(function (err) {
+      updateState({ error: { message: err.message || (window.I18n && window.I18n.task_load_error) || 'Task load error' } });
+    });
+  }
+
+  /**
+   * Shows the session end screen with reflective prompt and start-new option.
+   * Called when all tasks in TASK_SEQUENCE have been completed.
+   */
+  function showSessionEnd() {
+    updateState({ section: 'end' });
+    console.log('[Makaronas] Session complete — all tasks finished');
   }
 
   // --------------------------------------------------------------------------
@@ -280,6 +342,7 @@
       nextBtn.className = 'btn btn-primary post-task-next-btn';
       nextBtn.textContent = (window.I18n && window.I18n.btn_next_task) || 'Kitas u\u017Edavinys';
       nextBtn.id = 'btn-next-task';
+      nextBtn.addEventListener('click', loadNextTask);
       interactionPanel.appendChild(nextBtn);
 
       // Focus management: move to next task button after reveal appears
@@ -452,7 +515,8 @@
     sessionStorage.removeItem(STORAGE_KEYS.sessionId);
     sessionStorage.removeItem(STORAGE_KEYS.authToken);
     sessionStorage.removeItem(STORAGE_KEYS.interactionState);
-    updateState({ session: null });
+    sessionStorage.removeItem(STORAGE_KEYS.taskSequenceIndex);
+    updateState({ session: null, terminal: null, taskSequenceIndex: 0 });
   }
 
   /**
@@ -495,9 +559,21 @@
 
     if (!sessionId || !authToken) return;
 
+    // Recover taskSequenceIndex from sessionStorage
+    var storedIndex = sessionStorage.getItem(STORAGE_KEYS.taskSequenceIndex);
+    var recoveredIndex = storedIndex !== null ? parseInt(storedIndex, 10) : 0;
+    if (isNaN(recoveredIndex)) recoveredIndex = 0;
+
     // Populate state BEFORE API call — getCurrentSession reads
     // state.session.auth_token for the Bearer header (see IMPL_NOTES 3a)
-    updateState({ session: { session_id: sessionId, auth_token: authToken } });
+    updateState({ session: { session_id: sessionId, auth_token: authToken }, taskSequenceIndex: recoveredIndex });
+
+    // If stored index indicates all tasks exhausted, go straight to end screen
+    if (recoveredIndex >= TASK_SEQUENCE.length) {
+      showSessionEnd();
+      console.log('[Makaronas] Recovery: task sequence exhausted, showing end screen');
+      return;
+    }
 
     Api.getCurrentSession(sessionId).then(function (data) {
       if (data.current_task === null) {
@@ -505,8 +581,37 @@
         console.log('[Makaronas] Recovery: session alive, no active task');
         return;
       }
-      // Active task — render the current phase
+
+      // Reconcile taskSequenceIndex with actual current task from backend
+      var backendIndex = TASK_SEQUENCE.indexOf(data.task_id);
+      if (backendIndex >= 0 && backendIndex !== state.taskSequenceIndex) {
+        updateState({ taskSequenceIndex: backendIndex });
+      }
+
+      // Store dialogue history for potential recovery
       state.dialogueHistory = data.dialogue_history || [];
+
+      // Terminal phase recovery: route through handlePhaseTransition
+      // which calls startPostTaskFlow (debrief restarts from scratch)
+      if (data.is_terminal) {
+        // Render the phase first to set up content + interaction panels
+        renderPhase(data);
+
+        // Restore dialogue history if available (freeform terminal)
+        if (state.dialogueHistory.length > 0 && window.Dialogue) {
+          var recoveryPanel = document.querySelector('.interaction-panel');
+          if (recoveryPanel) {
+            window.Dialogue.renderDialogueHistory(recoveryPanel, state.dialogueHistory);
+          }
+        }
+
+        // Now trigger terminal flow (stores terminal data, starts post-task)
+        handlePhaseTransition(data);
+        console.log('[Makaronas] Recovery: restored terminal phase, restarting post-task flow');
+        return;
+      }
+
+      // Non-terminal: render the current phase
       renderPhase(data);
 
       // Restore dialogue history if the current phase is a freeform interaction (Phase 5b)
@@ -555,6 +660,15 @@
     var retryBtn = document.getElementById('btn-retry');
     if (retryBtn) {
       retryBtn.addEventListener('click', function () {
+        clearSession();
+        updateState({ section: 'welcome', error: null });
+      });
+    }
+
+    // Session End: "Pradėti iš naujo" button — clears session, returns to welcome
+    var startNewBtn = document.getElementById('btn-start-new');
+    if (startNewBtn) {
+      startNewBtn.addEventListener('click', function () {
         clearSession();
         updateState({ section: 'welcome', error: null });
       });
