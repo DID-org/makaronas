@@ -63,6 +63,12 @@ window.I18n = {
   placeholder_generation: 'Para\u0161ykite savo manipuliacijos bandym\u0105\u2026',
 
   // ---------------------------------------------------------------------------
+  // Interaction (Phase 5a)
+  // ---------------------------------------------------------------------------
+  interaction_unsupported: '\u0160is s\u0105veikos tipas dar nepalaikomas',
+  task_load_error: 'Nepavyko u\u017Ekrauti u\u017Eduoties',
+
+  // ---------------------------------------------------------------------------
   // Loading / Status
   // ---------------------------------------------------------------------------
   loading: 'Kraunama\u2026',

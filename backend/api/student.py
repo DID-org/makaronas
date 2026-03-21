@@ -263,7 +263,7 @@ def _derive_phase_response(cartridge: TaskCartridge, phase: Phase) -> dict:
     Returns:
         Dict with keys: task_id, task_type, medium, title, content,
         available_actions, trickster_intro, current_phase, is_terminal,
-        evaluation_outcome, reveal.
+        evaluation_outcome, reveal, interaction.
     """
     return {
         "task_id": cartridge.task_id,
@@ -277,6 +277,7 @@ def _derive_phase_response(cartridge: TaskCartridge, phase: Phase) -> dict:
         "is_terminal": phase.is_terminal,
         "evaluation_outcome": phase.evaluation_outcome,
         "reveal": cartridge.reveal.model_dump() if phase.is_terminal else None,
+        "interaction": phase.interaction.model_dump() if phase.interaction else None,
     }
 
 

@@ -11,11 +11,21 @@
   // --------------------------------------------------------------------------
 
   var state = {
-    section: 'welcome',   // which section is visible
+    section: 'welcome',    // which section is visible
     error: null,           // { message: string } | null
     locked: false,         // UI lockout during API calls (Phase 3a)
-    session: null          // { session_id: string, auth_token: string } | null
+    session: null,         // { session_id: string, auth_token: string } | null
+    task: null,            // Full phase data dict from API (_derive_phase_response)
+    phase: null,           // Current phase ID string (shorthand for task.current_phase)
+    taskSequenceIndex: 0,  // Position in TASK_SEQUENCE array
+    terminal: null         // { evaluation_outcome, reveal } when is_terminal, null otherwise
   };
+
+  // --------------------------------------------------------------------------
+  // Task Sequence (honest stub — replaced by V9 Roadmap Engine)
+  // --------------------------------------------------------------------------
+
+  var TASK_SEQUENCE = ['task-01', 'task-04'];
 
   // --------------------------------------------------------------------------
   // Session Storage Keys (namespaced to avoid collisions)
@@ -110,6 +120,101 @@
   }
 
   // --------------------------------------------------------------------------
+  // Phase Rendering + Task Loading
+  // --------------------------------------------------------------------------
+
+  /**
+   * Renders a phase into the content and interaction panels.
+   * Called on initial task load, phase transitions, and session recovery.
+   * This is imperative — not called from the render() loop.
+   */
+  function renderPhase(phaseData) {
+    // Update state with new phase data
+    updateState({
+      task: phaseData,
+      phase: phaseData.current_phase,
+      section: 'task'
+    });
+
+    // Content panel: preserve heading, render presentation blocks
+    var contentPanel = document.querySelector('.content-panel');
+    if (contentPanel && window.Renderer) {
+      var contentHeading = contentPanel.querySelector('h2');
+      window.Renderer.renderBlocksInto(contentPanel, phaseData.content || [], phaseData.task_id);
+      if (contentHeading) {
+        contentHeading.textContent = phaseData.title || ((window.I18n && window.I18n.content_heading) || 'Turinys');
+        contentPanel.insertBefore(contentHeading, contentPanel.firstChild);
+      }
+    }
+
+    // Layout class: reset and apply variant based on interaction type
+    var taskLayout = document.querySelector('.task-layout');
+    if (taskLayout) {
+      taskLayout.className = 'task-layout';
+      if (phaseData.interaction && phaseData.interaction.type === 'investigation') {
+        taskLayout.classList.add('layout-investigation');
+      }
+    }
+
+    // Interaction panel: render controls via interactions.js
+    if (window.Interactions) {
+      window.Interactions.renderInteraction(phaseData);
+    }
+
+    // Focus management: move focus to content heading for screen readers
+    setTimeout(function () {
+      var heading = contentPanel && contentPanel.querySelector('h2[tabindex="-1"]');
+      if (heading) {
+        heading.focus();
+      }
+    }, 0);
+  }
+
+  /**
+   * Loads the first task from TASK_SEQUENCE after session creation.
+   * Chains from createSessionFlow().
+   */
+  function loadFirstTask() {
+    if (!state.session) return;
+
+    var taskId = TASK_SEQUENCE[state.taskSequenceIndex];
+    if (!taskId) {
+      updateState({ error: { message: (window.I18n && window.I18n.task_load_error) || 'Task load error' } });
+      return;
+    }
+
+    Api.loadTask(state.session.session_id, taskId).then(function (data) {
+      renderPhase(data);
+      console.log('[Makaronas] Task loaded:', taskId);
+    }).catch(function (err) {
+      updateState({ error: { message: err.message || (window.I18n && window.I18n.task_load_error) || 'Task load error' } });
+    });
+  }
+
+  /**
+   * Unified entry point for all phase transitions.
+   * Both button clicks (5a) and SSE done events (5b) route here.
+   */
+  function handlePhaseTransition(phaseData) {
+    if (phaseData.is_terminal) {
+      // Store terminal data for Phase 6b debrief/reveal
+      updateState({
+        terminal: {
+          evaluation_outcome: phaseData.evaluation_outcome,
+          reveal: phaseData.reveal
+        }
+      });
+    } else {
+      // Clear stale terminal data from previous phases
+      if (state.terminal !== null) {
+        updateState({ terminal: null });
+      }
+    }
+    // Always render the phase content (even terminal — shows final content)
+    renderPhase(phaseData);
+  }
+
+  // --------------------------------------------------------------------------
   // Session Helpers
   // --------------------------------------------------------------------------
 
@@ -138,9 +243,7 @@
       sessionStorage.setItem(STORAGE_KEYS.authToken, authToken);
       updateState({ session: { session_id: data.session_id, auth_token: authToken } });
       console.log('[Makaronas] Session created:', data.session_id);
-      // Phase 5a will chain task loading here. For now, session exists but
-      // we stay on welcome — the student will see the full flow once task
-      // loading is wired.
+      loadFirstTask();
     }).catch(function (err) {
       updateState({ error: { message: err.message } });
     });
@@ -176,12 +279,10 @@
         console.log('[Makaronas] Recovery: session alive, no active task');
         return;
       }
-      // Active task — store data for future rendering (Phase 5a+)
-      updateState({
-        section: 'task',
-        task: data,
-        dialogueHistory: data.dialogue_history || []
-      });
+      // Active task — render the current phase
+      // Preserve dialogueHistory for Phase 5b chat recovery
+      state.dialogueHistory = data.dialogue_history || [];
+      renderPhase(data);
       console.log('[Makaronas] Recovery: restored active task');
     }).catch(function (err) {
       if (err.code === 'SESSION_NOT_FOUND' || err.code === 'TASK_CONTENT_UPDATED') {
@@ -239,7 +340,10 @@
   window.App = {
     updateState: updateState,
     getState: getState,
-    render: render
+    render: render,
+    renderPhase: renderPhase,
+    loadFirstTask: loadFirstTask,
+    handlePhaseTransition: handlePhaseTransition
   };
 
   // --------------------------------------------------------------------------

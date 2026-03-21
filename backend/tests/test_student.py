@@ -489,6 +489,9 @@ class TestNextTask:
         assert isinstance(data["content"], list)
         assert len(data["content"]) > 0
         assert isinstance(data["available_actions"], list)
+        # interaction field present (button type for default cartridge)
+        assert data["interaction"] is not None
+        assert data["interaction"]["type"] == "button"
 
     @pytest.mark.asyncio
     async def test_content_blocks_resolved_correctly(
@@ -529,7 +532,15 @@ class TestNextTask:
                 f"/api/v1/student/session/{session_id}/next?task_id=task-btn-001",
                 headers=AUTH_HEADER,
             )
-        assert resp.json()["data"]["available_actions"] == ["button_click"]
+        data = resp.json()["data"]
+        assert data["available_actions"] == ["button_click"]
+        interaction = data["interaction"]
+        assert interaction is not None
+        assert interaction["type"] == "button"
+        assert isinstance(interaction["choices"], list)
+        assert len(interaction["choices"]) == 1
+        assert interaction["choices"][0]["label"] == "T\u0119sti"
+        assert interaction["choices"][0]["target_phase"] == "phase_reveal"
 
     @pytest.mark.asyncio
     async def test_available_actions_freeform(
@@ -578,7 +589,12 @@ class TestNextTask:
                 f"/api/v1/student/session/{session_id}/next?task_id=task-ff-001",
                 headers=AUTH_HEADER,
             )
-        assert resp.json()["data"]["available_actions"] == ["freeform"]
+        data = resp.json()["data"]
+        assert data["available_actions"] == ["freeform"]
+        interaction = data["interaction"]
+        assert interaction is not None
+        assert interaction["type"] == "freeform"
+        assert interaction["trickster_opening"] == "Na, k\u0105 manai?"
 
     @pytest.mark.asyncio
     async def test_available_actions_investigation(
@@ -612,7 +628,12 @@ class TestNextTask:
                 f"/api/v1/student/session/{session_id}/next?task_id=task-inv-001",
                 headers=AUTH_HEADER,
             )
-        assert resp.json()["data"]["available_actions"] == ["investigate"]
+        data = resp.json()["data"]
+        assert data["available_actions"] == ["investigate"]
+        interaction = data["interaction"]
+        assert interaction is not None
+        assert interaction["type"] == "investigation"
+        assert interaction["submit_target"] == "phase_reveal"
 
     @pytest.mark.asyncio
     async def test_available_actions_no_interaction(
@@ -637,7 +658,9 @@ class TestNextTask:
                 f"/api/v1/student/session/{session_id}/next?task_id=task-noint-001",
                 headers=AUTH_HEADER,
             )
-        assert resp.json()["data"]["available_actions"] == []
+        data = resp.json()["data"]
+        assert data["available_actions"] == []
+        assert data["interaction"] is None
 
     # --- Trickster intro tests ---
 

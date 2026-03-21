@@ -305,6 +305,48 @@ button,
 }
 
 /* --------------------------------------------------------------------------
+   Choice Buttons (Phase 5a — Interaction Panel)
+   -------------------------------------------------------------------------- */
+
+.choice-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+}
+
+.choice-btn {
+  display: block;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  background-color: var(--color-platform-bg-alt);
+  color: var(--color-platform-text);
+  border: 1px solid var(--color-platform-border);
+  border-radius: 8px;
+  font-size: var(--font-size-base);
+  text-align: left;
+  line-height: var(--line-height-body);
+}
+
+.choice-btn:hover:not(:disabled) {
+  background-color: var(--color-platform-accent);
+  color: #fff;
+  border-color: var(--color-platform-accent);
+}
+
+.choice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.interaction-unsupported {
+  color: var(--color-platform-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  padding: var(--space-md) 0;
+}
+
+/* --------------------------------------------------------------------------
    Focus Styles (Accessibility)
    -------------------------------------------------------------------------- */
 
