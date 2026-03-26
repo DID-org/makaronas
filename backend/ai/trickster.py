@@ -271,6 +271,17 @@ class TricksterEngine:
                             if response_text:
                                 accumulated += response_text
                                 yield response_text
+                            # Store optional context for cross-task use
+                            transition_context = event.arguments.get(
+                                "context"
+                            )
+                            if transition_context:
+                                session.generated_artifacts.append({
+                                    "type": "student_article",
+                                    "text": transition_context,
+                                    "phase": phase.id,
+                                    "task_id": cartridge.task_id,
+                                })
                         else:
                             logger.warning(
                                 "Unknown transition signal: %s", sig,

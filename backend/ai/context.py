@@ -94,6 +94,14 @@ TRANSITION_TOOL: dict[str, Any] = {
                     "closing remark, acknowledgment, or reveal here."
                 ),
             },
+            "context": {
+                "type": "string",
+                "description": (
+                    "Optional context to carry forward to the next task. "
+                    "Use this to pass student-generated content (e.g., "
+                    "an article they wrote) that the next task needs."
+                ),
+            },
         },
         "required": ["signal", "response_text"],
     },
