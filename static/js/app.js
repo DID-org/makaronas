@@ -30,6 +30,7 @@
   // wedge, misleading-frame) are excluded until archetype visions complete them.
   var TASK_SEQUENCE = [
     'task-vaitkus-001',           // hybrid, investigation — MVP Story Task 1: two articles
+    'task-vaitkus-comments-001',  // ai_driven, social — MVP Story Task 2: comment section
     'task-tunguska-001',          // ai_driven, article — rhetoric analysis
     'task-follow-money-001',      // hybrid, investigation — deeper, guided discovery
     'task-clickbait-trap-001'     // hybrid, article — clickbait patterns

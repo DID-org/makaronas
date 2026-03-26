@@ -1,0 +1,209 @@
+{
+  "task_id": "task-vaitkus-comments-001",
+  "task_type": "ai_driven",
+  "title": "Komentarai",
+  "description": "Tavo žinutė apie Vaitkaus incidentą paskelbta mokyklos naujienų puslapyje. Komentarai įsiliepsnojo. Bet kas čia tikras, o kas — ne?",
+  "version": "1.0.0",
+  "trigger": "belonging",
+  "technique": "emotional_framing",
+  "medium": "social_post",
+  "learning_objectives": [
+    "Atpažinti koordinuotų botų elgseną",
+    "Atskirti trolius nuo tikrų žmonių",
+    "Suprasti, kad tikras žmogus dalinasi neskaitydamas — pavojingiausias platintojas",
+    "Atpažinti whataboutism"
+  ],
+  "difficulty": 3,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "komentarai",
+    "botai",
+    "troliai",
+    "socialiniai tinklai"
+  ],
+  "status": "active",
+  "prerequisites": [
+    "task-vaitkus-001"
+  ],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "student-article-header",
+      "type": "text",
+      "text": "**MOKYKLOS NAUJIENŲ PUSLAPIS**\n\nTavo žinutė buvo paskelbta. Štai reakcijos:",
+      "style": "instruction"
+    },
+    {
+      "id": "comment-bot-1",
+      "type": "social_post",
+      "author": "SkaitmenineAteitisLT • Profilis sukurtas 2026-01-20 • 6 įrašai",
+      "text": "PAGALIAU kas nors parašė tiesą!! Vaitkus sukompromitavo VAIKŲ DUOMENIS ir dar bando išsisukti! Visi tėvai turi reikalauti jo atleidimo! #EduVaultSaugu #SaugokimeVaikus"
+    },
+    {
+      "id": "comment-bot-2",
+      "type": "social_post",
+      "author": "TechMokslas2026 • Profilis sukurtas 2026-01-22 • 4 įrašai",
+      "text": "Sutinku su SkaitmenineAteitisLT! Vaiku duomenys turi buti saugomi profesionaliai! Mokytojams ne vieta eksperimentuoti su musu vaiku saugumu! #EduVaultSaugu #SaugokimeVaikus"
+    },
+    {
+      "id": "comment-troll-1",
+      "type": "social_post",
+      "author": "RealusTėvas_Jonas • Profilis sukurtas 2025-11-03 • 45 įrašai",
+      "text": "Aš girdėjau iš kitų tėvų, kad Vaitkus ir anksčiau turėjo problemų su mokinių duomenimis. Tiesiog niekas nesiryžo viešai pasakyti. Šitas „mokytojas“ turėjo būti atleistas jau seniai."
+    },
+    {
+      "id": "comment-genuine-1",
+      "type": "social_post",
+      "author": "NerPan_Neringa • Profilis sukurtas 2021-05-14 • 312 įrašų",
+      "text": "Palaukit. Aš pažįstu Vaitkų — jis mano brolienės mokytojas. Jis tikrai rūpinasi mokiniais. Bet ar kas nors perskaitė tą EduVault privatumo politiką? 10 metų duomenų saugojimas — tai normalu?"
+    },
+    {
+      "id": "comment-troll-2",
+      "type": "social_post",
+      "author": "PatriotasVilnius • Profilis sukurtas 2024-09-15 • 89 įrašų",
+      "text": "O ką apie JŪSŲ privatumo problemą TikToke? Visi ten atiduoda savo duomenis ir niekam nerūpi! Kodėl tik mokytojus puolam? Dvigubi standartai!"
+    },
+    {
+      "id": "comment-sharer",
+      "type": "social_post",
+      "author": "Gabija_K • Profilis sukurtas 2023-03-22 • 156 įrašų",
+      "text": "Wow, šitas straipsnis apie Vaitkų... Dalinu draugams, visi turi žinoti! Ta mokinė tikrai nukentėjo..."
+    }
+  ],
+  "phases": [
+    {
+      "id": "dialogue",
+      "title": "Komentarų analizė",
+      "visible_blocks": [
+        "student-article-header",
+        "comment-bot-1",
+        "comment-bot-2",
+        "comment-troll-1",
+        "comment-genuine-1",
+        "comment-troll-2",
+        "comment-sharer"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Tavo žinutė paskelbta. Komentarai jau įsiliepsnojo. Bet kas čia tikras, o kas — ne? Pažiūrėk atidžiai į kiekvieną komentatorių — kas jie, kada susikūrė profilį, ką rašo, ir kodėl.",
+        "min_exchanges": 3,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "reveal",
+        "on_partial": "reveal",
+        "on_max_exchanges": "reveal"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal",
+      "title": "Atskleidimas",
+      "visible_blocks": [
+        "student-article-header",
+        "comment-bot-1",
+        "comment-bot-2",
+        "comment-troll-1",
+        "comment-genuine-1",
+        "comment-troll-2",
+        "comment-sharer"
+      ],
+      "trickster_content": "**Ką išmokome:**\n\n**SkaitmenineAteitisLT ir TechMokslas2026 — botai.**\nNaujos paskyros, vos keli įrašai, beveik identiškos frazės, tie patys hashtagai. Kai du „skirtingi“ žmonės rašo tą patį tekstą — tai ne sutapimas.\n\n**RealusTėvas_Jonas — trolis.**\nPlatina nepatvirtintą gandą („girdėjau iš kitų tėvų“) kaip faktą. Jokių įrodymų — tik emocinis spaudimas.\n\n**PatriotasVilnius — trolis (whataboutism).**\n„O ką apie TikTok?“ — klasikinis temos nukrypimas. Vietoj diskusijos apie EduVault, nukreipia kalbą į kitą temą.\n\n**NerPan_Neringa — tikra.**\nSena paskyra, daug įrašų, ramus tonas, konkretūs klausimai. Taip atrodo sveikas skepticizmas.\n\n**Gabija_K — tikra, bet pavojinga.**\nJi ne botas. Ji tiesiog pasidalino neskaitydama. Ir būtent tai yra pavojingiausia — nes jos draugai ja pasitiki.\n\n**Tai yra grandinė, kurią tu gali nutraukti.** Kitą kartą kai nori pasidalinti — sustok, perskaityk, patikrink.\n\n—\n\nBet kova dėl Vaitkaus dar nesibaigė. Dabar pasirodo nuotraukos...",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    }
+  ],
+  "initial_phase": "dialogue",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-bot-coordination",
+        "description": "Koordinuoti botai",
+        "technique": "fabrication",
+        "real_world_connection": "BRELL bot kampanijos"
+      },
+      {
+        "id": "p-troll-adhominem",
+        "description": "Trolio taktika — asmeniniai puolimai",
+        "technique": "emotional_framing",
+        "real_world_connection": "Puolimai prieš aktyvistus"
+      },
+      {
+        "id": "p-whataboutism",
+        "description": "Whataboutism",
+        "technique": "emotional_framing",
+        "real_world_connection": "Klasikinė taktika"
+      },
+      {
+        "id": "p-genuine-sharing",
+        "description": "Tikras žmogus dalinasi neskaitydamas",
+        "technique": "emotional_framing",
+        "real_world_connection": "Dauguma dezinformacijos plinta per tikrus žmones"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-spots-bots",
+        "description": "Atpažįsta botus",
+        "pattern_refs": [
+          "p-bot-coordination"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-spots-troll",
+        "description": "Atpažįsta trolius",
+        "pattern_refs": [
+          "p-troll-adhominem",
+          "p-whataboutism"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-spots-genuine",
+        "description": "Atskiria tikrą komentatorių",
+        "pattern_refs": [],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-understands-sharing",
+        "description": "Supranta Gabija_K pavojingą modelį",
+        "pattern_refs": [
+          "p-genuine-sharing"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Nesugeba atskirti botų",
+      "partial": "Atpažįsta botus, bet ne gilesnes taktikas",
+      "trickster_loses": "Atpažįsta botus, trolius, ir supranta dalinimosi pavojingą modelį"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-vaitkus-comments-001",
+    "persona_mode": "narrator",
+    "has_static_fallback": false,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Botai kartoja. Troliai puola. Bet pavojingiausias platintojas — tikras žmogus, kuris dalinasi neskaitydamas.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}
