@@ -94,16 +94,45 @@ TRANSITION_TOOL: dict[str, Any] = {
                     "closing remark, acknowledgment, or reveal here."
                 ),
             },
-            "context": {
+        },
+        "required": ["signal", "response_text"],
+    },
+}
+
+# Tool for publishing student-written articles (used only in write_article phases).
+# Separate from TRANSITION_TOOL so the model doesn't use context prematurely.
+PUBLISH_ARTICLE_TOOL: dict[str, Any] = {
+    "name": "publish_article",
+    "description": (
+        "Publish the student's article and transition to the next phase. "
+        "Use this ONLY when the student has written their article and you "
+        "have approved it. Include the student's article text exactly as "
+        "they wrote it in the article_text field."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "signal": {
+                "type": "string",
+                "enum": ["understood", "partial", "max_reached"],
+                "description": "The transition signal.",
+            },
+            "response_text": {
                 "type": "string",
                 "description": (
-                    "Optional context to carry forward to the next task. "
-                    "Use this to pass student-generated content (e.g., "
-                    "an article they wrote) that the next task needs."
+                    "Your final message to the student in Lithuanian."
+                ),
+            },
+            "article_text": {
+                "type": "string",
+                "description": (
+                    "The student's article text, copied exactly as they "
+                    "wrote it. This will be displayed as their published "
+                    "article in the next task."
                 ),
             },
         },
-        "required": ["signal", "response_text"],
+        "required": ["signal", "response_text", "article_text"],
     },
 }
 
@@ -177,6 +206,7 @@ class ContextManager:
         provider: str,
         exchange_count: int,
         min_exchanges: int,
+        phase_id: str | None = None,
     ) -> AssembledContext:
         """Assembles the full Trickster dialogue call payload.
 
@@ -226,7 +256,10 @@ class ContextManager:
 
         tools: list[dict] | None = None
         if exchange_count >= min_exchanges:
-            tools = [TRANSITION_TOOL]
+            if phase_id == "write_article":
+                tools = [PUBLISH_ARTICLE_TOOL]
+            else:
+                tools = [TRANSITION_TOOL]
 
         return AssembledContext(
             system_prompt=system_prompt,

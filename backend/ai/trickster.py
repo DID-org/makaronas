@@ -48,7 +48,7 @@ _MIN_RESPONSE_LENGTH = 10
 # instead of using the function calling mechanism. This catches common
 # patterns like: { "action": "transition_phase", ... "signal": "understood" }
 _TEXT_SIGNAL_RE = re.compile(
-    r"""transition_phase.*?['"]?(understood|partial|max_reached)['"]?""",
+    r"""(?:transition_phase|publish_article).*?['"]?(understood|partial|max_reached)['"]?""",
     re.DOTALL,
 )
 
@@ -58,7 +58,7 @@ _TEXT_SIGNAL_RE = re.compile(
 #   befp_transition_phase: {signal: 'understood'}
 #   transition_phase({"signal": "understood"})
 _LEAKED_TOOL_CALL_RE = re.compile(
-    r'\s*(?:\{[^{}]*transition_phase[^{}]*\}|befp_transition_phase\s*:.+|transition_phase\s*\(.+\))\s*$',
+    r'\s*(?:\{[^{}]*(?:transition_phase|publish_article)[^{}]*\}|befp_(?:transition_phase|publish_article)\s*:.+|(?:transition_phase|publish_article)\s*\(.+\))\s*$',
     re.DOTALL,
 )
 
@@ -217,6 +217,7 @@ class TricksterEngine:
             model_config.provider,
             exchange_count,
             interaction.min_exchanges,
+            phase_id=phase.id,
         )
 
         logger.info(
@@ -257,31 +258,28 @@ class TricksterEngine:
                     accumulated += event.text
                     yield event.text
                 elif isinstance(event, ToolCallEvent):
-                    if event.function_name == "transition_phase":
+                    if event.function_name in ("transition_phase", "publish_article"):
                         sig = event.arguments.get("signal")
                         if sig in _SIGNAL_MAP:
                             transition_signal = sig
-                            # Extract response_text from tool call —
-                            # this is the model's final message to the
-                            # student, included in the tool call so it
-                            # can talk and signal atomically.
                             response_text = event.arguments.get(
                                 "response_text", ""
                             )
                             if response_text:
                                 accumulated += response_text
                                 yield response_text
-                            # Store optional context for cross-task use
-                            transition_context = event.arguments.get(
-                                "context"
-                            )
-                            if transition_context:
-                                session.generated_artifacts.append({
-                                    "type": "student_article",
-                                    "text": transition_context,
-                                    "phase": phase.id,
-                                    "task_id": cartridge.task_id,
-                                })
+                            # Store article text from publish_article tool
+                            if event.function_name == "publish_article":
+                                article_text = event.arguments.get(
+                                    "article_text", ""
+                                )
+                                if article_text:
+                                    session.generated_artifacts.append({
+                                        "type": "student_article",
+                                        "text": article_text,
+                                        "phase": phase.id,
+                                        "task_id": cartridge.task_id,
+                                    })
                         else:
                             logger.warning(
                                 "Unknown transition signal: %s", sig,
@@ -331,7 +329,7 @@ class TricksterEngine:
                         accumulated += event.text
                         yield event.text
                     elif isinstance(event, ToolCallEvent):
-                        if event.function_name == "transition_phase":
+                        if event.function_name in ("transition_phase", "publish_article"):
                             sig = event.arguments.get("signal")
                             if sig in _SIGNAL_MAP:
                                 retry_signal = sig
@@ -341,6 +339,18 @@ class TricksterEngine:
                                 if response_text:
                                     accumulated += response_text
                                     yield response_text
+                                # Store article from retry path too
+                                if event.function_name == "publish_article":
+                                    article_text = event.arguments.get(
+                                        "article_text", ""
+                                    )
+                                    if article_text:
+                                        session.generated_artifacts.append({
+                                            "type": "student_article",
+                                            "text": article_text,
+                                            "phase": phase.id,
+                                            "task_id": cartridge.task_id,
+                                        })
 
                 if retry_signal is not None:
                     transition_signal = retry_signal
