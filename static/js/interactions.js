@@ -54,7 +54,27 @@
 
     switch (interaction.type) {
       case 'button':
-        renderButtonInteraction(panel, interaction, phaseData);
+        // In fullpage layout, render trickster intro + buttons into the content panel
+        var buttonTarget = panel;
+        var taskLayout = document.querySelector('.task-layout');
+        if (taskLayout && taskLayout.classList.contains('layout-fullpage')) {
+          var contentPanel = document.querySelector('.content-panel');
+          if (contentPanel) {
+            buttonTarget = contentPanel;
+            // Render trickster intro in content panel (interaction panel is hidden)
+            if (phaseData.trickster_intro) {
+              var introEl = document.createElement('div');
+              introEl.className = 'fullpage-trickster-intro';
+              if (window.Renderer) {
+                introEl.innerHTML = window.Renderer.renderMarkdown(phaseData.trickster_intro);
+              } else {
+                introEl.textContent = phaseData.trickster_intro;
+              }
+              contentPanel.appendChild(introEl);
+            }
+          }
+        }
+        renderButtonInteraction(buttonTarget, interaction, phaseData);
         break;
       case 'freeform':
         if (window.Dialogue) {

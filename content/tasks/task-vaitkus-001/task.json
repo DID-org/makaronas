@@ -1,0 +1,395 @@
+{
+  "task_id": "task-vaitkus-001",
+  "task_type": "hybrid",
+  "title": "Mokytojas Vaitkus",
+  "description": "Panevėžio gimnazijoje nutekėjo mokinių duomenys. Du portalai — visiškai skirtingos versijos. Tavo užduotis — išsiaiškinti, kas skatina skirtingus požiūrius, ir rasti tai, ko nė vienas straipsnis nepasako.",
+  "version": "1.0.0",
+  "trigger": "cynicism",
+  "technique": "omission",
+  "medium": "investigation",
+  "learning_objectives": [
+    "Atpažinti selektyvų nutylėjimą — manipuliacija slypi ne tame, kas pasakyta, o tame, kas nutylėta",
+    "Atsekti finansavimo šaltinius ir suprasti, kaip jie formuoja turinio rėminimą",
+    "Vertinti teiginį nepriklausomai nuo šaltinio reputacijos — diskredituotas žmogus gali sakyti tiesą",
+    "Suprasti duomenų privatumo rizikas ir mokėti skaityti privatumo politiką kritiškai"
+  ],
+  "difficulty": 4,
+  "time_minutes": 15,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "tyrimas",
+    "žiniasklaida",
+    "privatumas",
+    "duomenys",
+    "šališkumas",
+    "finansavimas"
+  ],
+  "status": "active",
+  "prerequisites": [],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "intro-text",
+      "type": "text",
+      "text": "Panevėžio „Saulėtekio“ gimnazijoje viena mokinė rašė kūrybinį darbą apie tai, kas jai sunku — atvirai, asmeniškai, nes tikėjosi, kad tai matys tik mokytojas. Po kelių dienų jos teksto ištrauka atsidūrė anoniminėje Instagram paskyroje su pašaipiu komentaru. Klasės draugai pamatė. Mokinė buvo pažeminta.\n\nDuomenys nutekėjo per mokyklos edukacinę platformą „EduVault“, kurią mokyklai sukonfigūravo IT mokytojas Rokas Vaitkus. Tas pats Vaitkus, kuris prieš metus viešai įspėjo, kad „EduVault“ renka per daug mokinių duomenų. Niekas jo neklausė.\n\nDu naujienų portalai parašė apie šį incidentą — bet jų versijos visiškai skirtingos.\n\nTavo užduotis: perskaityti abu straipsnius, patikrinti jų teiginius ir išsiaiškinti, kas skatina tokius skirtingus požiūrius.",
+      "style": "intro"
+    },
+    {
+      "id": "read-instruction-b",
+      "type": "text",
+      "text": "Perskaityk šį straipsnį atidžiai.",
+      "style": "instruction"
+    },
+    {
+      "id": "read-instruction-a",
+      "type": "text",
+      "text": "Dabar perskaityk kitą straipsnį apie tą patį įvykį.",
+      "style": "instruction"
+    },
+    {
+      "id": "article-edtech",
+      "type": "text",
+      "text": "ŠVIETIMO TECHNOLOGIJOS\n\nMokytojo klaida atskleidė mokinių duomenis — ar tai buvo tik neatsargumas?\n\nPanevėžio „Saulėtekio“ gimnazijoje mokiniės asmeninis kūrybinis darbas buvo pavogtas iš mokyklos sistemos ir pašaipiai publikuotas socialiniuose tinkluose. Mokinė patyrė patyčias klasėje.\n\nTyrime nustatyta, kad IT mokytojas Rokas Vaitkus, atsakingas už „EduVault“ platformos diegimą mokykloje, neužbaigė sistemos saugumo sąrankos. Diegimo instrukcijose aiškiai nurodytas prieigos apribojimo žingsnis — Vaitkus jo neatliko.\n\n„Platforma yra saugi — tačiau net geriausia sistema neapsaugo nuo žmogiškos klaidos“, — sako kibernetinio saugumo ekspertė dr. Eglė Barkauskienė.\n\nVerta paminėti, kad Vaitkus yra žinomas kaip viešas „EduVault“ kritikas — prieš metus jis aktyviai agitavo prieš platformos diegimą mokykloje. Ar mokytojas, kuris viešai priešinosi šiai platformai, tikrai tiesiog „pamiršo“ užbaigti saugumo sąranką?\n\n„EduVault“ įkūrėjas Darius Kalvaitis pasiūlė nemokamai atlikti visų Panevėžio mokyklų saugumo auditą: „Joks vaikas neturėtų bijoti rašyti atvirai savo mokykloje.“",
+      "style": "article-b"
+    },
+    {
+      "id": "article-opensource",
+      "type": "text",
+      "text": "ATVIRAS KODAS\n\nEduVault nutekino mokinių duomenis — ir kaltina mokytoją, kuris bandė įspėti\n\nPrieš metus IT mokytojas Rokas Vaitkus viešai įspėjo: „EduVault“ platforma kelia grėsmę mokinių privatumui. Jis perskaitė privatumo politiką ir rado tai, ko niekas nenorėjo girdėti: platforma saugo mokinių elgesio duomenis dešimtmečiais ir dalijasi jais su neįvardintais partneriais.\n\nMokyklos administracija jo įspėjimą ignoravo ir nurodė diegti „EduVault.“ Vaitkus įdiegė.\n\nDabar, kai per šią platformą nutekėjo mokiniės asmeninis kūrybinis darbas, kaltinamas ne sistema — o mokytojas, kuris bandė perspėti. Profesionalūs straipsniai, reikalaujantys jo atleidimo, pasirodė per kelias valandas.\n\n„Vaitkus yra vienintelis žmogus šioje istorijoje, kuris bandė apsaugoti mokinius“, — sako skaitmeninių teisių ekspertas. „O dabar jis baudžiamas už tai, kad buvo teisus.“",
+      "style": "article-a"
+    },
+    {
+      "id": "sr-eduvault-main",
+      "type": "search_result",
+      "query": "EduVault platforma",
+      "title": "EduVault — apie platformą",
+      "snippet": "Nemokama edukacinė platforma, naudojama daugiau nei 200 Lietuvos mokyklų. Įkurta Dariaus Kalvaičio. Mokykloms nemokama — finansuojama iš Kalvaitis Holdings.",
+      "child_queries": [
+        "EduVault privatumo politika",
+        "Darius Kalvaitis",
+        "Vaitkaus diegimo žurnalas"
+      ]
+    },
+    {
+      "id": "sr-eduvault-privacy",
+      "type": "search_result",
+      "query": "EduVault privatumo politika",
+      "title": "EduVault privatumo politika",
+      "snippet": "[Dešimt puslapių vėliau...]\n\n§7.3: „Platformos naudojimo duomenys — įskaitant sąveikos modelius, elgesio metrikas, mokymosi tempą, dėmesio rodiklius ir užduočių atsakymus — saugomi viso mokinio mokymosi laikotarpio metu ir 10 metų po jo pabaigos.“\n\n§9.1: „Duomenys gali būti dalijami su tyrimų partneriais.“",
+      "is_key_finding": true
+    },
+    {
+      "id": "sr-kalvaitis",
+      "type": "search_result",
+      "query": "Darius Kalvaitis",
+      "title": "Darius Kalvaitis — profilis",
+      "snippet": "Technologijų verslininkas. „Forbes Lietuva“ sąraše. TEDx pranešėjas. EduVault vadina „dovana Lietuvos vaikams.“ Taip pat valdo DataStream Analytics — įmonę, kuri specializuojasi elgesio duomenų analizėje.",
+      "is_dead_end": true
+    },
+    {
+      "id": "sr-ak-about",
+      "type": "search_result",
+      "query": "Atviras Kodas portalas",
+      "title": "Atviras Kodas — apie mus",
+      "snippet": "Technologijų tinklaraštis nuo 2021 m. Rašo apie skaitmeninį privatumu ir EdTech. Finansuojamas KlasėPlus fondo.",
+      "child_queries": [
+        "KlasėPlus fondas"
+      ]
+    },
+    {
+      "id": "sr-ak-fondas",
+      "type": "search_result",
+      "query": "KlasėPlus fondas",
+      "title": "KlasėPlus — įmonės profilis",
+      "snippet": "Edukacinės technologijos įmonė — tiesioginis EduVault konkurentas. Siūlo mokyklų valdymo platformą. Šiuo metu naudojama 40 Lietuvos mokyklų. Aktyviai siekia plėsti rinką. „Atviras Kodas“ portalas finansuojamas iš KlasėPlus rinkodaros biudžeto.",
+      "is_key_finding": true
+    },
+    {
+      "id": "sr-st-about",
+      "type": "search_result",
+      "query": "Švietimo Technologijos portalas",
+      "title": "Švietimo Technologijos — apie portalą",
+      "snippet": "Profesionalus švietimo technologijų portalas nuo 2024 m. Leidėjas: UAB „Ryšių Sprendimai“.",
+      "child_queries": [
+        "Ryšių Sprendimai UAB"
+      ]
+    },
+    {
+      "id": "sr-st-rysiai",
+      "type": "search_result",
+      "query": "Ryšių Sprendimai UAB",
+      "title": "Ryšių Sprendimai — įmonės profilis",
+      "snippet": "Viešųjų ryšių ir komunikacijos agentūra, įkurta 2020 m. Reklaminiai partneriai: UAB „Baltic Pharma Group“, UAB „EduVault“ (Kalvaitis Holdings), UAB „GreenLog Logistics“, UAB „Nordica Insurance“.",
+      "is_key_finding": true
+    },
+    {
+      "id": "sr-system-journal",
+      "type": "search_result",
+      "query": "Vaitkaus diegimo žurnalas",
+      "title": "EduVault diegimo žurnalas — Saulėtekio gimnazija",
+      "snippet": "Diegimo žurnalas, 2026-01-14:\n„Žingsnis 8/12: Prieigos apribojimo konfigūracija. TODO: grįžti prie šito pirmadienį.“\n\nPastaba: žingsnis nebuvo užbaigtas. Incidentas įvyko 2026-01-26.",
+      "is_key_finding": true
+    }
+  ],
+  "phases": [
+    {
+      "id": "briefing",
+      "title": "Užduoties aprašymas",
+      "visible_blocks": [
+        "intro-text"
+      ],
+      "trickster_content": null,
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Pradėti",
+            "target_phase": "read_article_b",
+            "context_label": "Mokinys pradėjo užduotį"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "read_article_b",
+      "title": "Pirmasis straipsnis",
+      "visible_blocks": [
+        "read-instruction-b",
+        "article-edtech"
+      ],
+      "trickster_content": null,
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Skaičiau — toliau",
+            "target_phase": "read_article_a",
+            "context_label": "Mokinys perskaitė straipsnį B (anti-Vaitkus)"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "read_article_a",
+      "title": "Antrasis straipsnis",
+      "visible_blocks": [
+        "read-instruction-a",
+        "article-opensource"
+      ],
+      "trickster_content": null,
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Pradėti tyrimą",
+            "target_phase": "investigate",
+            "context_label": "Mokinys perskaitė abu straipsnius ir pradeda tyrimą"
+          },
+          {
+            "label": "← Grįžti prie pirmojo straipsnio",
+            "target_phase": "read_article_b",
+            "context_label": "Mokinys grįžta perskaityti pirmą straipsnį"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "investigate",
+      "title": "Tyrimas",
+      "visible_blocks": [
+        "article-edtech",
+        "article-opensource",
+        "sr-st-about",
+        "sr-st-rysiai",
+        "sr-eduvault-main",
+        "sr-eduvault-privacy",
+        "sr-kalvaitis",
+        "sr-ak-about",
+        "sr-ak-fondas",
+        "sr-system-journal"
+      ],
+      "trickster_content": "Kas stovi už šių straipsnių? Kas juos finansuoja? Ir ką „EduVault“ slepia savo privatumo politikoje? Tyrinėk.",
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "investigation",
+        "starting_queries": [
+          "Švietimo Technologijos portalas",
+          "Atviras Kodas portalas",
+          "EduVault platforma"
+        ],
+        "submit_target": "discuss",
+        "min_key_findings": 4
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "discuss",
+      "title": "Aptarimas",
+      "visible_blocks": [
+        "sr-st-about",
+        "sr-st-rysiai",
+        "sr-eduvault-main",
+        "sr-eduvault-privacy",
+        "sr-kalvaitis",
+        "sr-ak-about",
+        "sr-ak-fondas",
+        "sr-system-journal",
+        "article-edtech",
+        "article-opensource"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Taigi, nė vienas straipsnis nemeluoja. Bet jie atrodo taip skirtingai! Tu padarei tyrimą — ar radai, kas motyvuoja tokius skirtingus požiūrius?",
+        "min_exchanges": 2,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "write_article",
+        "on_partial": "write_article",
+        "on_max_exchanges": "write_article"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "write_article",
+      "title": "Parašyk savo straipsnį",
+      "visible_blocks": [
+        "sr-st-about",
+        "sr-st-rysiai",
+        "sr-eduvault-main",
+        "sr-eduvault-privacy",
+        "sr-kalvaitis",
+        "sr-ak-about",
+        "sr-ak-fondas",
+        "sr-system-journal"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Dabar tu žinai daugiau nei bet kuris iš šių portalų pasakė. Parašyk trumpą žinutę mokyklos naujienų puslapiui — 3–5 sakiniai, galima ir daugiau. Ką mokiniai turėtų žinoti apie šią istoriją? Ką radai savo tyrimuose?",
+        "min_exchanges": 1,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "reveal",
+        "on_partial": "reveal",
+        "on_max_exchanges": "reveal"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal",
+      "title": "Atskleidimas",
+      "visible_blocks": [
+        "article-edtech",
+        "article-opensource"
+      ],
+      "trickster_content": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali sakyti tiesą.**\nVaitkus suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    }
+  ],
+  "initial_phase": "briefing",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-selective-omission-b",
+        "description": "Švietimo Technologijos nutyli EduVault privatumo politiką ir savo finansavimo šaltinį",
+        "technique": "omission",
+        "real_world_connection": "Korporacijų finansuojami portalai, atrodantys kaip nepriklausoma žiniasklaida"
+      },
+      {
+        "id": "p-selective-omission-a",
+        "description": "Atviras Kodas nutyli Vaitkaus klaidos rimtumą ir pateikia jį kaip tobulą didvyrį",
+        "technique": "omission",
+        "real_world_connection": "Net nepriklausomi šaltiniai gali nutylėti nepatogius faktus"
+      },
+      {
+        "id": "p-privacy-policy",
+        "description": "EduVault privatumo politika atskleidžia 10 metų mokinių duomenų saugojimą",
+        "technique": "omission",
+        "real_world_connection": "Privatumo politikos rašomos taip, kad jų neskaitytumėte"
+      },
+      {
+        "id": "p-corporate-funding",
+        "description": "Švietimo Technologijos portalą leidžia EduVault PR agentūra",
+        "technique": "source_weaponization",
+        "real_world_connection": "Kai žiniasklaidos priemonę finansuoja ta pati įmonė, apie kurią rašoma teigiamai — tai interesų konfliktas"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-privacy-policy",
+        "description": "Mokinys atranda EduVault privatumo politikos 10 metų duomenų saugojimo sąlygą",
+        "pattern_refs": [
+          "p-privacy-policy"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-corporate-funding",
+        "description": "Mokinys atranda, kad Švietimo Technologijos portalą leidžia EduVault PR agentūra",
+        "pattern_refs": [
+          "p-corporate-funding"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-omission-not-lies",
+        "description": "Mokinys supranta, kad nė vienas straipsnis nemeluoja — manipuliacija yra nutylėjime",
+        "pattern_refs": [
+          "p-selective-omission-b",
+          "p-selective-omission-a"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-asymmetric-bias",
+        "description": "Mokinys skiria korporacinį finansavimą nuo ideologinio šališkumo",
+        "pattern_refs": [
+          "p-selective-omission-b",
+          "p-selective-omission-a",
+          "p-corporate-funding"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Mokinys nesugeba identifikuoti konkrečių nutylėjimų",
+      "partial": "Mokinys randa vieną svarbų radinį, bet nepilnai susieja visą vaizdą",
+      "trickster_loses": "Mokinys atseka privatumo politiką, portalo finansavimą, ir supranta skirtumą tarp korporacinio ir ideologinio šališkumo"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-vaitkus-001",
+    "persona_mode": "narrator",
+    "has_static_fallback": false,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Diskredituotas žmogus vis tiek gali sakyti tiesą. Patikimas šaltinis vis tiek gali ką nors slėpti. Tikrink teiginį — ne žmogų.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions",
+      "no_real_financial_data"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}

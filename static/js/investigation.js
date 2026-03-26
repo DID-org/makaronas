@@ -355,6 +355,11 @@
       markBtn.setAttribute('aria-pressed', 'true');
       markBtn.classList.add('investigation-mark-btn--marked');
       if (cardEl) cardEl.classList.add('block-search-result--marked');
+
+      // Auto-expand children of marked findings (so student sees deeper trail)
+      if (cardEl && cardEl.getAttribute('aria-expanded') === 'false') {
+        toggleExpand(cardEl);
+      }
     }
 
     updateControls();

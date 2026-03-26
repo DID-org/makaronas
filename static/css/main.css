@@ -243,6 +243,55 @@ a:hover {
   background-color: var(--color-platform-bg);
 }
 
+/* Layout variant: fullpage (content only, no interaction panel) */
+.task-layout.layout-fullpage .content-panel {
+  flex: 1 1 100%;
+  max-width: 80%;
+  margin: 0 auto;
+}
+
+.task-layout.layout-fullpage .interaction-panel {
+  display: none;
+}
+
+/* Intro block — story setup text */
+.block-text--intro {
+  font-size: var(--font-size-base);
+  line-height: 1.7;
+  color: var(--color-content-text);
+  margin-bottom: var(--space-xl);
+}
+
+/* Instruction block — brief phase instruction */
+.block-text--instruction {
+  font-size: var(--font-size-sm);
+  color: var(--color-platform-text-muted);
+  font-style: italic;
+  margin-bottom: var(--space-md);
+}
+
+/* Trickster intro text in fullpage mode */
+.fullpage-trickster-intro {
+  color: var(--color-content-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+  margin-bottom: var(--space-lg);
+}
+
+.fullpage-trickster-intro p {
+  margin-bottom: var(--space-md);
+}
+
+/* Button container in fullpage mode — centered, spaced */
+.task-layout.layout-fullpage .choice-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-platform-border);
+}
+
 /* Layout variant: investigation (60/40) */
 .task-layout.layout-investigation .content-panel {
   flex: 0 0 60%;

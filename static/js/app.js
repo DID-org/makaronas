@@ -29,7 +29,8 @@
   // Only active cartridges — draft skeletons (cherry-pick, phantom-quote,
   // wedge, misleading-frame) are excluded until archetype visions complete them.
   var TASK_SEQUENCE = [
-    'task-tunguska-001',          // ai_driven, article — rhetoric analysis (easiest entry point)
+    'task-vaitkus-001',           // hybrid, investigation — MVP Story Task 1: two articles
+    'task-tunguska-001',          // ai_driven, article — rhetoric analysis
     'task-follow-money-001',      // hybrid, investigation — deeper, guided discovery
     'task-clickbait-trap-001'     // hybrid, article — clickbait patterns
   ];
@@ -170,6 +171,7 @@
     // Content panel: task header + presentation blocks
     var contentPanel = document.querySelector('.content-panel');
     if (contentPanel && window.Renderer) {
+      console.log('[Makaronas] renderPhase:', phaseData.current_phase, 'blocks:', (phaseData.content || []).map(function(b) { return b.id; }));
       window.Renderer.renderBlocksInto(contentPanel, phaseData.content || [], phaseData.task_id);
 
       // Build task header: number + title + medium context
@@ -207,6 +209,8 @@
       taskLayout.className = 'task-layout';
       if (phaseData.interaction && phaseData.interaction.type === 'investigation') {
         taskLayout.classList.add('layout-investigation');
+      } else if (phaseData.interaction && phaseData.interaction.type === 'button') {
+        taskLayout.classList.add('layout-fullpage');
       }
     }
 
@@ -215,8 +219,10 @@
       window.Interactions.renderInteraction(phaseData);
     }
 
-    // Focus management: move focus to content heading for screen readers
+    // Scroll to top on phase transition and focus management
     setTimeout(function () {
+      window.scrollTo(0, 0);
+      if (contentPanel) contentPanel.scrollTop = 0;
       var heading = contentPanel && contentPanel.querySelector('h2[tabindex="-1"]');
       if (heading) {
         heading.focus();
