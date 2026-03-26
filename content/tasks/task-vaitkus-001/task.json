@@ -133,6 +133,12 @@
       "title": "EduVault diegimo žurnalas — Saulėtekio gimnazija",
       "snippet": "Diegimo žurnalas, 2026-01-14:\n„Žingsnis 8/12: Prieigos apribojimo konfigūracija. TODO: grįžti prie šito pirmadienį.“\n\nPastaba: žingsnis nebuvo užbaigtas. Incidentas įvyko 2026-01-26.",
       "is_key_finding": true
+    },
+    {
+      "id": "conclusions-text",
+      "type": "text",
+      "text": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali sakyti tiesą.**\nVaitkus suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
+      "style": "conclusions"
     }
   ],
   "phases": [
@@ -255,9 +261,29 @@
         "max_exchanges": 16
       },
       "ai_transitions": {
-        "on_success": "write_article",
-        "on_partial": "write_article",
-        "on_max_exchanges": "write_article"
+        "on_success": "conclusions",
+        "on_partial": "conclusions",
+        "on_max_exchanges": "conclusions"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "conclusions",
+      "title": "Išvados",
+      "visible_blocks": [
+        "conclusions-text"
+      ],
+      "trickster_content": null,
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Parašyti žinutę draugams",
+            "target_phase": "write_article",
+            "context_label": "Mokinys perskaitė išvadas ir eina rašyti žinutę"
+          }
+        ]
       },
       "is_terminal": false
     },
@@ -277,7 +303,7 @@
       "is_ai_phase": true,
       "interaction": {
         "type": "freeform",
-        "trickster_opening": "Dabar tu žinai daugiau nei bet kuris iš šių portalų pasakė. Parašyk trumpą žinutę mokyklos naujienų puslapiui — 3–5 sakiniai, galima ir daugiau. Ką mokiniai turėtų žinoti apie šią istoriją? Ką radai savo tyrimuose?",
+        "trickster_opening": "Įsivaizduok, kad rašai žinutę savo klasės draugams — ką jie turėtų žinoti apie šią istoriją? Keletas sakinių, savo žodžiais — ką radai?",
         "min_exchanges": 1,
         "max_exchanges": 16
       },
@@ -295,7 +321,7 @@
         "article-edtech",
         "article-opensource"
       ],
-      "trickster_content": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali sakyti tiesą.**\nVaitkus suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
+      "trickster_content": "Tavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
@@ -380,7 +406,7 @@
     "context_requirements": "session_only"
   },
   "reveal": {
-    "key_lesson": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali sakyti tiesą.**\nVaitkus suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
+    "key_lesson": "Tavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
     "additional_resources": []
   },
   "safety": {

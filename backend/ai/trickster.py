@@ -62,6 +62,12 @@ _LEAKED_TOOL_CALL_RE = re.compile(
     re.DOTALL,
 )
 
+# Regex to extract article_text from leaked publish_article JSON.
+_TEXT_ARTICLE_RE = re.compile(
+    r"""article_text['":\s]+['"](.+?)['"]""",
+    re.DOTALL,
+)
+
 # Signal name -> AiTransitions attribute name mapping.
 _SIGNAL_MAP: dict[str, str] = {
     "understood": "on_success",
@@ -204,8 +210,12 @@ class TricksterEngine:
         # 4. Input validation (warn-and-log only, never blocks)
         safety.validate_input(student_input, cartridge.task_id)
 
-        # 5. Resolve model tier
+        # 5. Resolve model tier and provider
         model_config = resolve_tier(cartridge.ai_config.model_preference)
+        # Use per-task provider if tier differs from default
+        from backend.api.deps import create_provider
+        from backend.config import get_settings
+        provider = create_provider(model_config, get_settings())
 
         # 6. Assemble context
         exchange_count = sum(
@@ -233,7 +243,6 @@ class TricksterEngine:
         # Python closures are late-binding: 'result' is captured by reference.
         # When the generator body executes (during consumer iteration),
         # 'result' is already bound to the TricksterResult instance.
-        provider = self._provider
         max_exchanges = interaction.max_exchanges
 
         async def _stream() -> AsyncIterator[str]:
@@ -296,6 +305,18 @@ class TricksterEngine:
                 m = _TEXT_SIGNAL_RE.search(accumulated)
                 if m:
                     transition_signal = m.group(1)
+                    # Extract article_text from leaked publish_article JSON
+                    article_m = _TEXT_ARTICLE_RE.search(accumulated)
+                    if article_m:
+                        session.generated_artifacts.append({
+                            "type": "student_article",
+                            "text": article_m.group(1),
+                            "phase": phase.id,
+                            "task_id": cartridge.task_id,
+                        })
+                        logger.info(
+                            "Extracted student article from leaked tool call text"
+                        )
                     # Strip the leaked JSON from accumulated text so it
                     # doesn't appear in exchanges or the done event
                     accumulated = _LEAKED_TOOL_CALL_RE.sub(
@@ -512,8 +533,11 @@ class TricksterEngine:
         Returns:
             DebriefResult with token iterator and post-completion fields.
         """
-        # 1. Resolve model tier
+        # 1. Resolve model tier and provider
         model_config = resolve_tier(cartridge.ai_config.model_preference)
+        from backend.api.deps import create_provider
+        from backend.config import get_settings
+        provider = create_provider(model_config, get_settings())
 
         # 2. Assemble debrief context
         ctx = self._context_manager.assemble_debrief_call(
@@ -525,8 +549,6 @@ class TricksterEngine:
             cartridge.task_id,
             len(session.exchanges),
         )
-
-        provider = self._provider
 
         async def _stream() -> AsyncIterator[str]:
             accumulated = ""

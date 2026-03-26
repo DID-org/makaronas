@@ -154,11 +154,13 @@
    * This is imperative — not called from the render() loop.
    */
   function renderPhase(phaseData) {
-    // Update state with new phase data
+    // Update state with new phase data — clear dialogue history on phase transitions
+    // so the debrief only reflects the final AI dialogue, not accumulated history
     updateState({
       task: phaseData,
       phase: phaseData.current_phase,
-      section: 'task'
+      section: 'task',
+      dialogueHistory: []
     });
 
     // Clear interaction state from previous phase
@@ -589,11 +591,13 @@
   function handlePhaseTransition(phaseData) {
     if (phaseData.is_terminal) {
       // Store terminal data for debrief/reveal
+      // Clear dialogue history — the reveal conclusions replace the debrief
       updateState({
         terminal: {
           evaluation_outcome: phaseData.evaluation_outcome,
           reveal: phaseData.reveal
-        }
+        },
+        dialogueHistory: []
       });
       // Terminal fork: preserve dialogue, start post-task flow
       startPostTaskFlow(phaseData);

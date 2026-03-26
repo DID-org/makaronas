@@ -42,7 +42,7 @@ TaskType = Literal["ai_driven", "static", "hybrid"]
 TaskStatus = Literal["active", "deprecated", "draft"]
 """Lifecycle status — active tasks are visible to teachers and students."""
 
-ModelPreference = Literal["fast", "standard", "complex"]
+ModelPreference = Literal["fast", "standard", "complex", "haiku"]
 """Capability tier for AI model selection (Layer 1 of the three-layer abstraction)."""
 
 PersonaMode = Literal["presenting", "chat_participant", "narrator", "commenter"]

@@ -262,6 +262,44 @@ a:hover {
   margin-bottom: var(--space-xl);
 }
 
+/* Student's published article — personal, distinct from comments */
+.block-text--student-article {
+  background-color: rgba(80, 128, 200, 0.12);
+  border: 1px solid rgba(80, 128, 200, 0.3);
+  border-radius: 6px;
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  color: var(--color-content-text);
+  line-height: var(--line-height-body);
+}
+
+.block-text--student-article::before {
+  content: "TAVO ŽINUTĖ";
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(120, 170, 230, 0.8);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid rgba(80, 128, 200, 0.3);
+}
+
+/* Conclusions block — task summary/lessons learned */
+.block-text--conclusions {
+  background-color: rgba(26, 46, 34, 0.5);
+  border: 1px solid rgba(80, 160, 100, 0.3);
+  border-radius: 6px;
+  padding: var(--space-xl);
+  color: var(--color-content-text);
+  line-height: 1.7;
+}
+
+.block-text--conclusions strong {
+  color: rgba(140, 210, 160, 0.9);
+}
+
 /* Instruction block — brief phase instruction */
 .block-text--instruction {
   font-size: var(--font-size-sm);

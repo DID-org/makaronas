@@ -253,24 +253,49 @@ def _derive_trickster_intro(phase: Phase) -> str | None:
     return None
 
 
-def _derive_phase_response(cartridge: TaskCartridge, phase: Phase) -> dict:
+def _derive_phase_response(
+    cartridge: TaskCartridge,
+    phase: Phase,
+    session: "GameSession | None" = None,
+) -> dict:
     """Assembles a phase content response dict for the student API.
 
     Combines existing derivation helpers with terminal phase fields and
     reveal gating. Reused by /current, /next, /choice, and done event
     enrichment to eliminate duplication.
 
+    When session is provided, student-generated artifacts (e.g., published
+    articles from prior tasks) are injected into the content blocks.
+
     Returns:
         Dict with keys: task_id, task_type, medium, title, content,
         available_actions, trickster_intro, current_phase, is_terminal,
         evaluation_outcome, reveal, interaction.
     """
+    content = _derive_content_blocks(cartridge, phase)
+
+    # Inject student's published article from prior task if available
+    if session and session.generated_artifacts:
+        for artifact in session.generated_artifacts:
+            if artifact.get("type") == "student_article" and artifact.get("text"):
+                student_block = {
+                    "id": "student-published-article",
+                    "type": "text",
+                    "data": {"text": artifact["text"], "style": "student-article"},
+                    "text": artifact["text"],
+                    "style": "student-article",
+                }
+                # Insert after the header block (index 0) if present
+                insert_idx = 1 if content else 0
+                content.insert(insert_idx, student_block)
+                break  # Only inject the first/latest article
+
     return {
         "task_id": cartridge.task_id,
         "task_type": cartridge.task_type,
         "medium": cartridge.medium,
         "title": cartridge.title,
-        "content": _derive_content_blocks(cartridge, phase),
+        "content": content,
         "available_actions": _derive_available_actions(phase),
         "trickster_intro": _derive_trickster_intro(phase),
         "current_phase": phase.id,
@@ -670,7 +695,7 @@ async def next_task(
 
     return ApiResponse(
         ok=True,
-        data=_derive_phase_response(cartridge, initial_phase),
+        data=_derive_phase_response(cartridge, initial_phase, session=session),
     ).model_dump()
 
 
@@ -745,7 +770,7 @@ async def current_session(
         )
 
     # --- Build response ---
-    data = _derive_phase_response(cartridge, current_phase)
+    data = _derive_phase_response(cartridge, current_phase, session=session)
     data["dialogue_history"] = [
         exchange.model_dump() for exchange in session.exchanges
     ]
@@ -880,7 +905,7 @@ async def choose(
     # 10. Build response
     return ApiResponse(
         ok=True,
-        data=_derive_phase_response(cartridge, target_phase),
+        data=_derive_phase_response(cartridge, target_phase, session=session),
     ).model_dump()
 
 
