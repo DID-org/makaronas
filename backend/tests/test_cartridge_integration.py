@@ -239,7 +239,7 @@ class TestLoaderValidation:
         assert c.technique == "omission"
         assert c.medium == "investigation"
         assert c.difficulty == 4
-        assert c.time_minutes == 20
+        assert c.time_minutes == 15
         assert c.is_evergreen is True
         assert c.is_clean is False
         assert c.language == "lt"
@@ -407,7 +407,7 @@ class TestRegistryIndexing:
         assert registry.is_phase_valid("task-clickbait-trap-001", "intro") is True
         assert registry.is_phase_valid("task-clickbait-trap-001", "evaluate") is True
         assert registry.is_phase_valid("task-clickbait-trap-001", "nonexistent") is False
-        assert registry.is_phase_valid("task-follow-money-001", "investigation") is True
+        assert registry.is_phase_valid("task-follow-money-001", "discuss_framing") is True
         assert registry.is_phase_valid("nonexistent-task", "intro") is False
 
 
@@ -543,7 +543,7 @@ class TestStudentAPI:
         self, client: httpx.AsyncClient, registry: TaskRegistry,
         session_id: str,
     ) -> None:
-        """Next-task for follow-money returns button_click action and content."""
+        """Next-task for follow-money returns freeform action and content."""
         _use_student()
         _use_registry(registry)
 
@@ -557,8 +557,8 @@ class TestStudentAPI:
         assert body["ok"] is True
         data = body["data"]
         assert data["task_id"] == "task-follow-money-001"
-        assert data["current_phase"] == "intro"
-        assert "button_click" in data["available_actions"]
+        assert data["current_phase"] == "discuss_framing"
+        assert "freeform" in data["available_actions"]
         assert len(data["content"]) >= 2  # two article blocks
 
     @pytest.mark.asyncio
@@ -622,10 +622,10 @@ class TestInvestigationTree:
         ]
         available_queries = {b.query for b in sr_blocks}
 
-        # Find the investigation phase
+        # Find the first investigation phase (investigate_herald)
         inv_phase = None
         for phase in c.phases:
-            if phase.id == "investigation":
+            if phase.interaction is not None and getattr(phase.interaction, 'starting_queries', None) is not None:
                 inv_phase = phase
                 break
         assert inv_phase is not None, "No investigation phase found"
@@ -663,31 +663,33 @@ class TestInvestigationTree:
                 )
 
     def test_both_branches_reachable(self, taxonomy: dict) -> None:
-        """Both key financial connections are discoverable from starting queries."""
+        """Key financial connections are discoverable from investigation phases."""
         c = self._get_follow_money(taxonomy)
         sr_blocks = {
             b.query: b for b in c.presentation_blocks
             if isinstance(b, SearchResultBlock)
         }
 
-        # BFS from starting queries to find key findings
-        inv_phase = next(p for p in c.phases if p.id == "investigation")
-        visited = set()
-        queue = list(inv_phase.interaction.starting_queries)
+        # BFS from all investigation phases' starting queries
         found_key_findings = []
+        for phase in c.phases:
+            if phase.interaction is None or not getattr(phase.interaction, 'starting_queries', None):
+                continue
+            visited = set()
+            queue = list(phase.interaction.starting_queries)
 
-        while queue:
-            query = queue.pop(0)
-            if query in visited:
-                continue
-            visited.add(query)
-            block = sr_blocks.get(query)
-            if block is None:
-                continue
-            if block.is_key_finding:
-                found_key_findings.append(block.id)
-            for child_q in block.child_queries:
-                queue.append(child_q)
+            while queue:
+                query = queue.pop(0)
+                if query in visited:
+                    continue
+                visited.add(query)
+                block = sr_blocks.get(query)
+                if block is None:
+                    continue
+                if block.is_key_finding:
+                    found_key_findings.append(block.id)
+                for child_q in block.child_queries:
+                    queue.append(child_q)
 
         assert len(found_key_findings) >= 2, (
             f"Only {len(found_key_findings)} key findings reachable: "
@@ -760,13 +762,13 @@ class TestSkeletonLoaderValidation:
         assert len(warnings) == 0
 
     def test_all_skeletons_load_together(self, taxonomy: dict) -> None:
-        """All 6 cartridges load via load_all_tasks with zero errors."""
+        """All cartridges load via load_all_tasks with zero errors."""
         loader = TaskLoader()
         results, errors = loader.load_all_tasks(CONTENT_DIR, taxonomy)
         # TEMPLATE directory produces a known path_mismatch error — filter it
         real_errors = [e for e in errors if "TEMPLATE" not in e.task_dir]
         assert len(real_errors) == 0, f"Load errors: {real_errors}"
-        assert len(results) == 6
+        assert len(results) == 10
         loaded_ids = sorted(r.cartridge.task_id for r in results)
         assert "task-cherry-pick-001" in loaded_ids
         assert "task-phantom-quote-001" in loaded_ids

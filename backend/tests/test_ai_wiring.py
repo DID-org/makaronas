@@ -81,6 +81,7 @@ except ModuleNotFoundError:
     _has_anthropic = False
 
 
+@pytest.mark.real_providers
 class TestCreateProvider:
     """Tests for deps.create_provider() factory routing."""
 

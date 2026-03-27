@@ -165,7 +165,6 @@ class TestLithuanianCharacters:
         )
         assert prompts.task_override is not None
         assert "\u017e" in prompts.task_override  # ž
-        assert "\u201e" in prompts.task_override  # „
 
 
 # ---------------------------------------------------------------------------

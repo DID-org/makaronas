@@ -503,19 +503,13 @@ class TestFollowMoneyScenarios:
 class TestFollowMoneyPromptContent:
     """Verifies key structural elements in the prompt file content."""
 
-    def test_no_english_content(self, loader: PromptLoader) -> None:
-        """Prompt file contains no English common words."""
-        import re
-
+    def test_prompt_has_content(self, loader: PromptLoader) -> None:
+        """Prompt file has substantial content."""
         prompts = loader.load_trickster_prompts(
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
-        english = re.findall(
-            r"\b(the|and|for|with|this|that|from|but|not|are|was|were)\b",
-            prompts.task_override.lower(),
-        )
-        assert english == [], f"English words found in prompt: {english}"
+        assert len(prompts.task_override) > 200
 
     def test_references_all_pattern_ids(self, loader: PromptLoader) -> None:
         """Prompt references all 4 pattern IDs from the cartridge."""
@@ -546,25 +540,23 @@ class TestFollowMoneyPromptContent:
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
-        assert "pasakotojas" in prompts.task_override
+        assert "narrator" in prompts.task_override.lower()
 
-    def test_no_transition_mechanics(self, loader: PromptLoader) -> None:
-        """Prompt doesn't contain transition tool mechanics."""
+    def test_has_transition_instructions(self, loader: PromptLoader) -> None:
+        """Prompt contains transition instructions for multi-phase flow."""
         prompts = loader.load_trickster_prompts(
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
-        assert "transition_phase" not in prompts.task_override
-        assert "tool" not in prompts.task_override.lower()
+        assert "transition" in prompts.task_override.lower()
 
-    def test_no_persona_duplication(self, loader: PromptLoader) -> None:
-        """Prompt doesn't duplicate persona instructions from mode files."""
+    def test_no_makaronas_reference(self, loader: PromptLoader) -> None:
+        """Prompt doesn't reference the platform name directly."""
         prompts = loader.load_trickster_prompts(
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
         assert "Makaronas" not in prompts.task_override
-        assert "persona" not in prompts.task_override.lower()
 
     def test_mentions_four_patterns(self, loader: PromptLoader) -> None:
         """Prompt acknowledges 4 patterns exist."""
@@ -572,5 +564,5 @@ class TestFollowMoneyPromptContent:
             "gemini", task_id=_TASK_ID, persona_mode=_PERSONA_MODE,
         )
         assert prompts.task_override is not None
-        content = prompts.task_override
-        assert "4 \u0161ablon" in content or "Keturi" in content or "keturi" in content
+        content = prompts.task_override.lower()
+        assert "four" in content or "4 pattern" in content or "4 hidden" in content

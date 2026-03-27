@@ -112,7 +112,7 @@ class TestTierMap:
     """TIER_MAP — maps capability tiers to ModelConfig instances."""
 
     def test_contains_all_tiers(self) -> None:
-        expected_tiers = {"fast", "standard", "complex"}
+        expected_tiers = {"fast", "standard", "complex", "haiku"}
         assert set(TIER_MAP.keys()) == expected_tiers
 
     def test_values_are_model_configs(self) -> None:
@@ -122,7 +122,7 @@ class TestTierMap:
     def test_fast_tier(self) -> None:
         mc = TIER_MAP["fast"]
         assert mc.provider == "gemini"
-        assert mc.model_id == GEMINI_FLASH_LITE
+        assert mc.model_id == GEMINI_FLASH
 
     def test_standard_tier(self) -> None:
         mc = TIER_MAP["standard"]
@@ -135,9 +135,12 @@ class TestTierMap:
         assert mc.model_id == GEMINI_PRO
 
     def test_all_tiers_gemini_provider(self) -> None:
-        """MVP strategy: all tiers use Gemini."""
+        """MVP strategy: most tiers use Gemini (haiku uses Anthropic)."""
         for tier, config in TIER_MAP.items():
-            assert config.provider == "gemini", f"TIER_MAP['{tier}'] not gemini"
+            if tier == "haiku":
+                assert config.provider == "anthropic", f"TIER_MAP['{tier}'] not anthropic"
+            else:
+                assert config.provider == "gemini", f"TIER_MAP['{tier}'] not gemini"
 
 
 class TestResolveTier:

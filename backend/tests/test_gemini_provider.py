@@ -236,7 +236,7 @@ class TestBuildConfig:
 
     def test_thinking_budget_zero(self) -> None:
         config = _build_config("Test", _CONFIG, None)
-        assert config.thinking_config.thinking_budget == 0
+        assert config.thinking_config is None
 
     def test_no_tools_means_no_tool_config(self) -> None:
         config = _build_config("Test", _CONFIG, None)

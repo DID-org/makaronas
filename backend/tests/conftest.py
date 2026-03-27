@@ -8,12 +8,14 @@ Fixtures:
     make_session: Factory for valid GameSession instances
     make_cartridge: Factory for valid AI-capable TaskCartridge instances
     mock_registry: Pre-populated TaskRegistry with one default cartridge
+    patch_provider: Patches create_provider to return a given mock provider
 
 Helpers (imported directly by test modules):
     write_prompt_file: Creates a prompt file at the given path
     setup_base_prompts: Creates the three mandatory base prompt files
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
@@ -23,6 +25,26 @@ from backend.ai.providers.mock import MockProvider
 from backend.schemas import GameSession
 from backend.tasks.registry import TaskRegistry
 from backend.tasks.schemas import TaskCartridge
+
+
+@dataclass
+class _FakeSettings:
+    """Minimal settings stub for engine tests."""
+
+    google_api_key: str = "test-key"
+    anthropic_api_key: str = "test-key"
+    app_env: str = "test"
+    app_port: int = 8001
+    log_level: str = "WARNING"
+    cors_origins: list = None
+    default_language: str = "lt"
+    supported_languages: list = None
+
+    def __post_init__(self) -> None:
+        if self.cors_origins is None:
+            self.cors_origins = []
+        if self.supported_languages is None:
+            self.supported_languages = ["lt"]
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +79,65 @@ def mock_provider():
         return MockProvider(**kwargs)
 
     return _make
+
+
+# ---------------------------------------------------------------------------
+# Provider patching for engine tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def patch_provider(monkeypatch):
+    """Returns a callable that patches create_provider to return the given provider.
+
+    Usage in tests:
+        spy = SpyProvider(responses=["Hello"])
+        patch_provider(spy)
+        engine = TricksterEngine(spy, context_manager)
+    """
+
+    def _patch(provider):
+        monkeypatch.setattr(
+            "backend.api.deps.create_provider", lambda mc, s: provider,
+        )
+        monkeypatch.setattr(
+            "backend.config.get_settings", lambda: _FakeSettings(),
+        )
+
+    return _patch
+
+
+@pytest.fixture(autouse=True)
+def _auto_patch_engine_provider(request, monkeypatch):
+    """Auto-patches create_provider so TricksterEngine uses injected providers.
+
+    TricksterEngine.respond() and debrief() call create_provider() internally
+    instead of using self._provider. This fixture intercepts TricksterEngine's
+    __init__ to capture the injected provider, then makes create_provider()
+    return it.
+
+    Tests marked with @pytest.mark.real_providers skip this fixture.
+    """
+    if request.node.get_closest_marker("real_providers"):
+        return
+
+    from backend.ai.trickster import TricksterEngine
+
+    _provider_slot = [None]
+    _original_init = TricksterEngine.__init__
+
+    def _capturing_init(self, provider, context_manager, **kwargs):
+        _provider_slot[0] = provider
+        _original_init(self, provider, context_manager, **kwargs)
+
+    monkeypatch.setattr(TricksterEngine, "__init__", _capturing_init)
+    monkeypatch.setattr(
+        "backend.api.deps.create_provider",
+        lambda mc, s: _provider_slot[0] if _provider_slot[0] is not None else MockProvider(),
+    )
+    monkeypatch.setattr(
+        "backend.config.get_settings", lambda: _FakeSettings(),
+    )
 
 
 # ---------------------------------------------------------------------------
