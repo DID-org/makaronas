@@ -1002,14 +1002,6 @@ async def respond(
                 ).model_dump(),
             )
 
-    # Save student input as article if this is the write_article phase
-    if phase.id == "write_article" and body.payload and len(body.payload) > 10:
-        try:
-            from pathlib import Path
-            Path("/tmp/student_article.txt").write_text(body.payload, encoding="utf-8")
-        except Exception:
-            pass
-
     # Call engine
     result = await engine.respond(session, cartridge, phase, body.payload)
 
@@ -1343,4 +1335,97 @@ async def export_profile(
     return ApiResponse(
         ok=True,
         data=export_data,
+    ).model_dump()
+
+
+# ---------------------------------------------------------------------------
+# GET /session/{session_id}/report — session completion report
+# ---------------------------------------------------------------------------
+
+
+@router.get("/session/{session_id}/report")
+async def session_report(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    session_store: SessionStore = Depends(get_session_store),
+) -> dict:
+    """Generates a personalized end-of-session report.
+
+    Reviews the student's performance across all completed tasks and
+    generates an encouraging summary (100-160 words, Lithuanian).
+    """
+    session = await _get_session_or_404(session_id, session_store)
+    _check_ownership(session, user)
+
+    if not session.task_history:
+        return ApiResponse(
+            ok=True,
+            data={"report": "Sveikiname baigus sesiją!"},
+        ).model_dump()
+
+    # Build summary of what the student did across tasks
+    task_summaries = []
+    for entry in session.task_history:
+        outcome = entry.get("evaluation_outcome", "unknown")
+        outcome_lt = {
+            "on_success": "puikiai",
+            "on_partial": "iš dalies",
+            "on_max_exchanges": "su pagalba",
+        }.get(outcome, "baigta")
+        task_summaries.append(
+            f"- {entry['task_id']}: {outcome_lt} "
+            f"({entry.get('exchange_count', '?')} pokalbių)"
+        )
+
+    summary_text = "\n".join(task_summaries)
+
+    system_prompt = (
+        "Tu esi Makaronas — DI asistentas, kuris moko paauglius atpažinti "
+        "dezinformaciją. Mokinys ką tik baigė visas užduotis. Parašyk ASMENINĘ "
+        "ataskaitą lietuvių kalba (100-160 žodžių). Naudok 'jūs' formą.\n\n"
+        "Ataskaita turi:\n"
+        "- Pagirti mokinį už pastangas ir kantrybę\n"
+        "- Paminėti konkrečiai, ką jie darė gerai (pagal užduočių rezultatus)\n"
+        "- Trumpai paminėti, ką galėtų tobulinti (bet pozityviai)\n"
+        "- Paskatinti būti budriems ateityje\n"
+        "- Padėkoti už dalyvavimą\n"
+        "- Baigti viltingai: kritinis mąstymas veikia, tiesa randama\n\n"
+        "Nerašyk pavadinimo ar antraštės. Tik tekstą."
+    )
+
+    messages = [
+        {"role": "user", "content": (
+            f"Mokinio sesijos rezultatai:\n{summary_text}\n\n"
+            f"Užduočių seka: straipsniai → komentarai → botų tinklas → "
+            f"banko išrašas → deepfake video.\n\n"
+            f"Parašyk asmeninę ataskaitą."
+        )},
+    ]
+
+    model_config = resolve_tier("fast")
+    settings = get_settings()
+    provider = create_provider(model_config, settings)
+
+    start_time = time.monotonic()
+    report_text, usage = await provider.complete(
+        system_prompt=system_prompt,
+        messages=messages,
+        model_config=model_config,
+        tools=None,
+    )
+    elapsed_ms = (time.monotonic() - start_time) * 1000
+
+    log_ai_call(
+        call_type="session_report",
+        model_id=model_config.model_id,
+        prompt_tokens=usage.prompt_tokens if usage else 0,
+        completion_tokens=usage.completion_tokens if usage else 0,
+        latency_ms=elapsed_ms,
+        task_id="session_report",
+        session_id=session_id,
+    )
+
+    return ApiResponse(
+        ok=True,
+        data={"report": report_text.strip()},
     ).model_dump()

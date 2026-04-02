@@ -20,6 +20,7 @@
     respond:       function (id) { return '/api/v1/student/session/' + id + '/respond'; },
     debrief:       function (id) { return '/api/v1/student/session/' + id + '/debrief'; },
     generate:      function (id) { return '/api/v1/student/session/' + id + '/generate'; },
+    report:        function (id) { return '/api/v1/student/session/' + id + '/report'; },
     radar:         function (id) { return '/api/v1/student/profile/' + id + '/radar'; },
     deleteProfile: function (id) { return '/api/v1/student/profile/' + id; },
     exportProfile: function (id) { return '/api/v1/student/profile/' + id + '/export'; },
@@ -282,6 +283,10 @@
   // --------------------------------------------------------------------------
   // Asset URL Helper (not a fetch — returns URL string for img.src, etc.)
   // --------------------------------------------------------------------------
+
+  function getReport(sessionId) {
+    return request('GET', PATHS.report(sessionId), null);
+  }
 
   function assetUrl(taskId, src) {
     return PATHS.asset(taskId, src);
@@ -686,6 +691,7 @@
     getRadar: getRadar,
 
     // Utility
+    getReport: getReport,
     assetUrl: assetUrl,
 
     // Exposed for SSE functions and future use

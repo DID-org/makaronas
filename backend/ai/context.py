@@ -242,6 +242,26 @@ class ContextManager:
 
         messages: list[dict[str, Any]] = self._format_exchanges(session.exchanges)
 
+        # Inject trickster_opening as the first assistant message so the model
+        # knows what it already said to the student (displayed by the frontend
+        # but not recorded in exchanges). Only when there are no assistant
+        # messages yet — meaning the model hasn't responded in this phase.
+        has_assistant_msg = any(
+            m.get("role") == "assistant" for m in messages
+        )
+        if not has_assistant_msg:
+            current_phase = None
+            for p in cartridge.phases:
+                if p.id == (phase_id or session.current_phase):
+                    current_phase = p
+                    break
+            if (current_phase
+                    and current_phase.interaction
+                    and hasattr(current_phase.interaction, 'trickster_opening')):
+                opening = current_phase.interaction.trickster_opening
+                if opening:
+                    messages.insert(0, {"role": "assistant", "content": opening})
+
         # Inject multimodal image context if the current phase has images.
         image_parts = self._extract_visible_images(cartridge, session)
         context_prefix_count = 0

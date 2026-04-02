@@ -359,6 +359,25 @@
   function showSessionEnd() {
     updateState({ section: 'end' });
     console.log('[Makaronas] Session complete — all tasks finished');
+
+    var reportEl = document.getElementById('session-report');
+    if (!reportEl) return;
+
+    var sessionId = state.session && state.session.session_id;
+    if (!sessionId) {
+      reportEl.innerHTML = '<h2 class="session-report__title">\u2714 Sesija baigta</h2>' +
+        '<p>A\u010Di\u016B, kad dalyvavote!</p>';
+      return;
+    }
+
+    Api.getReport(sessionId).then(function (data) {
+      var report = data.report || 'Sveikiname baigus sesiją!';
+      reportEl.innerHTML = '<h2 class="session-report__title">\u2714 Sesija baigta</h2>' +
+        '<div class="session-report__text">' + window.Renderer.renderMarkdown(report) + '</div>';
+    }).catch(function () {
+      reportEl.innerHTML = '<h2 class="session-report__title">\u2714 Sesija baigta</h2>' +
+        '<p>A\u010Di\u016B, kad dalyvavote! Puikiai padirbėjote.</p>';
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -669,6 +688,9 @@
    */
   function createSessionFlow() {
     if (state.locked) return;
+
+    // Clear any stale session data from previous runs
+    clearSession();
 
     var authToken = crypto.randomUUID();
 

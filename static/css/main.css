@@ -961,6 +961,42 @@ button,
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* --- Session Report (end-of-session AI-generated summary) --- */
+
+.session-report {
+  max-width: 600px;
+  margin: var(--space-xl) auto;
+  padding: var(--space-xl);
+  background: rgba(80, 200, 120, 0.06);
+  border: 1px solid rgba(80, 200, 120, 0.2);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.session-report__title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: rgba(80, 200, 120, 0.9);
+  margin-bottom: var(--space-lg);
+}
+
+.session-report__text {
+  color: var(--color-platform-text);
+  line-height: var(--line-height-body);
+  text-align: left;
+  font-size: var(--font-size-base);
+}
+
+.session-report__text p {
+  margin-bottom: var(--space-md);
+}
+
+.session-report__loading {
+  color: var(--color-platform-text-muted);
+  font-style: italic;
+  padding: var(--space-xl) 0;
+}
+
 /* --- Task Done Box (content-only terminal phases) --- */
 
 .task-done-box {

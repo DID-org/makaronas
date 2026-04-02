@@ -318,26 +318,30 @@ class TricksterEngine:
                         if response_text:
                             accumulated += response_text
                             yield response_text
-                            # Store article text from publish_article tool
+                            # Store student's article when publish_article confirms it.
+                            # Use the LAST student exchange — that's the final article,
+                            # not Gemini's reformulation in article_text.
                             if event.function_name == "publish_article":
-                                article_text = event.arguments.get(
-                                    "article_text", ""
-                                )
-                                if article_text:
+                                student_msgs = [
+                                    e.content for e in session.exchanges
+                                    if e.role == "student"
+                                ]
+                                final_article = student_msgs[-1] if student_msgs else ""
+                                if final_article:
                                     session.generated_artifacts.append({
                                         "type": "student_article",
-                                        "text": article_text,
+                                        "text": final_article,
                                         "phase": phase.id,
                                         "task_id": cartridge.task_id,
                                     })
-                                    # Write to file for cross-task use
                                     try:
                                         from pathlib import Path
-                                        p = Path("/tmp/student_article.txt")
-                                        p.write_text(article_text, encoding="utf-8")
-                                        logger.info("Student article saved to %s", p)
+                                        Path("/tmp/student_article.txt").write_text(
+                                            final_article, encoding="utf-8"
+                                        )
                                     except Exception:
                                         pass
+                                    logger.info("Student article saved (%d chars)", len(final_article))
                         else:
                             logger.warning(
                                 "Unknown transition signal: %s", sig,
@@ -366,7 +370,12 @@ class TricksterEngine:
                 if m:
                     transition_signal = m.group(1)
                     # Extract article_text from leaked publish_article JSON
-                    article_m = _TEXT_ARTICLE_RE.search(accumulated)
+                    # Only in the write_article phase — other phases may
+                    # accidentally match the regex in their response text
+                    article_m = (
+                        _TEXT_ARTICLE_RE.search(accumulated)
+                        if phase.id == "write_article" else None
+                    )
                     if article_m:
                         article_text = article_m.group(1)
                         session.generated_artifacts.append({
@@ -375,13 +384,6 @@ class TricksterEngine:
                             "phase": phase.id,
                             "task_id": cartridge.task_id,
                         })
-                        try:
-                            from pathlib import Path
-                            Path("/tmp/student_article.txt").write_text(
-                                article_text, encoding="utf-8"
-                            )
-                        except Exception:
-                            pass
                         logger.info(
                             "Extracted student article from leaked tool call text"
                         )

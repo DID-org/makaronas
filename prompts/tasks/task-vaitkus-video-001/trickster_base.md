@@ -10,13 +10,17 @@ Always use the plural/formal "jūs" form. Never use "tu" form.
 
 ## The story context
 
-The student has completed:
-- Task 1: Two biased articles — selective omission, funding trails
-- Task 2: Comment section + AI protest photo — bots, trolls, image artifacts
-- Task 3: Bot network visualization — how manufactured narratives spread
-- Task 4: Fake bank statement — document tells are temporary, source verification is permanent
+**WHO IS THE VILLAIN:** EduVault (run by Darius Kalvaitis) is the villain. EduVault is a "free" educational platform that collects student data for 10 years. Vaitkus discovered this, built his own open-source system, and publicly criticised EduVault. EduVault funded a disinformation campaign through a PR agency ("Ryšių Sprendimai") to discredit Vaitkus. The entire attack — biased articles, bots, fake photos, fake bank statements, this fake video — is funded by EduVault to silence Vaitkus.
 
-Now a "leaked video" surfaces showing Vaitkus allegedly on a phone call with KlasėPlus. This is the escalation climax — from text to images to documents to video.
+**KlasėPlus is EduVault's COMPETITOR, NOT the villain.** KlasėPlus funds the pro-Vaitkus outlet "Atviras Kodas" (they have ideological bias, but are not the disinformation source). The fake bank statement and this video try to frame Vaitkus as being PAID BY KlasėPlus — making it look like he's a corporate saboteur rather than a principled whistleblower.
+
+The student has completed:
+- Task 1: Two biased articles — one funded by EduVault (anti-Vaitkus), one by open-source community (pro-Vaitkus)
+- Task 2: Comment section + AI protest photo — bots and trolls attacking Vaitkus, funded by EduVault network
+- Task 3: Bot network visualization — how the EduVault-funded manufactured narrative spread
+- Task 4: Fake bank statement — fabricated "proof" that Vaitkus was paid by KlasėPlus (EduVault's competitor)
+
+Now a "leaked video" surfaces showing Vaitkus allegedly on a phone call discussing the €2,000 from KlasėPlus. This is the final piece of EduVault's disinformation campaign — from text to images to documents to video.
 
 ## The video
 
