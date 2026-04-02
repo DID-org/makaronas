@@ -117,7 +117,7 @@ def _validate_asset_path(task_id: str, filename: str, base_path: Path) -> Path:
                 ).model_dump(),
             )
 
-    file_path = (base_path / task_id / filename).resolve()
+    file_path = (base_path / task_id / "assets" / filename).resolve()
 
     if not file_path.is_relative_to(base_path.resolve()):
         raise HTTPException(
@@ -270,16 +270,14 @@ async def refine_roadmap(
 async def serve_asset(
     task_id: str,
     filename: str,
-    user: User = Depends(get_current_user),
     storage: FileStorage = Depends(get_file_storage),
 ) -> FileResponse:
     """Serves a static asset file for a task (image, audio, etc.).
 
-    Accessible by any authenticated user — students need task images/audio,
-    teachers need preview assets.
-
-    Path traversal protection is enforced before any filesystem access
-    (Framework Principle 13).
+    Unauthenticated — browser <img>/<audio>/<video> tags cannot send
+    Authorization headers. Path traversal protection is still enforced
+    before any filesystem access (Framework Principle 13). Assets are
+    non-sensitive task content (images, audio clips).
     """
     # V1 stub coupling: access _base_path from LocalFileStorage.
     # When the team swaps to CDN storage, this route becomes unnecessary.

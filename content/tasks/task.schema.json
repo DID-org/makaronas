@@ -444,6 +444,22 @@
           "type": "string",
           "description": "Post content. Lithuanian."
         },
+        "image": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Optional image asset filename (e.g. 'protest.jpg'). Served from the task's assets/ directory."
+        },
+        "image_alt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Alt text for the image. Required for accessibility when image is set."
+        },
         "engagement": {
           "type": [
             "object",

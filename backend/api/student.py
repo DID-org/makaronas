@@ -274,21 +274,37 @@ def _derive_phase_response(
     """
     content = _derive_content_blocks(cartridge, phase)
 
-    # Inject student's published article from prior task if available
-    if session and session.generated_artifacts:
-        for artifact in session.generated_artifacts:
-            if artifact.get("type") == "student_article" and artifact.get("text"):
-                student_block = {
-                    "id": "student-published-article",
-                    "type": "text",
-                    "data": {"text": artifact["text"], "style": "student-article"},
-                    "text": artifact["text"],
-                    "style": "student-article",
-                }
-                # Insert after the header block (index 0) if present
-                insert_idx = 1 if content else 0
-                content.insert(insert_idx, student_block)
-                break  # Only inject the first/latest article
+    # Inject student's published article — only for the comments task
+    if session and cartridge.task_id == "task-vaitkus-comments-001" and phase.id == "dialogue":
+        article_text = None
+
+        # Primary: check generated_artifacts
+        if session.generated_artifacts:
+            for artifact in session.generated_artifacts:
+                if artifact.get("type") == "student_article" and artifact.get("text"):
+                    article_text = artifact["text"]
+                    break
+
+        # Fallback: read from file (written by respond endpoint or trickster engine)
+        if not article_text:
+            try:
+                from pathlib import Path
+                p = Path("/tmp/student_article.txt")
+                if p.exists():
+                    article_text = p.read_text(encoding="utf-8").strip()
+            except Exception:
+                pass
+
+        if article_text:
+            student_block = {
+                "id": "student-published-article",
+                "type": "text",
+                "data": {"text": article_text, "style": "student-article"},
+                "text": article_text,
+                "style": "student-article",
+            }
+            insert_idx = 1 if content else 0
+            content.insert(insert_idx, student_block)
 
     return {
         "task_id": cartridge.task_id,
@@ -432,7 +448,7 @@ async def _stream_trickster_response(
     session_store: SessionStore,
     cartridge: TaskCartridge,
     call_type: str,
-    timeout_seconds: float = 30.0,
+    timeout_seconds: float = 60.0,
 ) -> AsyncGenerator[str, None]:
     """Turns a TricksterResult/DebriefResult into a full SSE event stream.
 
@@ -976,6 +992,14 @@ async def respond(
                     ),
                 ).model_dump(),
             )
+
+    # Save student input as article if this is the write_article phase
+    if phase.id == "write_article" and body.payload and len(body.payload) > 10:
+        try:
+            from pathlib import Path
+            Path("/tmp/student_article.txt").write_text(body.payload, encoding="utf-8")
+        except Exception:
+            pass
 
     # Call engine
     result = await engine.respond(session, cartridge, phase, body.payload)

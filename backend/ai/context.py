@@ -23,7 +23,7 @@ from typing import Any
 
 from backend.ai.prompts import PromptLoader, TricksterPrompts
 from backend.schemas import Exchange, GameSession
-from backend.tasks.schemas import ImageBlock, MemeBlock, TaskCartridge
+from backend.tasks.schemas import ImageBlock, MemeBlock, SocialPostBlock, TaskCartridge
 
 logger = logging.getLogger(__name__)
 
@@ -1010,6 +1010,9 @@ class ContextManager:
                         "type": "text",
                         "text": f"Meme tekstas: {' / '.join(overlay_parts)}",
                     })
+            elif isinstance(block, SocialPostBlock) and block.image:
+                src = block.image
+                text_parts = []
             else:
                 continue
 

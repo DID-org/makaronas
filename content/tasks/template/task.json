@@ -1,7 +1,7 @@
 {
   "$schema": "../task.schema.json",
   "_comment": "Copy this directory, rename it to your task_id, then edit. See AUTHORING_GUIDE.md for the full workflow.",
-  "task_id": "my-new-task-001",
+  "task_id": "template",
   "_comment_task_id": "Must match the parent directory name. Lowercase, alphanumeric and hyphens only.",
   "task_type": "hybrid",
   "title": "[PLACEHOLDER: Užduoties pavadinimas]",
@@ -157,7 +157,7 @@
   },
   "ai_config": {
     "model_preference": "standard",
-    "prompt_directory": "prompts/tasks/my-new-task-001",
+    "prompt_directory": "prompts/tasks/template",
     "persona_mode": "presenting",
     "has_static_fallback": true,
     "context_requirements": "session_only"

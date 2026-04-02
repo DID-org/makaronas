@@ -355,8 +355,8 @@ class TestServeAsset:
     async def test_serves_existing_file(self, client: httpx.AsyncClient, tmp_path) -> None:
         _use_student()
         # Create a test asset on disk
-        task_dir = tmp_path / "task-img-001"
-        task_dir.mkdir()
+        task_dir = tmp_path / "task-img-001" / "assets"
+        task_dir.mkdir(parents=True)
         asset_file = task_dir / "graph.png"
         asset_file.write_bytes(b"\x89PNG\r\n\x1a\nfake-png-data")
 
@@ -375,8 +375,8 @@ class TestServeAsset:
     @pytest.mark.asyncio
     async def test_content_type_detection(self, client: httpx.AsyncClient, tmp_path) -> None:
         _use_student()
-        task_dir = tmp_path / "task-audio-001"
-        task_dir.mkdir()
+        task_dir = tmp_path / "task-audio-001" / "assets"
+        task_dir.mkdir(parents=True)
         asset_file = task_dir / "clip.mp3"
         asset_file.write_bytes(b"fake-mp3-data")
 
@@ -395,8 +395,8 @@ class TestServeAsset:
     @pytest.mark.asyncio
     async def test_teacher_can_access(self, client: httpx.AsyncClient, tmp_path) -> None:
         _use_teacher()
-        task_dir = tmp_path / "task-t-001"
-        task_dir.mkdir()
+        task_dir = tmp_path / "task-t-001" / "assets"
+        task_dir.mkdir(parents=True)
         (task_dir / "preview.jpg").write_bytes(b"fake-jpg")
 
         app.dependency_overrides[get_file_storage] = lambda: LocalFileStorage(
@@ -461,7 +461,14 @@ class TestServeAsset:
         assert body["error"]["code"] == "BAD_REQUEST"
 
     @pytest.mark.asyncio
-    async def test_no_auth_returns_401(self, client: httpx.AsyncClient) -> None:
+    async def test_no_auth_serves_asset(self, client: httpx.AsyncClient, tmp_path) -> None:
+        """Asset endpoint is unauthenticated — browser img/audio tags can't send auth headers."""
+        task_dir = tmp_path / "task-001" / "assets"
+        task_dir.mkdir(parents=True)
+        (task_dir / "file.png").write_bytes(b"\x89PNGfake")
+        app.dependency_overrides[get_file_storage] = lambda: LocalFileStorage(
+            base_path=str(tmp_path)
+        )
         async with client:
             resp = await client.get("/api/v1/assets/task-001/file.png")
-        assert resp.status_code == 401
+        assert resp.status_code == 200

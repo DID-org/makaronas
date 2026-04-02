@@ -168,6 +168,8 @@ class SocialPostBlock(BaseModel):
     type: Literal["social_post"] = "social_post"
     author: str
     text: str
+    image: str | None = None
+    image_alt: str | None = None
     engagement: dict[str, Any] | None = None
     cited_source: str | None = None
     platform_hint: str | None = None

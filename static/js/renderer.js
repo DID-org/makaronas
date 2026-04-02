@@ -205,7 +205,7 @@
     return el;
   }
 
-  function renderSocialPostBlock(block) {
+  function renderSocialPostBlock(block, taskId) {
     var el = document.createElement('div');
     el.className = 'block block-social-post';
     if (block.platform_hint) {
@@ -222,6 +222,23 @@
     body.className = 'block-social-post__text';
     body.innerHTML = renderMarkdown(block.text);
     el.appendChild(body);
+
+    if (block.image && taskId) {
+      var imgWrap = document.createElement('div');
+      imgWrap.className = 'block-social-post__image-wrap';
+      var img = document.createElement('img');
+      img.className = 'block-social-post__image';
+      img.src = window.Api.assetUrl(taskId, block.image);
+      img.alt = block.image_alt || '';
+      img.onerror = function () {
+        handleAssetError(img, block.image_alt || window.I18n.error_asset);
+      };
+      img.addEventListener('click', function () {
+        openLightbox(img.src, img.alt);
+      });
+      imgWrap.appendChild(img);
+      el.appendChild(imgWrap);
+    }
 
     if (block.engagement) {
       var metrics = document.createElement('div');
@@ -463,6 +480,30 @@
   function renderBlocksInto(container, blocks, taskId) {
     container.innerHTML = '';
     container.appendChild(renderBlocks(blocks, taskId));
+  }
+
+  // --------------------------------------------------------------------------
+  // Lightbox — click-to-enlarge for images
+  // --------------------------------------------------------------------------
+
+  function openLightbox(src, alt) {
+    var overlay = document.getElementById('lightbox-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'lightbox-overlay';
+      overlay.className = 'lightbox-overlay';
+      overlay.addEventListener('click', function () {
+        overlay.classList.remove('lightbox-overlay--visible');
+      });
+      var img = document.createElement('img');
+      img.className = 'lightbox-overlay__image';
+      overlay.appendChild(img);
+      document.body.appendChild(overlay);
+    }
+    var img = overlay.querySelector('img');
+    img.src = src;
+    img.alt = alt || '';
+    overlay.classList.add('lightbox-overlay--visible');
   }
 
   window.Renderer = {

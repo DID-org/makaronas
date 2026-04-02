@@ -23,7 +23,7 @@ from backend.config import PROJECT_ROOT
 # ---------------------------------------------------------------------------
 
 SCHEMA_PATH = PROJECT_ROOT / "content" / "tasks" / "task.schema.json"
-TEMPLATE_PATH = PROJECT_ROOT / "content" / "tasks" / "TEMPLATE" / "task.json"
+TEMPLATE_PATH = PROJECT_ROOT / "content" / "tasks" / "template" / "task.json"
 CARTRIDGES_DIR = PROJECT_ROOT / "content" / "tasks"
 
 

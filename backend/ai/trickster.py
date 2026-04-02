@@ -54,11 +54,11 @@ _TEXT_SIGNAL_RE = re.compile(
 
 # Regex to strip leaked tool call text from displayed output.
 # Catches multiple formats models may emit:
-#   { "action": "transition_phase", ... }
+#   { "action": "transition_phase", ... }  (including nested braces)
 #   befp_transition_phase: {signal: 'understood'}
 #   transition_phase({"signal": "understood"})
 _LEAKED_TOOL_CALL_RE = re.compile(
-    r'\s*(?:\{[^{}]*(?:transition_phase|publish_article)[^{}]*\}|befp_(?:transition_phase|publish_article)\s*:.+|(?:transition_phase|publish_article)\s*\(.+\))\s*$',
+    r'\s*(?:\{.*(?:transition_phase|publish_article).*\}|befp_(?:transition_phase|publish_article)\s*:.+|(?:transition_phase|publish_article)\s*\(.+\))\s*$',
     re.DOTALL,
 )
 
@@ -289,6 +289,14 @@ class TricksterEngine:
                                         "phase": phase.id,
                                         "task_id": cartridge.task_id,
                                     })
+                                    # Write to file for cross-task use
+                                    try:
+                                        from pathlib import Path
+                                        p = Path("/tmp/student_article.txt")
+                                        p.write_text(article_text, encoding="utf-8")
+                                        logger.info("Student article saved to %s", p)
+                                    except Exception:
+                                        pass
                         else:
                             logger.warning(
                                 "Unknown transition signal: %s", sig,
@@ -308,12 +316,20 @@ class TricksterEngine:
                     # Extract article_text from leaked publish_article JSON
                     article_m = _TEXT_ARTICLE_RE.search(accumulated)
                     if article_m:
+                        article_text = article_m.group(1)
                         session.generated_artifacts.append({
                             "type": "student_article",
-                            "text": article_m.group(1),
+                            "text": article_text,
                             "phase": phase.id,
                             "task_id": cartridge.task_id,
                         })
+                        try:
+                            from pathlib import Path
+                            Path("/tmp/student_article.txt").write_text(
+                                article_text, encoding="utf-8"
+                            )
+                        except Exception:
+                            pass
                         logger.info(
                             "Extracted student article from leaked tool call text"
                         )

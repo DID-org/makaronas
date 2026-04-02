@@ -73,6 +73,14 @@
       "type": "social_post",
       "author": "Gabija_K • Profilis sukurtas 2023-03-22 • 156 įrašų",
       "text": "Wow, šitas straipsnis apie Vaitkų... Dalinu draugams, visi turi žinoti! Ta mokinė tikrai nukentėjo..."
+    },
+    {
+      "id": "comment-troll-photo",
+      "type": "social_post",
+      "author": "RealusTėvas_Jonas • Profilis sukurtas 2025-11-03 • 45 įrašai",
+      "text": "ŽIŪRĖKIT! Tėvai JAU protestuoja prie ministerijos! Atleiskit Vaitkų! Dalinkitės!",
+      "image": "protest.jpg",
+      "image_alt": "Nuotrauka: žmonės su plakatais Atleiskit Vaitkų prie Švietimo ministerijos"
     }
   ],
   "phases": [
@@ -93,6 +101,26 @@
         "type": "freeform",
         "trickster_opening": "Tavo žinutė paskelbta. Komentarai jau įsiliepsnojo. Bet kas čia tikras, o kas — ne? Pažiūrėk atidžiai į kiekvieną komentatorių — kas jie, kada susikūrė profilį, ką rašo, ir kodėl.",
         "min_exchanges": 3,
+        "max_exchanges": 16
+      },
+      "ai_transitions": {
+        "on_success": "photo_comment",
+        "on_partial": "photo_comment",
+        "on_max_exchanges": "photo_comment"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "photo_comment",
+      "title": "Naujas komentaras",
+      "visible_blocks": [
+        "comment-troll-photo"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "O! Naujas komentaras pasirodė po tavo žinute. RealusTėvas_Jonas — prisimeni jį? — dabar pridėjo nuotrauką. Tėvai tariamai protestuoja prie Švietimo ministerijos. Pažiūrėk atidžiai.",
+        "min_exchanges": 2,
         "max_exchanges": 16
       },
       "ai_transitions": {

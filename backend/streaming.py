@@ -56,7 +56,7 @@ def create_sse_response(generator: AsyncGenerator[str, None]) -> StreamingRespon
 async def stream_ai_response(
     token_iterator: AsyncIterator[str],
     done_data: dict[str, Any] | None = None,
-    timeout_seconds: float = 30.0,
+    timeout_seconds: float = 60.0,
 ) -> AsyncGenerator[str, None]:
     """Turns a token iterator into a full SSE event stream.
 
