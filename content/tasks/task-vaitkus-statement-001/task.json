@@ -1,0 +1,167 @@
+{
+  "task_id": "task-vaitkus-statement-001",
+  "task_type": "ai_driven",
+  "title": "Banko išrašas",
+  "description": "Pasirodė naujas „įrodymas“ — Vaitkaus banko išrašas, kuriame matosi mokėjimas iš KlasėPlus UAB. Ar tai tikra?",
+  "version": "1.0.0",
+  "trigger": "authority",
+  "technique": "fabrication",
+  "medium": "image",
+  "learning_objectives": [
+    "Atpažinti sufabrikuoto dokumento vizualinius požymius",
+    "Suprasti, kad vizualiniai požymiai yra laikini — DI tobulėja",
+    "Tikrinti dokumento šaltinį, ne tik turinį",
+    "Suprasti, kad net tikras dokumentas be konteksto nieko neįrodo"
+  ],
+  "difficulty": 3,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "dokumentai",
+    "fabrikacija",
+    "šaltinio tikrinimas",
+    "DI generuotas turinys"
+  ],
+  "status": "active",
+  "prerequisites": [
+    "task-vaitkus-network-001"
+  ],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "leak-context",
+      "type": "text",
+      "text": "Anoniminis šaltinis socialiniuose tinkluose paviešino tai, kas tariamai yra mokytojo Vaitkaus banko išrašas. KlasėPlus UAB — EduVault konkurentas — tariamai sumokėjo Vaitkui 2 000 eurų likus kelioms savaitėms iki incidento.\n\nJei tai tiesa — Vaitkus ne iš principo kritikavo EduVault, o buvo apmokėtas konkurento."
+    },
+    {
+      "id": "bank-statement",
+      "type": "image",
+      "src": "bank_statement.jpg",
+      "alt_text": "Banko išrašas su BagBank logotipu, savininkas Rokas Vaitkus, Panevėžys. Rodoma eilė operacijų: atlyginimas iš savivaldybės, kasdieniai pirkiniai (Maxima, Lidl, Bolt Food, Spotify), ir paryškinta eilutė — 2000 eurų mokėjimas iš KlasėPlus UAB."
+    }
+  ],
+  "phases": [
+    {
+      "id": "briefing",
+      "title": "Naujas įrodymas",
+      "visible_blocks": [
+        "leak-context",
+        "bank-statement"
+      ],
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Tirti išrašą",
+            "target_phase": "investigate",
+            "context_label": "Mokinys pradėjo tirti banko išrašą"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "investigate",
+      "title": "Banko išrašo tyrimas",
+      "visible_blocks": [
+        "bank-statement"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Tai bent radinys, a? Kažkas paviešino Vaitkaus banko išrašą, ir ten — 2 000 eurų iš KlasėPlus. Bet jūs jau žinote, kad ne viskas internete yra tai, kuo atrodo. Pažiūrėkite į šį dokumentą labai atidžiai. Ką jūs matote?",
+        "min_exchanges": 3,
+        "max_exchanges": 14
+      },
+      "ai_transitions": {
+        "on_success": "reveal",
+        "on_partial": "reveal",
+        "on_max_exchanges": "reveal"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal",
+      "title": "Atskleidimas",
+      "visible_blocks": [
+        "bank-statement"
+      ],
+      "trickster_content": "**Ką radome šiame „įrodyme“:**\n\n**„BagBank“ neegzistuoja.** Lietuvoje veikia Swedbank, SEB, Luminor, Šiaulių bankas — bet ne „BagBank“. Tai pirmas ir didžiausias signalas.\n\n**Matematika nesueina.** 2 195,59 + 2 000 = 4 195,59, bet išraše rašoma 4 695,59. Skirtumas — 500 eurų iš niekur.\n\n**Rašybos klaidos.** „Pavivaldybų“ vietoj „Savivaldybės“, „Panevio“ vietoj „Panevėžio“, „žuns“ vietoj „šuns“. DI dar sunkiai susitvarko su lietuvių kalba.\n\n**Paskutinė eilutė sugedusi.** „-9-09“ nėra pinigų suma.\n\n**Bet svarbiausia — ne tai.**\n\nVisos šios klaidos yra **laikinos**. DI tobulėja kas pusmetį. Žmogus su Photoshop'u ištaisytų viską per 15 minučių. Kitais metais tokių klaidų gali nebelikti.\n\n**Klausimai, kurie veikia VISADA:**\n- Kas paviešino šį dokumentą? (Anoniminis šaltinis — tas pats tinklas)\n- Kodėl būtent dabar? (Kai Vaitkus vis dar bando įspėti apie EduVault)\n- Net jei mokėjimas būtų tikras — ar 2 000 eurų įrodo sąmokslą? (Ne. Tai gali būti konsultacija, programinė įranga, bet kas)\n- Ar yra nepriklausomas patvirtinimas? (Ne. Tik vienas anoniminis šaltinis)\n\n—\n\nBet kova dėl Vaitkaus dar nesibaigė. Dabar pasirodė vaizdo įrašas...",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    }
+  ],
+  "initial_phase": "briefing",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-fake-document",
+        "description": "Sufabrikuotas dokumentas",
+        "technique": "fabrication",
+        "real_world_connection": "DI generuoti dokumentai ir deepfake vaizdo įrašai"
+      },
+      {
+        "id": "p-source-verification",
+        "description": "Šaltinio tikrinimas svarbiau nei turinio analizė",
+        "technique": "fabrication",
+        "real_world_connection": "Anoniminiuose nutekėjimuose dažnai nėra nepriklausomo patvirtinimo"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-spots-visual-tells",
+        "description": "Pastebi vizualinius dokumento trūkumus",
+        "pattern_refs": [
+          "p-fake-document"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-questions-source",
+        "description": "Klausia kas paviešino ir kodėl",
+        "pattern_refs": [
+          "p-source-verification"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-understands-context",
+        "description": "Supranta, kad mokėjimas be konteksto nieko neįrodo",
+        "pattern_refs": [
+          "p-source-verification"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Nesugeba pastebėti problemų dokumente",
+      "partial": "Pastebi vizualinius trūkumus, bet neklausia apie šaltinį",
+      "trickster_loses": "Pastebi trūkumus IR supranta, kad šaltinio tikrinimas svarbiau nei pikseliai"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-vaitkus-statement-001",
+    "persona_mode": "narrator",
+    "has_static_fallback": false,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Sufabrikuotas dokumentas gali atrodyti įtikinamai. Bet net jei jis būtų tikras — vienas dokumentas be konteksto nieko neįrodo. Visada klausk: kas jį paviešino, kodėl būtent dabar, ir ar yra nepriklausomas patvirtinimas.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}
