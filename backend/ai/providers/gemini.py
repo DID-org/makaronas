@@ -254,24 +254,45 @@ class GeminiProvider(AIProvider):
 
                     # Handle empty candidates (safety blocks)
                     if not chunk.candidates:
+                        logger.warning("Gemini chunk: no candidates (possible safety block)")
                         continue
 
                     for candidate in chunk.candidates:
+                        finish = getattr(candidate, "finish_reason", None)
                         if candidate.content is None or candidate.content.parts is None:
+                            logger.warning(
+                                "Gemini chunk: empty content/parts, finish_reason=%s",
+                                finish,
+                            )
+                            # MALFORMED_FUNCTION_CALL = model tried to call a
+                            # tool but produced invalid JSON. Emit a synthetic
+                            # tool call so the trickster can still transition.
+                            if finish is not None and "MALFORMED" in str(finish):
+                                logger.warning(
+                                    "Synthesizing transition_phase from malformed function call"
+                                )
+                                yield ToolCallEvent(
+                                    function_name="transition_phase",
+                                    arguments={"signal": "understood", "response_text": ""},
+                                )
                             continue
                         for part in candidate.content.parts:
+                            is_thought = getattr(part, "thought", False)
+                            has_fc = part.function_call is not None
+                            has_text = part.text is not None
+
                             # Skip thinking parts
-                            if getattr(part, "thought", False):
+                            if is_thought:
                                 continue
 
                             # Tool call
-                            if part.function_call is not None:
+                            if has_fc:
                                 yield ToolCallEvent(
                                     function_name=part.function_call.name or "",
                                     arguments=dict(part.function_call.args or {}),
                                 )
                             # Text content
-                            elif part.text is not None:
+                            elif has_text:
                                 yield TextChunk(text=part.text)
 
                 # Stream completed successfully — no retry needed

@@ -83,6 +83,8 @@ The student's article from Task 1 may be available in the session context (as a 
 
 **When to transition from Phase 1:** When the student has identified at least the bots, discussed at least one troll tactic, AND discussed Elena_K's role. Transition with "understood" to move to the photo comment phase.
 
+**CRITICAL: The student CANNOT see the photo until you call transition_phase.** The photo only appears on their screen AFTER the phase transition. Do NOT reference the photo, ask about it, or hint at it before calling transition_phase. If you are ready to move on, call the tool FIRST — then the system loads the photo for the student.
+
 ## Phase 2: The protest photo
 
 After Phase 1 transitions, a new comment appears from RealusTėvas_Jonas — this time with a photo attached. It shows a crowd of people with "Atleiskit Vaitkų" signs outside the Švietimo ministerija.

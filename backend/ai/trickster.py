@@ -68,6 +68,13 @@ _TEXT_ARTICLE_RE = re.compile(
     re.DOTALL,
 )
 
+# Regex to extract response_text from leaked transition_phase JSON.
+# Matches: "response_text": "..." (greedy — grab everything up to the last quote-brace)
+_TEXT_RESPONSE_RE = re.compile(
+    r"""response_text['":\s]+['"](.*?)['"]\s*[}'"]\s*[}'"]?\s*$""",
+    re.DOTALL,
+)
+
 # Signal name -> AiTransitions attribute name mapping.
 _SIGNAL_MAP: dict[str, str] = {
     "understood": "on_success",
@@ -256,6 +263,7 @@ class TricksterEngine:
             # the conversation always ends cleanly at max_exchanges.
             has_tools = ctx.tools is not None and len(ctx.tools) > 0
             force_now = has_tools and exchange_count >= max_exchanges - 1
+            _leak_buf: str | None = None  # Buffer for suspected leaked tool calls
             async for event in provider.stream(
                 system_prompt=ctx.system_prompt,
                 messages=ctx.messages,
@@ -265,18 +273,51 @@ class TricksterEngine:
             ):
                 if isinstance(event, TextChunk):
                     accumulated += event.text
-                    yield event.text
+                    # Buffer tokens that look like the start of a leaked
+                    # tool call JSON — hold them back until we know whether
+                    # the model is leaking a tool call or writing normal text.
+                    if _leak_buf is not None:
+                        _leak_buf += event.text
+                        # Check if buffer is clearly NOT a tool call
+                        if len(_leak_buf) > 30 and 'transition_phase' not in _leak_buf and 'publish_article' not in _leak_buf:
+                            yield _leak_buf
+                            _leak_buf = None
+                        # Check if buffer IS a complete leaked tool call
+                        elif _leak_buf.rstrip().endswith('}') and _leak_buf.count('}') >= _leak_buf.count('{'):
+                            if _TEXT_SIGNAL_RE.search(_leak_buf):
+                                # Extract response_text so the student sees the message
+                                resp_m = _TEXT_RESPONSE_RE.search(_leak_buf)
+                                if resp_m and resp_m.group(1).strip():
+                                    resp_text = resp_m.group(1).replace('\\n', '\n')
+                                    yield resp_text
+                                    logger.info("Extracted response_text from leaked tool call (%d chars)", len(resp_text))
+                                else:
+                                    logger.info("Suppressed leaked tool call with no response_text (%d chars)", len(_leak_buf))
+                            else:
+                                yield _leak_buf
+                            _leak_buf = None
+                    elif 'transition_phase' in event.text or 'publish_article' in event.text:
+                        # Larger token that already contains the tool name
+                        _leak_buf = event.text
+                    elif event.text.lstrip().startswith('{'):
+                        # Opening brace — could be a tool call starting
+                        _leak_buf = event.text
+                    else:
+                        yield event.text
                 elif isinstance(event, ToolCallEvent):
                     if event.function_name in ("transition_phase", "publish_article"):
                         sig = event.arguments.get("signal")
-                        if sig in _SIGNAL_MAP:
-                            transition_signal = sig
-                            response_text = event.arguments.get(
-                                "response_text", ""
-                            )
-                            if response_text:
-                                accumulated += response_text
-                                yield response_text
+                        if sig not in _SIGNAL_MAP:
+                            # Unrecognised signal — default to "understood"
+                            logger.warning("Unrecognised transition signal %r, defaulting to 'understood'", sig)
+                            sig = "understood"
+                        transition_signal = sig
+                        response_text = event.arguments.get(
+                            "response_text", ""
+                        )
+                        if response_text:
+                            accumulated += response_text
+                            yield response_text
                             # Store article text from publish_article tool
                             if event.function_name == "publish_article":
                                 article_text = event.arguments.get(
@@ -306,6 +347,17 @@ class TricksterEngine:
                             "Unexpected tool call: %s",
                             event.function_name,
                         )
+
+            # Flush leak buffer if stream ended mid-buffer
+            if _leak_buf is not None:
+                if not _TEXT_SIGNAL_RE.search(_leak_buf):
+                    yield _leak_buf
+                else:
+                    resp_m = _TEXT_RESPONSE_RE.search(_leak_buf)
+                    if resp_m and resp_m.group(1).strip():
+                        yield resp_m.group(1).replace('\\n', '\n')
+                    logger.info("Suppressed leaked tool call at stream end (%d chars)", len(_leak_buf))
+                _leak_buf = None
 
             # 7b. Text-based signal fallback \u2014 some models emit the
             # tool call as JSON text instead of using function calling.
@@ -344,21 +396,36 @@ class TricksterEngine:
                         transition_signal,
                     )
 
-            # 8. Malformed response check \u2014 retry once if < 10 chars
+            # 8. Empty response recovery — escalate to Pro model
             if (
                 len(accumulated) < _MIN_RESPONSE_LENGTH
                 and transition_signal is None
             ):
-                logger.warning(
-                    "Malformed response (<%d chars), retrying",
-                    _MIN_RESPONSE_LENGTH,
+                from backend.models import ModelConfig, GEMINI_PRO
+                fallback_config = ModelConfig(
+                    provider="gemini",
+                    model_id=GEMINI_PRO,
+                    thinking_level="low",
                 )
+                logger.warning(
+                    "Empty response (<%d chars) from %s, escalating to %s",
+                    _MIN_RESPONSE_LENGTH, model_config.model_id, GEMINI_PRO,
+                )
+                nudge_messages = list(ctx.messages) + [
+                    {"role": "assistant", "content": accumulated or ""},
+                    {"role": "user", "content": (
+                        "[SYSTEM: Your last response was empty — the student "
+                        "saw nothing. Please respond to the student's last "
+                        "message. If you want to transition phases, use the "
+                        "transition_phase tool AND include response_text.]"
+                    )},
+                ]
                 retry_signal: str | None = None
 
                 async for event in provider.stream(
                     system_prompt=ctx.system_prompt,
-                    messages=ctx.messages,
-                    model_config=model_config,
+                    messages=nudge_messages,
+                    model_config=fallback_config,
                     tools=ctx.tools,
                     force_tool=force_now,
                 ):
@@ -368,46 +435,46 @@ class TricksterEngine:
                     elif isinstance(event, ToolCallEvent):
                         if event.function_name in ("transition_phase", "publish_article"):
                             sig = event.arguments.get("signal")
-                            if sig in _SIGNAL_MAP:
-                                retry_signal = sig
-                                response_text = event.arguments.get(
-                                    "response_text", ""
+                            if sig not in _SIGNAL_MAP:
+                                logger.warning("Retry: unrecognised signal %r, defaulting to 'understood'", sig)
+                                sig = "understood"
+                            retry_signal = sig
+                            response_text = event.arguments.get(
+                                "response_text", ""
+                            )
+                            if response_text:
+                                accumulated += response_text
+                                yield response_text
+                            if event.function_name == "publish_article":
+                                article_text = event.arguments.get(
+                                    "article_text", ""
                                 )
-                                if response_text:
-                                    accumulated += response_text
-                                    yield response_text
-                                # Store article from retry path too
-                                if event.function_name == "publish_article":
-                                    article_text = event.arguments.get(
-                                        "article_text", ""
-                                    )
-                                    if article_text:
-                                        session.generated_artifacts.append({
-                                            "type": "student_article",
-                                            "text": article_text,
-                                            "phase": phase.id,
-                                            "task_id": cartridge.task_id,
-                                        })
+                                if article_text:
+                                    session.generated_artifacts.append({
+                                        "type": "student_article",
+                                        "text": article_text,
+                                        "phase": phase.id,
+                                        "task_id": cartridge.task_id,
+                                    })
 
                 if retry_signal is not None:
                     transition_signal = retry_signal
 
-                if len(accumulated) < _MIN_RESPONSE_LENGTH:
-                    logger.error(
-                        "Both attempts produced malformed response "
-                        "(<%d chars)",
-                        _MIN_RESPONSE_LENGTH,
-                    )
-                    result.done_data = {
-                        "error": "malformed_response",
-                        "phase_transition": None,
-                        "next_phase": None,
-                        "exchanges_count": exchange_count,
-                    }
-                    result.usage = getattr(
-                        provider, "_last_usage", None,
-                    )
-                    return
+            if len(accumulated) < _MIN_RESPONSE_LENGTH and transition_signal is None:
+                logger.error("Pro fallback also returned empty response")
+                fallback = "Hmm... pabandykite dar kartą."
+                accumulated = fallback
+                yield fallback
+                result.done_data = {
+                    "error": "malformed_response",
+                    "phase_transition": None,
+                    "next_phase": None,
+                    "exchanges_count": exchange_count,
+                }
+                result.usage = getattr(
+                    provider, "_last_usage", None,
+                )
+                return
 
             # 9. Post-completion safety check
             safety_result = safety.check_output(

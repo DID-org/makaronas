@@ -519,7 +519,7 @@ button,
   border: 1px solid var(--color-platform-border);
   border-radius: 6px;
   padding: var(--space-md) var(--space-lg);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
 }
 
 .task-header__label {
@@ -959,6 +959,36 @@ button,
   object-fit: contain;
   border-radius: 4px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Task Done Box (content-only terminal phases) --- */
+
+.task-done-box {
+  margin-top: var(--space-xl);
+  padding: var(--space-lg);
+  background: rgba(80, 200, 120, 0.08);
+  border: 1px solid rgba(80, 200, 120, 0.25);
+  border-radius: 8px;
+}
+
+.task-done-box__title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: rgba(80, 200, 120, 0.9);
+  margin-bottom: var(--space-sm);
+}
+
+.task-done-box__text {
+  color: var(--color-content-text);
+  line-height: var(--line-height-body);
+  margin-bottom: var(--space-lg);
+}
+
+/* --- HTML Embed Block (interactive visualizations) --- */
+
+.block-html-embed {
+  margin-bottom: var(--space-xl);
+  max-width: 680px;
 }
 
 /* --- Meme Block --- */

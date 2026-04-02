@@ -26,14 +26,12 @@
   // Task Sequence (honest stub — replaced by V9 Roadmap Engine)
   // --------------------------------------------------------------------------
 
-  // Only active cartridges — draft skeletons (cherry-pick, phantom-quote,
-  // wedge, misleading-frame) are excluded until archetype visions complete them.
+  // MVP Story Arc: "Mokytojas Vaitkus" — 4 linked tasks
+  // Non-story tasks excluded until post-MVP content expansion.
   var TASK_SEQUENCE = [
-    'task-vaitkus-001',           // hybrid, investigation — MVP Story Task 1: two articles
-    'task-vaitkus-comments-001',  // ai_driven, social — MVP Story Task 2: comment section
-    'task-tunguska-001',          // ai_driven, article — rhetoric analysis
-    'task-follow-money-001',      // hybrid, investigation — deeper, guided discovery
-    'task-clickbait-trap-001'     // hybrid, article — clickbait patterns
+    'task-vaitkus-001',           // Task 1: two articles investigation
+    'task-vaitkus-comments-001',  // Task 2: comment section + protest photo
+    'task-vaitkus-network-001'    // Task 3: bot network visualization + article
   ];
 
   // --------------------------------------------------------------------------
@@ -143,7 +141,8 @@
       'social_post':      '\u0160is \u012fra\u0161as plinta socialiniuose tinkluose.',
       'chat':             'Pokalbis, kur\u012f ka\u017ekas tau persiunt\u0117.',
       'investigation':    'I\u0161tirk ir surask ties\u0105.',
-      'image':            'Ka\u017ekas pasidalino \u0161ia nuotrauka.'
+      'image':            'Ka\u017ekas pasidalino \u0161ia nuotrauka.',
+      'visualization':    'Kaip vyksta dirbtinis informacijos skleidimas per bot\u0173 tinklus.'
     };
     return hints[medium] || null;
   }
@@ -214,12 +213,48 @@
         taskLayout.classList.add('layout-investigation');
       } else if (phaseData.interaction && phaseData.interaction.type === 'button') {
         taskLayout.classList.add('layout-fullpage');
+      } else if (!phaseData.interaction || !phaseData.interaction.type || phaseData.interaction.type === 'none') {
+        // Static content-only phases (no AI dialogue, no buttons) — full page
+        taskLayout.classList.add('layout-fullpage');
       }
     }
 
     // Interaction panel: render controls via interactions.js
     if (window.Interactions) {
       window.Interactions.renderInteraction(phaseData);
+    }
+
+    // Content-only terminal phase — add "next task" button in content panel
+    var isContentOnly = !phaseData.interaction || !phaseData.interaction.type || phaseData.interaction.type === 'none';
+    if (phaseData.is_terminal && isContentOnly && contentPanel) {
+      updateState({
+        terminal: {
+          evaluation_outcome: phaseData.evaluation_outcome,
+          reveal: phaseData.reveal
+        }
+      });
+      var doneBox = document.createElement('div');
+      doneBox.className = 'task-done-box';
+
+      var doneTitle = document.createElement('p');
+      doneTitle.className = 'task-done-box__title';
+      doneTitle.textContent = '\u2714 U\u017Eduotis baigta';
+      doneBox.appendChild(doneTitle);
+
+      var doneText = document.createElement('p');
+      doneText.className = 'task-done-box__text';
+      doneText.textContent = (phaseData.reveal && phaseData.reveal.key_lesson)
+        ? phaseData.reveal.key_lesson
+        : 'Puiku! Pereikite prie kitos u\u017Eduoties.';
+      doneBox.appendChild(doneText);
+
+      var nextBtn = document.createElement('button');
+      nextBtn.className = 'btn btn-primary post-task-next-btn';
+      nextBtn.textContent = (window.I18n && window.I18n.btn_next_task) || 'Kitas u\u017Edavinys';
+      nextBtn.addEventListener('click', function () { loadNextTask(); });
+      doneBox.appendChild(nextBtn);
+
+      contentPanel.appendChild(doneBox);
     }
 
     // Scroll to top on phase transition and focus management

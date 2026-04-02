@@ -319,6 +319,7 @@ def _derive_phase_response(
         "evaluation_outcome": phase.evaluation_outcome,
         "reveal": cartridge.reveal.model_dump() if phase.is_terminal else None,
         "interaction": phase.interaction.model_dump() if phase.interaction else None,
+        "ai_transitions": phase.ai_transitions.model_dump() if phase.ai_transitions else None,
     }
 
 
@@ -327,15 +328,23 @@ def _get_legal_choice_targets(phase: Phase) -> set[str]:
 
     ButtonInteraction phases allow transitions to each choice's target_phase.
     InvestigationInteraction phases allow a single submit_target transition.
-    All other interaction types (freeform, generic, None) have no legal
-    choice transitions — those phases transition via AI done events instead.
+    AI phases also allow manual advance to ai_transitions targets (failsafe
+    for when the model fails to call the transition tool).
     """
+    targets: set[str] = set()
     interaction = phase.interaction
     if isinstance(interaction, ButtonInteraction):
-        return {c.target_phase for c in interaction.choices}
-    if isinstance(interaction, InvestigationInteraction):
-        return {interaction.submit_target}
-    return set()
+        targets = {c.target_phase for c in interaction.choices}
+    elif isinstance(interaction, InvestigationInteraction):
+        targets = {interaction.submit_target}
+    # AI phases: allow manual advance to any ai_transitions target
+    if phase.ai_transitions:
+        for target in (phase.ai_transitions.on_success,
+                       phase.ai_transitions.on_partial,
+                       phase.ai_transitions.on_max_exchanges):
+            if target:
+                targets.add(target)
+    return targets
 
 
 # ---------------------------------------------------------------------------

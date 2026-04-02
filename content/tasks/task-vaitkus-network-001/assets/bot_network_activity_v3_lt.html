@@ -1,0 +1,322 @@
+
+<div id="v" style="background:#0a0e17;border-radius:12px;overflow:hidden;position:relative;font-family:var(--font-sans);max-width:680px;margin:0 auto;aspect-ratio:680/400;">
+<canvas id="c" style="width:100%;height:100%;display:block;"></canvas>
+<div id="info" style="position:absolute;top:16px;left:20px;pointer-events:none;">
+<div id="plabel" style="color:#e8edf3;font-size:18px;font-weight:500;margin-bottom:6px;opacity:0;transition:opacity 0.6s;"></div>
+<div id="pdesc" style="color:#9aacbf;font-size:14px;max-width:320px;line-height:1.55;opacity:0;transition:opacity 0.6s;"></div>
+</div>
+<div id="ctrl" style="position:absolute;top:16px;right:16px;display:flex;gap:8px;">
+<button id="pp" style="background:rgba(255,255,255,0.08);border:none;color:#8899bb;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">⏸</button>
+<button id="rr" style="background:rgba(255,255,255,0.08);border:none;color:#8899bb;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">↺</button>
+</div>
+<div id="prog" style="position:absolute;bottom:0;left:0;right:0;display:flex;padding:10px 12px;gap:4px;"></div>
+</div>
+<script>
+(function(){
+var canvas=document.getElementById('c');
+var ctx=canvas.getContext('2d');
+var W=680,H=400,DPR=2;
+canvas.width=W*DPR;canvas.height=H*DPR;
+ctx.scale(DPR,DPR);
+
+var PHASE_DUR=8000;
+var PHASES=[
+{label:'Įprasta tinklo veikla',desc:'Įrašai, komentarai ir reakcijos organiškai pulsuoja tinkle. Kai kurie įrašai natūraliai populiarūs. Viename kampe snaudžia tamsių paskyrų grupė — visos sukurtos tą pačią dieną.'},
+{label:'Aktyvacija',desc:'Signalas suveikia. Miegančios paskyros užsižiebia vienu metu ir koordinuotai nukreipia aktyvumą į tuos pačius įrašus. Anksčiau nepastebėti įrašai staiga sprogsta.'},
+{label:'Stiprinimo efektas',desc:'Išpūsti įrašai pritraukia tikrus žmones — tikras susidomėjimas plūsta link dirbtinai iškelto turinio. Botai gali užgesti. Žala jau plinta savaime.'},
+{label:'Atskleidimas',desc:'Atsitraukiame ir matome visą vaizdą. Botų klasteris, finansavimo šaltinis ir organiškas plitimas, kurį jie sukėlė — aiškus šablonas triukšmo fone.'}
+];
+
+var progDiv=document.getElementById('prog');
+PHASES.forEach((p,i)=>{
+var s=document.createElement('div');
+s.style.cssText='flex:1;position:relative;cursor:pointer;';
+s.innerHTML='<div style="background:rgba(255,255,255,0.06);border-radius:3px;height:6px;overflow:hidden;"><div class="fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4a9eff,#5dcaa5);border-radius:3px;transition:none;"></div></div><div style="color:#4a5568;font-size:10px;margin-top:4px;text-align:center;">'+p.label+'</div>';
+s.onclick=()=>{startTime=performance.now()-i*PHASE_DUR;paused=false;document.getElementById('pp').textContent='⏸';};
+progDiv.appendChild(s);
+});
+
+function rand(a,b){return a+Math.random()*(b-a)}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+var COLORS=['#4a9eff','#5dcaa5','#85b7eb','#7f77dd','#97c459','#ed93b1'];
+var organic=[];
+for(var i=0;i<62;i++){
+var x,y,tries=0;
+do{x=rand(30,W-30);y=rand(30,H-50);tries++;}
+while(x>460&&y>230&&tries<50);
+var popularity=Math.random();
+var r;
+if(popularity>0.92)r=rand(7,11);
+else if(popularity>0.75)r=rand(5,7);
+else if(popularity>0.4)r=rand(3,5);
+else r=rand(1.8,3);
+organic.push({x,y,r,baseR:r,
+col:COLORS[Math.floor(rand(0,COLORS.length))],
+popularity,
+pulse:0,pulseTimer:rand(0,4000),
+pulseInterval:popularity>0.8?rand(800,2000):rand(2500,5500),
+connections:[]});
+}
+
+organic.forEach((n,i)=>{
+var maxConn=n.popularity>0.85?6:n.popularity>0.6?4:n.popularity>0.3?3:2;
+var range=n.popularity>0.85?160:120;
+var nearby=organic.filter((m,j)=>j!==i&&dist(n,m)<range).sort((a,b)=>dist(n,a)-dist(n,b));
+n.connections=nearby.slice(0,Math.floor(rand(1,maxConn+1))).map(m=>organic.indexOf(m));
+});
+
+var targets=[];
+var targetIndices=[];
+var smallNodes=organic.filter(n=>n.baseR<3.5&&n.x>100&&n.x<480&&n.y>60&&n.y<330);
+smallNodes.sort(()=>Math.random()-0.5);
+for(var i=0;i<5&&i<smallNodes.length;i++){
+var idx=organic.indexOf(smallNodes[i]);
+if(!targetIndices.includes(idx)){targetIndices.push(idx);targets.push({idx,boost:0,organicBoost:0});}
+}
+while(targets.length<5){
+var idx=Math.floor(rand(5,organic.length-5));
+if(!targetIndices.includes(idx)&&organic[idx].baseR<4){
+targetIndices.push(idx);targets.push({idx,boost:0,organicBoost:0});
+}}
+
+var botCenter={x:555,y:310};
+var bots=[];
+for(var i=0;i<25;i++){
+var a=rand(0,Math.PI*2),r=rand(8,52);
+bots.push({x:botCenter.x+Math.cos(a)*r,y:botCenter.y+Math.sin(a)*r,
+r:rand(2,3.5),active:0,targetIdx:Math.floor(rand(0,targets.length)),
+attackLine:0});
+}
+
+var source={x:380,y:32};
+var fundingLine=0,revealBorder=0;
+var startTime=performance.now();
+var paused=false,pausedAt=0;
+
+document.getElementById('pp').onclick=()=>{
+if(paused){paused=false;startTime=performance.now()-pausedAt;document.getElementById('pp').textContent='⏸';}
+else{paused=true;pausedAt=performance.now()-startTime;document.getElementById('pp').textContent='▶';}
+};
+document.getElementById('rr').onclick=()=>{startTime=performance.now();paused=false;document.getElementById('pp').textContent='⏸';organicAttracted.length=0;};
+
+var organicAttracted=[];
+
+function draw(now){
+requestAnimationFrame(draw);
+if(paused)now=startTime+pausedAt;
+var elapsed=now-startTime;
+var loopElapsed=elapsed%(PHASE_DUR*4);
+var phase=Math.min(3,Math.max(0,Math.floor(loopElapsed/PHASE_DUR)));
+var phaseT=(loopElapsed-phase*PHASE_DUR)/PHASE_DUR;
+if(!PHASES[phase])return;
+
+if(loopElapsed<200)organicAttracted.length=0;
+
+document.getElementById('plabel').textContent=PHASES[phase].label;
+document.getElementById('pdesc').textContent=PHASES[phase].desc;
+document.getElementById('plabel').style.opacity='1';
+document.getElementById('pdesc').style.opacity='1';
+
+var fills=progDiv.querySelectorAll('.fill');
+fills.forEach((f,i)=>{
+if(i<phase)f.style.width='100%';
+else if(i===phase)f.style.width=(phaseT*100)+'%';
+else f.style.width='0%';
+});
+
+ctx.fillStyle='#0a0e17';
+ctx.fillRect(0,0,W,H);
+
+organic.forEach(n=>{
+n.pulseTimer+=16;
+if(n.pulseTimer>n.pulseInterval){n.pulse=1;n.pulseTimer=0;n.pulseInterval=n.popularity>0.8?rand(800,2000):rand(2500,5500);}
+if(n.pulse>0)n.pulse=Math.max(0,n.pulse-0.018);
+});
+
+ctx.lineWidth=0.7;
+var drawnEdges=new Set();
+organic.forEach((n,i)=>{
+n.connections.forEach(j=>{
+var key=Math.min(i,j)+'-'+Math.max(i,j);
+if(drawnEdges.has(key))return;
+drawnEdges.add(key);
+var m=organic[j];
+var maxPop=Math.max(n.popularity,m.popularity);
+var alpha=0.06+maxPop*0.18;
+var pulse=Math.max(n.pulse,m.pulse);
+var finalAlpha=alpha+pulse*0.15;
+ctx.strokeStyle='rgba(100,160,210,'+finalAlpha+')';
+ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(m.x,m.y);ctx.stroke();
+});
+});
+
+if(phase>=1){
+var activateT=phase===1?ease(clamp(phaseT*2,0,1)):1;
+bots.forEach((b,i)=>{
+var delay=i*0.02;
+b.active=clamp((activateT-delay)*2,0,1);
+if(b.active>0.5){
+b.attackLine=phase===1?ease(clamp((phaseT-0.3-i*0.01)*2,0,1)):
+phase===2?Math.max(0,1-phaseT*0.5):
+phase===3?Math.max(0,0.5-phaseT*0.3):1;
+var t=targets[b.targetIdx];
+var tn=organic[t.idx];
+if(b.attackLine>0){
+ctx.strokeStyle='rgba(226,75,74,'+(0.3*b.attackLine)+')';
+ctx.lineWidth=0.9;
+ctx.beginPath();
+ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+(tn.x-b.x)*b.attackLine,b.y+(tn.y-b.y)*b.attackLine);ctx.stroke();
+}}
+});
+}
+
+targets.forEach(t=>{
+if(phase===0){t.boost=0;t.organicBoost=0;}
+else if(phase===1)t.boost=ease(clamp((phaseT-0.4)*2,0,1));
+else t.boost=1;
+if(phase===2)t.organicBoost=ease(phaseT);
+else if(phase===3)t.organicBoost=1;
+else t.organicBoost=0;
+});
+
+if(phase>=2){
+var attractT=phase===2?ease(phaseT):1;
+if(organicAttracted.length===0){
+organic.forEach((n,i)=>{
+if(targetIndices.includes(i))return;
+var closest=targets.reduce((best,t)=>{
+var d=dist(n,organic[t.idx]);
+return d<best.d?{t,d}:best;
+},{t:null,d:Infinity});
+if(closest.d<220&&Math.random()<0.45){
+organicAttracted.push({from:i,to:closest.t.idx,delay:Math.random()*0.6});
+}
+});
+}
+organicAttracted.forEach(a=>{
+var prog=clamp((attractT-a.delay)*2,0,1);
+if(prog>0){
+var fn=organic[a.from],tn=organic[a.to];
+ctx.strokeStyle='rgba(250,199,117,'+(0.2*prog)+')';
+ctx.lineWidth=0.7;
+ctx.beginPath();
+ctx.moveTo(fn.x,fn.y);ctx.lineTo(fn.x+(tn.x-fn.x)*prog,fn.y+(tn.y-fn.y)*prog);ctx.stroke();
+}
+});
+}else{
+organicAttracted.length=0;
+}
+
+organic.forEach((n,i)=>{
+var isTarget=targetIndices.includes(i);
+var tInfo=isTarget?targets[targetIndices.indexOf(i)]:null;
+var r=n.baseR,col=n.col,glow=0;
+var livePulse=n.pulse;
+r+=livePulse*2*n.popularity;
+if(isTarget&&tInfo){
+var b=tInfo.boost;
+r=n.baseR+b*10;
+glow=b;
+if(b>0.3)col='#fac775';
+var ob=tInfo.organicBoost;
+if(ob>0){r+=ob*4;glow+=ob*0.5;}
+}
+if(glow>0.1){
+ctx.beginPath();ctx.arc(n.x,n.y,r+14*glow,0,Math.PI*2);
+ctx.fillStyle='rgba(250,199,117,'+(0.1*glow)+')';ctx.fill();
+ctx.beginPath();ctx.arc(n.x,n.y,r+28*glow,0,Math.PI*2);
+ctx.fillStyle='rgba(250,199,117,'+(0.04*glow)+')';ctx.fill();
+}
+if(livePulse>0&&!isTarget){
+ctx.beginPath();ctx.arc(n.x,n.y,r+10*livePulse,0,Math.PI*2);
+var c=n.col.replace('#','');
+var rr=parseInt(c.substr(0,2),16),gg=parseInt(c.substr(2,2),16),bb=parseInt(c.substr(4,2),16);
+ctx.fillStyle='rgba('+rr+','+gg+','+bb+','+(0.12*livePulse)+')';
+ctx.fill();
+}
+ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+ctx.fillStyle=col;
+ctx.globalAlpha=0.6+livePulse*0.4+(n.popularity>0.8?0.15:0);
+ctx.fill();ctx.globalAlpha=1;
+});
+
+bots.forEach(b=>{
+var act=b.active||0;
+var baseAlpha=phase===0?0.1:0.1+act*0.9;
+if(act>0.5){
+ctx.beginPath();ctx.arc(b.x,b.y,b.r+5*act,0,Math.PI*2);
+ctx.fillStyle='rgba(226,75,74,'+(0.1*act)+')';ctx.fill();
+}
+ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+ctx.fillStyle=act>0.5?'rgba(226,75,74,'+baseAlpha+')':'rgba(40,15,15,'+baseAlpha+')';
+ctx.fill();
+});
+
+if(phase===0||(phase===1&&phaseT<0.15)){
+var a=phase===0?0.5:0.5*(1-phaseT/0.15);
+ctx.fillStyle='rgba(107,125,148,'+a+')';
+ctx.font='10px var(--font-sans)';ctx.textAlign='center';
+ctx.fillText('Sukurta: 2025-09-14',botCenter.x,botCenter.y-62);
+ctx.textAlign='start';
+}
+
+// Funding source dot + line: visible from phase 1, labelled in phase 3
+if(phase>=1){
+var fundAppear=phase===1?ease(clamp(phaseT*1.5,0,1)):1;
+var lineAlpha=phase<3?0.35:0.85;
+var dotAlpha=phase<3?0.4:1.0;
+var dotR=phase<3?6:9;
+var glowR=phase<3?0:20;
+// Line from source to bot cluster
+ctx.strokeStyle='rgba(160,130,255,'+(lineAlpha*fundAppear)+')';
+ctx.lineWidth=phase<3?1.2:2;ctx.setLineDash([5,3]);
+ctx.beginPath();
+var ex=source.x+(botCenter.x-source.x)*fundAppear;
+var ey=source.y+(botCenter.y-source.y)*fundAppear;
+ctx.moveTo(source.x,source.y);ctx.lineTo(ex,ey);ctx.stroke();
+ctx.setLineDash([]);
+// Source dot
+ctx.beginPath();ctx.arc(source.x,source.y,dotR,0,Math.PI*2);
+ctx.fillStyle='rgba(160,130,255,'+(dotAlpha*fundAppear)+')';ctx.fill();
+if(glowR>0){
+ctx.beginPath();ctx.arc(source.x,source.y,glowR,0,Math.PI*2);
+ctx.fillStyle='rgba(160,130,255,'+(0.12*fundAppear)+')';ctx.fill();
+}
+// Mysterious "?" before reveal, label during reveal
+if(phase<3&&fundAppear>0.7){
+ctx.fillStyle='rgba(160,130,255,'+(0.5*fundAppear)+')';
+ctx.font='600 13px var(--font-sans)';ctx.textAlign='center';
+ctx.fillText('?',source.x,source.y+5);
+ctx.textAlign='start';
+}
+}
+// Reveal phase: bot cluster border + funding label
+if(phase===3){
+revealBorder=ease(clamp(phaseT*2,0,1));
+ctx.strokeStyle='rgba(226,75,74,'+(0.55*revealBorder)+')';
+ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+ctx.beginPath();
+var pad=65;
+ctx.roundRect(botCenter.x-pad,botCenter.y-pad,pad*2,pad*2,8);ctx.stroke();
+ctx.setLineDash([]);
+if(revealBorder>0.5){
+ctx.fillStyle='rgba(226,75,74,'+(0.7*(revealBorder-0.5)*2)+')';
+ctx.font='500 11px var(--font-sans)';ctx.textAlign='center';
+ctx.fillText('Botų klasteris',botCenter.x,botCenter.y-70);
+ctx.textAlign='start';
+}
+var labelAppear=ease(clamp((phaseT-0.3)*2,0,1));
+if(labelAppear>0){
+ctx.fillStyle='rgba(200,180,255,'+(0.95*labelAppear)+')';
+ctx.font='600 12px var(--font-sans)';ctx.textAlign='center';
+ctx.fillText('Finansavimo šaltinis',source.x,source.y+22);
+ctx.textAlign='start';
+}
+}else{revealBorder=0;}
+}
+setTimeout(function(){requestAnimationFrame(draw);},0);
+})();
+</script>

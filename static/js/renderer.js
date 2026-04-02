@@ -27,9 +27,9 @@
 
   // DOMPurify config: strict whitelist, allow target and rel on links.
   // No <img> from markdown — images come from ImageBlock.
-  // No headings or blockquote — start strict, expand later if needed.
+  // Headings allowed for article-style content blocks (h2-h4).
   var PURIFY_CONFIG = {
-    ALLOWED_TAGS: ['p', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'br'],
+    ALLOWED_TAGS: ['p', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'br', 'h2', 'h3', 'h4'],
     ALLOWED_ATTR: ['href', 'target', 'rel'],
     ADD_ATTR: ['target', 'rel']
   };
@@ -425,6 +425,45 @@
   }
 
   // --------------------------------------------------------------------------
+  // HTML Embed Block — sandboxed iframe for interactive content (visualizations)
+  // --------------------------------------------------------------------------
+
+  function renderHtmlEmbedBlock(block, taskId) {
+    var el = document.createElement('div');
+    el.className = 'block block-html-embed';
+    el.id = 'block-' + block.id;
+
+    var data = block.data || block;
+    var src = data.src;
+    if (!src) {
+      el.textContent = '[html_embed: missing src]';
+      return el;
+    }
+
+    // Fetch the HTML fragment and inject it directly into the DOM.
+    // The visualization files are self-contained fragments (<div> + <script>),
+    // not full HTML documents, so iframe won't work without wrapping.
+    var url = window.Api.assetUrl(taskId, src);
+    fetch(url)
+      .then(function (resp) { return resp.text(); })
+      .then(function (html) {
+        el.innerHTML = html;
+        // Re-execute <script> tags — innerHTML doesn't run them
+        var scripts = el.querySelectorAll('script');
+        for (var i = 0; i < scripts.length; i++) {
+          var newScript = document.createElement('script');
+          newScript.textContent = scripts[i].textContent;
+          scripts[i].parentNode.replaceChild(newScript, scripts[i]);
+        }
+      })
+      .catch(function () {
+        el.textContent = '[html_embed: failed to load]';
+      });
+
+    return el;
+  }
+
+  // --------------------------------------------------------------------------
   // Renderer Dispatch Map
   // --------------------------------------------------------------------------
 
@@ -435,6 +474,7 @@
     video: renderVideoBlock,
     video_transcript: renderVideoTranscriptBlock,
     chat_message: renderChatMessageBlock,
+    html_embed: renderHtmlEmbedBlock,
     social_post: renderSocialPostBlock,
     meme: renderMemeBlock,
     search_result: renderSearchResultBlock

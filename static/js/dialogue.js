@@ -28,6 +28,8 @@
   // Exchange counter
   var exchangeCounter = null; // DOM element
   var maxExchanges = null;    // From interaction.max_exchanges
+  var minExchanges = 3;       // From interaction.min_exchanges (failsafe threshold)
+  var failsafeTarget = null;  // Phase ID from ai_transitions.on_success
 
   // Draft persistence key — same string as STORAGE_KEYS.interactionState in app.js
   // (STORAGE_KEYS is private to app.js IIFE — scout brief §1 confirmed)
@@ -279,8 +281,12 @@
     // Add flex column class for dialogue layout
     panel.classList.add('interaction-panel--dialogue');
 
-    // Store max exchanges for counter
+    // Store exchange limits for counter and failsafe
     maxExchanges = (interaction && interaction.max_exchanges) || null;
+    minExchanges = (interaction && interaction.min_exchanges) || 3;
+    // Store the AI transition target for the failsafe advance button
+    var aiTransitions = phaseData.ai_transitions || {};
+    failsafeTarget = aiTransitions.on_success || aiTransitions.on_partial || null;
 
     // Build the chat area
     dialogueArea = document.createElement('div');
@@ -350,6 +356,30 @@
         } else {
           setInputDisabled(false);
           if (textarea) textarea.focus();
+
+          // Failsafe: after min_exchanges with no transition, show a manual
+          // advance button so the student isn't stuck if the AI won't transition
+          if (data && data.exchanges_count >= minExchanges) {
+            var existing = dialogueArea && dialogueArea.querySelector('.dialogue-failsafe-btn');
+            if (!existing && dialogueArea) {
+              var failsafeBtn = document.createElement('button');
+              failsafeBtn.className = 'btn btn-secondary dialogue-failsafe-btn';
+              failsafeBtn.type = 'button';
+              failsafeBtn.textContent = (window.I18n && window.I18n.btn_continue) || 'T\u0119sti';
+              failsafeBtn.addEventListener('click', function () {
+                if (!failsafeTarget) return;
+                var sessionId = window.App.getState().session && window.App.getState().session.session_id;
+                if (sessionId) {
+                  window.Api.submitChoice(sessionId, failsafeTarget, 'Student advanced manually').then(function (phaseData) {
+                    window.App.handlePhaseTransition(phaseData);
+                  }).catch(function (err) {
+                    console.warn('[Makaronas] Failsafe advance failed:', err);
+                  });
+                }
+              });
+              dialogueArea.appendChild(failsafeBtn);
+            }
+          }
         }
         scrollToBottom();
       },

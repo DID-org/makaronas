@@ -768,7 +768,7 @@ class TestSkeletonLoaderValidation:
         # TEMPLATE directory produces a known path_mismatch error — filter it
         real_errors = [e for e in errors if "TEMPLATE" not in e.task_dir]
         assert len(real_errors) == 0, f"Load errors: {real_errors}"
-        assert len(results) == 10
+        assert len(results) == 11
         loaded_ids = sorted(r.cartridge.task_id for r in results)
         assert "task-cherry-pick-001" in loaded_ids
         assert "task-phantom-quote-001" in loaded_ids

@@ -1,0 +1,110 @@
+{
+  "task_id": "task-vaitkus-network-001",
+  "task_type": "static",
+  "title": "Botų tinklas",
+  "description": "Kaip dirbtinai sukurtos paskyros manipuliuoja organišku srautu? Stebėk vizualizaciją ir perskaityk, kaip atpažinti dirbtinai sukeltą populiarumą.",
+  "version": "1.0.0",
+  "trigger": "belonging",
+  "technique": "fabrication",
+  "medium": "visualization",
+  "learning_objectives": [
+    "Suprasti, kaip botų tinklai veikia koordinuotai",
+    "Atpažinti dirbtinai išpūsto populiarumo požymius",
+    "Suprasti socialinio įrodymo efektą ir kaip jis išnaudojamas",
+    "Susieti botų elgseną su ankstesnėje užduotyje matytais pavyzdžiais"
+  ],
+  "difficulty": 2,
+  "time_minutes": 5,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "botai",
+    "tinklai",
+    "vizualizacija",
+    "socialinis įrodymas"
+  ],
+  "status": "active",
+  "prerequisites": [
+    "task-vaitkus-comments-001"
+  ],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "intro",
+      "type": "text",
+      "text": "**Ankstesnėje užduotyje matei botus ir trolius veikiant pavieniui.** Dabar pažiūrėk, kaip visa tai atrodo iš viršaus — kai koordinuotas tinklas aktyvuojasi vienu metu.\n\nStebėk vizualizaciją ir perskaityk straipsnį apačioje."
+    },
+    {
+      "id": "network-viz",
+      "type": "html_embed",
+      "src": "bot_network_activity_v3_lt.html",
+      "title": "Botų tinklo aktyvumo vizualizacija"
+    },
+    {
+      "id": "article",
+      "type": "text",
+      "text": "## Kaip atpažinti dirbtinai sukurtą populiarumą\n\nKai socialiniuose tinkluose kyla karšta tema — politinis skandalas, protestas, ginčas dėl švietimo — ne visi komentarai ateina iš tikrų žmonių. Dalis jų yra dirbtinai sukurti ir sustiprinanti vieną konkrečią pusę.\n\n### Kaip atsiranda botų paskyros\n\nAnksčiau dirbtines paskyras buvo lengva atpažinti. Profilio nuotrauka — pilkas siluetas. Vardas — kažkas panašaus į `lui_57596792287m_f4`. Akivaizdu, kad ne tikras žmogus.\n\nŠiandien taip nebėra. Šiuolaikinės dirbtinės paskyros turi normalias profilio nuotraukas — dažnai DI sugeneruotas — ir vardus, kurie niekuo neišsiskiria. „Tomas K.“ su šypsena nuotraukoje atrodo kaip bet kuris kitas.\n\n### Kada jos atsiranda\n\nBotų paskyros paprastai kuriamos vienu iš dviejų būdų:\n\n**Iš anksto.** Paskyros sukuriamos kelis mėnesius prieš kampaniją — dažnai per 2–3 mėnesius. Jos tiesiog egzistuoja: jokių įrašų, jokios veiklos. Laukia.\n\n**Staigiai.** Kartais paskyros sukuriamos per kelias dienas prieš pat kampanijos pradžią arba tą pačią savaitę.\n\nAbiem atvejais modelis tas pats: paskyra ilgai neaktyvi, o kai prasideda karšta tema — staiga pradeda aktyviai komentuoti ir dalintis labai konkrečiu turiniu.\n\n### Ką išduoda jų elgsena\n\nPati paskyra gali atrodyti normaliai. Bet jos **elgsena** — ne.\n\n- **Viena tema.** Visi komentarai apie tą patį — tą patį žmogų, tą pačią organizaciją, tą patį produktą. Tikras žmogus turi daugiau interesų.\n- **Tos pačios frazės.** Keli skirtingi „žmonės“ rašo beveik identiškas žinutes — kartais su tais pačiais hashtagais.\n- **Panašus laiko tarpas.** Paskyros sukurtos per kelias dienas viena nuo kitos, o aktyviai komentuoti pradeda tą pačią savaitę.\n- **Jokios istorijos.** Prieš kampaniją — tuščia. Jokių kasdienių įrašų, jokių asmeninių nuomonių, jokio gyvenimo.\n\n### Kodėl tai veikia\n\nKai matai, kad „daugybė žmonių“ palaiko vieną poziciją, tavo smegenys automatiškai priima tai kaip signalą: „turbūt jie teisūs.“ Tai vadinama **socialiniu įrodymu** — mes pasitikime tuo, ką daro dauguma.\n\nBotų tikslas — ne tave asmeniškai įtikinti. Jų tikslas — sukurti **iliuziją**, kad visuomenė jau apsisprendė. O tada tikri žmonės — kaip Elena_K — prisijungia ir dalina tai toliau. Nemokamai.\n\n---\n\n*Šaltiniai: Lietuvos VSD grėsmių vertinimai (2023–2025), EUvsDisinfo, NATO StratCom COE ataskaitos apie koordinuotas informacines operacijas Baltijos šalyse.*"
+    }
+  ],
+  "phases": [
+    {
+      "id": "observe",
+      "title": "Botų tinklas",
+      "visible_blocks": [
+        "intro",
+        "network-viz",
+        "article"
+      ],
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    }
+  ],
+  "initial_phase": "observe",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-bot-network",
+        "description": "Koordinuotas botų tinklas",
+        "technique": "fabrication",
+        "real_world_connection": "BRELL bot kampanijos Baltijos šalyse"
+      },
+      {
+        "id": "p-social-proof",
+        "description": "Socialinio įrodymo manipuliacija",
+        "technique": "emotional_framing",
+        "real_world_connection": "Dirbtinai sukurtos peticijos ir apklausos"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-observes-network",
+        "description": "Stebi vizualizaciją ir supranta koordinuotos veiklos mechaniką",
+        "pattern_refs": [
+          "p-bot-network"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Neatveria turinio",
+      "partial": "Peržiūri dalį turinio",
+      "trickster_loses": "Peržiūri vizualizaciją ir perskaito straipsnį"
+    }
+  },
+  "reveal": {
+    "key_lesson": "Botų tinklas aktyvuojasi koordinuotai — visos paskyros vienu metu, tos pačios frazės, tie patys taikiniai. Tikrus žmones pritraukia dirbtinai sukurtas populiarumas.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 2,
+    "cold_start_safe": true
+  }
+}
