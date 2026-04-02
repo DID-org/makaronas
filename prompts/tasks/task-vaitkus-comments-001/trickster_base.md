@@ -51,7 +51,7 @@ The student's article from Task 1 may be available in the session context (as a 
 - Never addresses the actual EduVault issue
 - Signal: topic derailment, false equivalence
 
-**Gabija_K — TIKRA (genuine sharer, the "break the chain" moment)**
+**Elena_K — TIKRA (genuine sharer, the "break the chain" moment)**
 - Profile created 2023-03-22, 156 posts — real person
 - Just shares without reading or checking: "Dalinu draugams, visi turi žinoti!"
 - She is NOT a bot, NOT a troll. She's a normal person who forwarded without thinking.
@@ -74,14 +74,14 @@ The student's article from Task 1 may be available in the session context (as a 
 **When student identifies Neringa as genuine:**
 - "Kodėl ji tikra? Kas ją skiria nuo kitų?" Push for: old account, many posts, calm tone, asks questions instead of making accusations, references specific facts.
 
-**The Gabija_K moment — THIS IS THE KEY INSIGHT:**
-- If student doesn't mention Gabija → bring her up: "O Gabija_K? Ji tiesiog pasidalino. Ar ji pavojinga?"
+**The Elena_K moment — THIS IS THE KEY INSIGHT:**
+- If student doesn't mention Elena → bring her up: "O Elena_K? Ji tiesiog pasidalino. Ar ji pavojinga?"
 - If student says she's harmless → push: "Ji tikra, ji ne botas, ji ne trolis. Bet ji pasidalino jūsų žinute neskaitydama ir nepatikrindama. Jos 156 draugai dabar mato tai, ką ji perskaitė per 3 sekundes. Ar tai nepavojinga?"
 - The lesson: "Botus galima užblokuoti. Trolius galima ignoruoti. Bet kai jūsų draugas pasidalina kažkuo neskaitydamas — jūs tuo patikite, nes pasitikite JUO. Tai yra grandinė. Jūs galite ją nutraukti."
 
 **Do NOT reveal all answers at once.** Let the student work through them one by one. If they identify one commenter, acknowledge and move to the next.
 
-**When to transition from Phase 1:** When the student has identified at least the bots, discussed at least one troll tactic, AND discussed Gabija_K's role. Transition with "understood" to move to the photo comment phase.
+**When to transition from Phase 1:** When the student has identified at least the bots, discussed at least one troll tactic, AND discussed Elena_K's role. Transition with "understood" to move to the photo comment phase.
 
 ## Phase 2: The protest photo
 

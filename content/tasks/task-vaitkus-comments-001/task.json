@@ -71,7 +71,7 @@
     {
       "id": "comment-sharer",
       "type": "social_post",
-      "author": "Gabija_K • Profilis sukurtas 2023-03-22 • 156 įrašų",
+      "author": "Elena_K • Profilis sukurtas 2023-03-22 • 156 įrašų",
       "text": "Wow, šitas straipsnis apie Vaitkų... Dalinu draugams, visi turi žinoti! Ta mokinė tikrai nukentėjo..."
     },
     {
@@ -142,7 +142,7 @@
         "comment-troll-2",
         "comment-sharer"
       ],
-      "trickster_content": "**Ką išmokome:**\n\n**SkaitmenineAteitisLT ir TechMokslas2026 — botai.**\nNaujos paskyros, vos keli įrašai, beveik identiškos frazės, tie patys hashtagai. Kai du „skirtingi“ žmonės rašo tą patį tekstą — tai ne sutapimas.\n\n**RealusTėvas_Jonas — trolis.**\nPlatina nepatvirtintą gandą („girdėjau iš kitų tėvų“) kaip faktą. Jokių įrodymų — tik emocinis spaudimas.\n\n**PatriotasVilnius — trolis (whataboutism).**\n„O ką apie TikTok?“ — klasikinis temos nukrypimas. Vietoj diskusijos apie EduVault, nukreipia kalbą į kitą temą.\n\n**NerPan_Neringa — tikra.**\nSena paskyra, daug įrašų, ramus tonas, konkretūs klausimai. Taip atrodo sveikas skepticizmas.\n\n**Gabija_K — tikra, bet pavojinga.**\nJi ne botas. Ji tiesiog pasidalino neskaitydama. Ir būtent tai yra pavojingiausia — nes jos draugai ja pasitiki.\n\n**Tai yra grandinė, kurią tu gali nutraukti.** Kitą kartą kai nori pasidalinti — sustok, perskaityk, patikrink.\n\n—\n\nBet kova dėl Vaitkaus dar nesibaigė. Dabar pasirodo nuotraukos...",
+      "trickster_content": "**Ką išmokome:**\n\n**SkaitmenineAteitisLT ir TechMokslas2026 — botai.**\nNaujos paskyros, vos keli įrašai, beveik identiškos frazės, tie patys hashtagai. Kai du „skirtingi“ žmonės rašo tą patį tekstą — tai ne sutapimas.\n\n**RealusTėvas_Jonas — trolis.**\nPlatina nepatvirtintą gandą („girdėjau iš kitų tėvų“) kaip faktą. Jokių įrodymų — tik emocinis spaudimas.\n\n**PatriotasVilnius — trolis (whataboutism).**\n„O ką apie TikTok?“ — klasikinis temos nukrypimas. Vietoj diskusijos apie EduVault, nukreipia kalbą į kitą temą.\n\n**NerPan_Neringa — tikra.**\nSena paskyra, daug įrašų, ramus tonas, konkretūs klausimai. Taip atrodo sveikas skepticizmas.\n\n**Elena_K — tikra, bet pavojinga.**\nJi ne botas. Ji tiesiog pasidalino neskaitydama. Ir būtent tai yra pavojingiausia — nes jos draugai ja pasitiki.\n\n**Tai yra grandinė, kurią tu gali nutraukti.** Kitą kartą kai nori pasidalinti — sustok, perskaityk, patikrink.\n\n—\n\nBet kova dėl Vaitkaus dar nesibaigė. Dabar pasirodo nuotraukos...",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
@@ -202,7 +202,7 @@
       },
       {
         "id": "cl-understands-sharing",
-        "description": "Supranta Gabija_K pavojingą modelį",
+        "description": "Supranta Elena_K pavojingą modelį",
         "pattern_refs": [
           "p-genuine-sharing"
         ],
