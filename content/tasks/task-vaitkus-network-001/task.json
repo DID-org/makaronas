@@ -40,7 +40,7 @@
     {
       "id": "network-viz",
       "type": "html_embed",
-      "src": "bot_network_activity_v3_lt.html",
+      "src": "bot_network_viz.html",
       "title": "Botų tinklo aktyvumo vizualizacija"
     },
     {

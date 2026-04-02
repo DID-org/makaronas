@@ -32,7 +32,8 @@
     'task-vaitkus-001',           // Task 1: two articles investigation
     'task-vaitkus-comments-001',  // Task 2: comment section + protest photo
     'task-vaitkus-network-001',   // Task 3: bot network visualization + article
-    'task-vaitkus-statement-001'  // Task 4: fake bank statement analysis
+    'task-vaitkus-statement-001', // Task 4: fake bank statement analysis
+    'task-vaitkus-video-001'      // Task 5: deepfake video — MVP finale
   ];
 
   // --------------------------------------------------------------------------

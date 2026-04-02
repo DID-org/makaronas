@@ -32,7 +32,7 @@ PHASES.forEach((p,i)=>{
 var s=document.createElement('div');
 s.style.cssText='flex:1;position:relative;cursor:pointer;';
 s.innerHTML='<div style="background:rgba(255,255,255,0.06);border-radius:3px;height:6px;overflow:hidden;"><div class="fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4a9eff,#5dcaa5);border-radius:3px;transition:none;"></div></div><div style="color:#4a5568;font-size:10px;margin-top:4px;text-align:center;">'+p.label+'</div>';
-s.onclick=()=>{startTime=performance.now()-i*PHASE_DUR;paused=false;document.getElementById('pp').textContent='⏸';};
+s.onclick=()=>{startTime=performance.now()-i*PHASE_DUR;paused=false;var pp=document.getElementById('pp');if(pp)pp.textContent='⏸';};
 progDiv.appendChild(s);
 });
 
@@ -96,15 +96,21 @@ var fundingLine=0,revealBorder=0;
 var startTime=performance.now();
 var paused=false,pausedAt=0;
 
-document.getElementById('pp').onclick=()=>{
-if(paused){paused=false;startTime=performance.now()-pausedAt;document.getElementById('pp').textContent='⏸';}
-else{paused=true;pausedAt=performance.now()-startTime;document.getElementById('pp').textContent='▶';}
-};
-document.getElementById('rr').onclick=()=>{startTime=performance.now();paused=false;document.getElementById('pp').textContent='⏸';organicAttracted.length=0;};
+var elPlabel=document.getElementById('plabel');
+var elPdesc=document.getElementById('pdesc');
+var elPP=document.getElementById('pp');
+
+if(elPP){elPP.onclick=()=>{
+if(paused){paused=false;startTime=performance.now()-pausedAt;elPP.textContent='⏸';}
+else{paused=true;pausedAt=performance.now()-startTime;elPP.textContent='▶';}
+};}
+var elRR=document.getElementById('rr');
+if(elRR){elRR.onclick=()=>{startTime=performance.now();paused=false;if(elPP)elPP.textContent='⏸';organicAttracted.length=0;};}
 
 var organicAttracted=[];
 
 function draw(now){
+if(!canvas.isConnected)return;
 requestAnimationFrame(draw);
 if(paused)now=startTime+pausedAt;
 var elapsed=now-startTime;
@@ -115,10 +121,8 @@ if(!PHASES[phase])return;
 
 if(loopElapsed<200)organicAttracted.length=0;
 
-document.getElementById('plabel').textContent=PHASES[phase].label;
-document.getElementById('pdesc').textContent=PHASES[phase].desc;
-document.getElementById('plabel').style.opacity='1';
-document.getElementById('pdesc').style.opacity='1';
+if(elPlabel){elPlabel.textContent=PHASES[phase].label;elPlabel.style.opacity='1';}
+if(elPdesc){elPdesc.textContent=PHASES[phase].desc;elPdesc.style.opacity='1';}
 
 var fills=progDiv.querySelectorAll('.fill');
 fills.forEach((f,i)=>{

@@ -443,8 +443,8 @@
     // Fetch the HTML fragment and inject it directly into the DOM.
     // The visualization files are self-contained fragments (<div> + <script>),
     // not full HTML documents, so iframe won't work without wrapping.
-    var url = window.Api.assetUrl(taskId, src);
-    fetch(url)
+    var url = window.Api.assetUrl(taskId, src) + '?v=' + Date.now();
+    fetch(url, {cache: 'no-store'})
       .then(function (resp) { return resp.text(); })
       .then(function (html) {
         el.innerHTML = html;

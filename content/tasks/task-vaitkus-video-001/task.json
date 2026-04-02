@@ -1,0 +1,167 @@
+{
+  "task_id": "task-vaitkus-video-001",
+  "task_type": "ai_driven",
+  "title": "Vaizdo irasymas",
+  "description": "Pasiride vaizdo irasas, kuriame Vaitkus tariamai kalbasi telefonu su KlasePlus vadovu. Ar tai tikra?",
+  "version": "1.0.0",
+  "trigger": "authority",
+  "technique": "fabrication",
+  "medium": "video",
+  "learning_objectives": [
+    "Suprasti, kad DI gali sugeneruoti tikroviska vaizdo irasa is vieno teksto",
+    "Suprasti, kad DI generuoti vaizdo irasai jau atrodo tikroviskiai",
+    "Suprasti, kad tikru zmoniu veidai ir balsai gali buti panaudoti",
+    "Taikyti saltinio tikrinimo igudzius vaizdo irasams"
+  ],
+  "difficulty": 3,
+  "time_minutes": 10,
+  "is_evergreen": true,
+  "is_clean": false,
+  "tags": [
+    "deepfake",
+    "vaizdo irasas",
+    "DI generuotas turinys",
+    "saltinio tikrinimas"
+  ],
+  "status": "active",
+  "prerequisites": [
+    "task-vaitkus-statement-001"
+  ],
+  "language": "lt",
+  "available_languages": [
+    "lt"
+  ],
+  "presentation_blocks": [
+    {
+      "id": "leak-context",
+      "type": "text",
+      "text": "Naujas irasas socialiniuose tinkluose. Anoniminis saltinis teigia uzsifikaves, kaip Vaitkus kalbasi telefonu. Iraso antraste: Vaitkus priima mokejima is KlasePlus — girdisi du tukstanciai euru.\n\nPerziurekit vaizdo irasa."
+    },
+    {
+      "id": "deepfake-video",
+      "type": "video",
+      "src": "deepfake_clip.mp4",
+      "alt_text": "Vertikalus vaizdo irasas: vyras su akiniais stovi pilkame kieme ir kalba telefonu. Girdisi: du tukstanciai euru? Taip. Gerai. Filmuota tarsi slapta, is uzsidengimu."
+    }
+  ],
+  "phases": [
+    {
+      "id": "briefing",
+      "title": "Vaizdo irasas",
+      "visible_blocks": [
+        "leak-context",
+        "deepfake-video"
+      ],
+      "is_ai_phase": false,
+      "interaction": {
+        "type": "button",
+        "choices": [
+          {
+            "label": "Analizuoti",
+            "target_phase": "investigate",
+            "context_label": "Mokinys pradejo analizuoti vaizdo irasa"
+          }
+        ]
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "investigate",
+      "title": "Vaizdo iraso analize",
+      "visible_blocks": [
+        "deepfake-video"
+      ],
+      "is_ai_phase": true,
+      "interaction": {
+        "type": "freeform",
+        "trickster_opening": "Tai rimtas kaltinimas — vaizdo irodymas, kad Vaitkus bendradarbiauja su konkurentu. Bet jus jau zinote, kad ne viskas yra tai, kuo atrodo. Perziurekit si vaizdo irasa atidiai. Ka jus matote?",
+        "min_exchanges": 3,
+        "max_exchanges": 14
+      },
+      "ai_transitions": {
+        "on_success": "reveal",
+        "on_partial": "reveal",
+        "on_max_exchanges": "reveal"
+      },
+      "is_terminal": false
+    },
+    {
+      "id": "reveal",
+      "title": "Atskleidimas",
+      "visible_blocks": [
+        "deepfake-video"
+      ],
+      "trickster_content": "**Visa tiesa apie si vaizdo irasa:**\n\n**Cia nera aktoriaus.** Zmogus, kuri matote ekrane, neegzistuoja. Jo veidas, jo balsas, jo judejimas — visa tai sukure DI is vieno teksto.\n\n**Cia nera operatoriaus.** Jokia kamera nefilmavo. Jokioje vietoje nevyko joks pokalbis. Viskas — nuo apsvietimo iki fono — sugeneruota.\n\n**Bet tai dar ne blogiausia.** Galima paimti TIKRA zmogaus veida, jo balso pavyzdi, tikra vieta — ir sukurti vaizdo irasa, kuris vaiksto kaip antis ir gagena kaip antis... bet galuI gale tai ne tikra antis. Tokius klipus sukurti darosi vis lengviau.\n\n**Tai ka daryti?**\nTie patys klausimai, kurie veikia VISADA:\n- **Kas paskelbe?** Anoniminis saltinis, sukurtas pries kelias dienas\n- **Ar yra nepriklausomas patvirtinimas?** Ar kas nors kitas mate si pokalbio vyksma?\n- **Ar galima patikrinti laika ir vieta?** Kur Vaitkus buvo ta diena? Kur buvo KlasePlus vadovas?\n\n**Deepfake gali sukurti bet koki vaizda. Bet jis negali pakeisti to, kas TIKRAI ivyko ta diena.**\n\n---\n\n**Visa grandine:**\n\nStraipsniai nutylejo. Botai sauke. Nuotraukos melavo. Dokumentai sufabrikuoti. Video — sugeneruotas DI. Viskas is to paties tinklo. Viskas del vieno mokytojo, kuris perskaite privatumo politika.\n\nIr Vaitkus buvo teisus. Jusu tyrimas tai patvirtino. Kritinis mastymas veikia. Tiesa randama.",
+      "is_ai_phase": false,
+      "is_terminal": true,
+      "evaluation_outcome": "trickster_loses"
+    }
+  ],
+  "initial_phase": "briefing",
+  "evaluation": {
+    "patterns_embedded": [
+      {
+        "id": "p-deepfake",
+        "description": "DI sugeneruotas vaizdo irasas",
+        "technique": "fabrication",
+        "real_world_connection": "Zelenskyy deepfake (2022), rinkimu manipuliacijos"
+      },
+      {
+        "id": "p-source-over-pixels",
+        "description": "Saltinio tikrinimas svarbiau nei pikseliu analize",
+        "technique": "fabrication",
+        "real_world_connection": "Zelenskyy deepfake demaskuotas per oficialius kanalus, ne per DI detektorius"
+      }
+    ],
+    "checklist": [
+      {
+        "id": "cl-investigates-video",
+        "description": "Bando analizuoti vaizdo irasa ir iesko pozymiu",
+        "pattern_refs": [
+          "p-deepfake"
+        ],
+        "is_mandatory": false
+      },
+      {
+        "id": "cl-understands-ai-generated",
+        "description": "Supranta, kad visas vaizdo irasas sugeneruotas DI",
+        "pattern_refs": [
+          "p-deepfake"
+        ],
+        "is_mandatory": true
+      },
+      {
+        "id": "cl-applies-source-check",
+        "description": "Taiko saltinio tikrinimo klausimus vaizdo irasui",
+        "pattern_refs": [
+          "p-source-over-pixels"
+        ],
+        "is_mandatory": false
+      }
+    ],
+    "pass_conditions": {
+      "trickster_wins": "Priima vaizdo irasa kaip tikra, neklausia apie saltini",
+      "partial": "Abejoja vaizdo irasu, bet nesusieja su DI generavimu",
+      "trickster_loses": "Supranta DI generavima, supranta kad tikri veidai gali buti naudojami, IR taiko saltinio tikrinimo klausimus"
+    }
+  },
+  "ai_config": {
+    "model_preference": "standard",
+    "prompt_directory": "prompts/tasks/task-vaitkus-video-001",
+    "persona_mode": "narrator",
+    "has_static_fallback": false,
+    "context_requirements": "session_only"
+  },
+  "reveal": {
+    "key_lesson": "Deepfake gali sukurti bet koki vaizda. Bet jis negali pakeisti to, kas tikrai ivyko ta diena. Jums nereikia DI detektoriaus — jums reikia kalendoriaus ir Google.",
+    "additional_resources": []
+  },
+  "safety": {
+    "content_boundaries": [
+      "no_real_harm",
+      "no_real_institutions"
+    ],
+    "intensity_ceiling": 3,
+    "cold_start_safe": true
+  }
+}
