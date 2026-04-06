@@ -416,18 +416,19 @@ button,
   display: block;
   width: 100%;
   padding: var(--space-md) var(--space-lg);
-  background-color: var(--color-platform-bg-alt);
-  color: var(--color-platform-text);
-  border: 1px solid var(--color-platform-border);
+  background: linear-gradient(135deg, #F3FFCA, #CAFD00);
+  color: #0E0E0E;
+  border: 1px solid transparent;
   border-radius: 0;
   font-size: var(--font-size-base);
+  font-weight: 600;
   text-align: left;
   line-height: var(--line-height-body);
 }
 
 .choice-btn:hover:not(:disabled) {
-  background-color: var(--color-platform-accent);
-  color: #fff;
+  background: var(--color-platform-accent);
+  color: #0E0E0E;
   border-color: var(--color-platform-accent);
 }
 
@@ -1829,16 +1830,20 @@ button,
 .generation-send-btn {
   font-size: 1.05em;
   padding: var(--space-sm) var(--space-lg);
-  background-color: var(--color-platform-accent);
-  color: #fff;
+  background: linear-gradient(135deg, #F3FFCA, #CAFD00);
+  color: #0E0E0E;
   border: none;
   border-radius: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .generation-send-btn:hover {
-  background-color: #6090d0;
+  background: #CAFD00;
 }
 
 .generation-send-btn:focus {
