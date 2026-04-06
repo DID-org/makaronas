@@ -246,7 +246,7 @@ a:hover {
 /* Layout variant: fullpage (content only, no interaction panel) */
 .task-layout.layout-fullpage .content-panel {
   flex: 1 1 100%;
-  max-width: 80%;
+  max-width: 100%;
   margin: 0 auto;
 }
 
