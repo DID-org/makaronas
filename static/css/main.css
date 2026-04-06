@@ -280,10 +280,10 @@ a:hover {
   margin-bottom: var(--space-xl);
 }
 
-/* Student's published article — prominent purple, stands out from comments */
+/* Student's published article — near-black with full magenta border */
 .block-text--student-article {
-  background-color: rgba(216, 115, 255, 0.08);
-  border: 2px solid rgba(216, 115, 255, 0.4);
+  background-color: var(--color-platform-bg);
+  border: 2px solid #D873FF;
   border-radius: 0;
   padding: var(--space-lg);
   margin-bottom: var(--space-xl);
