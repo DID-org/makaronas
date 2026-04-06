@@ -62,6 +62,7 @@ class PromptLoader:
         provider: str,
         task_id: str | None = None,
         persona_mode: str | None = None,
+        phase_id: str | None = None,
     ) -> TricksterPrompts:
         """Loads Trickster prompt layers with model-specific fallback.
 
@@ -81,12 +82,12 @@ class PromptLoader:
         Returns:
             TricksterPrompts with loaded content (or None per field).
         """
-        cache_key = (provider, task_id, persona_mode)
+        cache_key = (provider, task_id, persona_mode, phase_id)
         if cache_key in self._cache:
-            logger.debug("Cache hit for prompts: provider=%s task_id=%s mode=%s", provider, task_id, persona_mode)
+            logger.debug("Cache hit for prompts: provider=%s task_id=%s mode=%s phase=%s", provider, task_id, persona_mode, phase_id)
             return self._cache[cache_key]
 
-        logger.debug("Cache miss for prompts: provider=%s task_id=%s mode=%s", provider, task_id, persona_mode)
+        logger.debug("Cache miss for prompts: provider=%s task_id=%s mode=%s phase=%s", provider, task_id, persona_mode, phase_id)
         suffix = _PROVIDER_SUFFIX.get(provider)
         trickster_dir = self._prompts_dir / "trickster"
 
@@ -97,7 +98,14 @@ class PromptLoader:
         task_override: str | None = None
         if task_id is not None:
             task_dir = self._prompts_dir / "tasks" / task_id
-            task_override = self._load_with_fallback(task_dir, "trickster", suffix)
+            # Try phase-specific prompt first (e.g. trickster_dialogue_base.md)
+            if phase_id:
+                task_override = self._load_with_fallback(
+                    task_dir, f"trickster_{phase_id}", suffix,
+                )
+            # Fall back to task-level prompt
+            if task_override is None:
+                task_override = self._load_with_fallback(task_dir, "trickster", suffix)
 
         mode_behaviour: str | None = None
         if persona_mode is not None:

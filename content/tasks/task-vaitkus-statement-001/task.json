@@ -136,7 +136,7 @@
         "pattern_refs": [
           "p-source-verification"
         ],
-        "is_mandatory": false
+        "is_mandatory": true
       }
     ],
     "pass_conditions": {

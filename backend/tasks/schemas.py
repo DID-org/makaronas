@@ -499,6 +499,20 @@ class AiTransitions(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class PhaseChecklistItem(BaseModel):
+    """Lightweight checklist item for per-phase evaluator criteria.
+
+    Simpler than ChecklistItem — no pattern_refs needed. The evaluator
+    uses these to decide when to transition from an AI phase.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    description: str
+    is_mandatory: bool = False
+
+
 class Phase(BaseModel):
     """A single phase in the task state machine.
 
@@ -521,6 +535,10 @@ class Phase(BaseModel):
     is_ai_phase: bool = False
     interaction: InteractionConfig | None = None
     ai_transitions: AiTransitions | None = None
+
+    # Phase-specific evaluator checklist (optional — falls back to
+    # task-level evaluation.checklist if not set)
+    evaluator_checklist: list[PhaseChecklistItem] = Field(default_factory=list)
 
     # Terminal state
     is_terminal: bool = False

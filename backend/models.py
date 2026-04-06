@@ -61,8 +61,8 @@ class ModelConfig:
 # and cost while keeping Flash's improved instruction-following over Lite.
 
 TIER_MAP: dict[str, ModelConfig] = {
-    "fast": ModelConfig(provider="gemini", model_id=GEMINI_FLASH, thinking_level="low"),
-    "standard": ModelConfig(provider="gemini", model_id=GEMINI_FLASH, thinking_level="medium"),
+    "fast": ModelConfig(provider="gemini", model_id=GEMINI_FLASH),
+    "standard": ModelConfig(provider="gemini", model_id=GEMINI_FLASH),
     "complex": ModelConfig(provider="gemini", model_id=GEMINI_PRO, thinking_level="medium"),
     "haiku": ModelConfig(provider="anthropic", model_id=CLAUDE_HAIKU),
 }

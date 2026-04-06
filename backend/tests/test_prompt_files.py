@@ -225,13 +225,13 @@ class TestContentElements:
         assert prompts.persona is not None
         assert "Makaronas" in prompts.persona
 
-    def test_behaviour_has_transition_phase(
+    def test_behaviour_has_phase_transition_section(
         self, loader: PromptLoader
     ) -> None:
-        """Behaviour references the transition_phase tool."""
+        """Behaviour includes phase transition guidance."""
         prompts = loader.load_trickster_prompts("gemini")
         assert prompts.behaviour is not None
-        assert "transition_phase" in prompts.behaviour
+        assert "Phase Transitions" in prompts.behaviour or "transition" in prompts.behaviour.lower()
 
     def test_behaviour_has_rubric_review(self, loader: PromptLoader) -> None:
         """Behaviour includes rubric/checklist review instruction."""

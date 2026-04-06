@@ -25,3 +25,6 @@ venv/
 
 # Claude Code
 .claude/
+
+# Telemetry data (student sessions — anonymous, delete after analysis)
+data/sessions/

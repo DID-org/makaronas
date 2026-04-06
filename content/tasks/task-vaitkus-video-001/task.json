@@ -132,11 +132,11 @@
       },
       {
         "id": "cl-applies-source-check",
-        "description": "Taiko saltinio tikrinimo klausimus vaizdo irasui",
+        "description": "Supranta kad tikru zmoniu veidai ir balsai gali buti panaudoti deepfake",
         "pattern_refs": [
           "p-source-over-pixels"
         ],
-        "is_mandatory": false
+        "is_mandatory": true
       }
     ],
     "pass_conditions": {

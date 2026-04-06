@@ -545,6 +545,24 @@ async def _stream_trickster_response(
                 "is_clean": cartridge.is_clean,
             })
 
+            # Telemetry: save task completion data incrementally
+            try:
+                from backend.telemetry import save_task_completion
+                save_task_completion(
+                    session=session,
+                    task_id=cartridge.task_id,
+                    phase_exchanges=[
+                        {
+                            "role": e.role,
+                            "content": e.content,
+                            "timestamp": e.timestamp.isoformat(),
+                        }
+                        for e in session.exchanges
+                    ],
+                )
+            except Exception as exc:
+                logger.warning("Telemetry save failed: %s", exc)
+
         # Enrich done event with next phase content for seamless transitions
         if done_data.get("next_phase") is not None:
             target_phase = _find_phase_by_id(cartridge, done_data["next_phase"])
@@ -1425,7 +1443,45 @@ async def session_report(
         session_id=session_id,
     )
 
+    # Telemetry: save session completion with report
+    try:
+        from backend.telemetry import save_session_end
+        save_session_end(session, report_text.strip())
+    except Exception as exc:
+        logger.warning("Telemetry session end save failed: %s", exc)
+
     return ApiResponse(
         ok=True,
         data={"report": report_text.strip()},
+    ).model_dump()
+
+
+# ---------------------------------------------------------------------------
+# GET /dump-sessions — admin: dump all active sessions to disk
+# ---------------------------------------------------------------------------
+
+
+@router.get("/dump-sessions")
+async def dump_sessions(
+    session_store: SessionStore = Depends(get_session_store),
+) -> dict:
+    """Dumps all active sessions to data/sessions/ for telemetry.
+
+    Call this after each class to capture data from students who
+    didn't finish. No auth required — this is a dev/admin tool.
+    """
+    from backend.telemetry import save_active_session
+
+    sessions = session_store.get_all_sessions()
+    count = 0
+    for session in sessions:
+        try:
+            save_active_session(session)
+            count += 1
+        except Exception as exc:
+            logger.warning("Failed to dump session %s: %s", session.session_id, exc)
+
+    return ApiResponse(
+        ok=True,
+        data={"dumped": count, "message": f"Dumped {count} active sessions to data/sessions/"},
     ).model_dump()

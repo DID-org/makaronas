@@ -846,6 +846,20 @@
           "default": null,
           "description": "Required for AI phases. Maps engine signals to target phases."
         },
+        "evaluator_checklist": {
+          "type": "array",
+          "default": [],
+          "description": "Per-phase checklist for the Flash Lite evaluator. Overrides task-level evaluation.checklist for this phase.",
+          "items": {
+            "type": "object",
+            "required": ["id", "description"],
+            "properties": {
+              "id": {"type": "string"},
+              "description": {"type": "string"},
+              "is_mandatory": {"type": "boolean", "default": false}
+            }
+          }
+        },
         "is_terminal": {
           "type": "boolean",
           "default": false,

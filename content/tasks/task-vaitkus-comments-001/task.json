@@ -103,6 +103,10 @@
         "min_exchanges": 3,
         "max_exchanges": 16
       },
+      "evaluator_checklist": [
+        {"id": "ec-bots", "description": "Mokinys atpažino botus (SkaitmenineAteitisLT, TechMokslas2026)", "is_mandatory": true},
+        {"id": "ec-elena", "description": "Mokinys aptarė Elena_K — tikras žmogus dalinasi neskaitydamas, tai pavojingiausia", "is_mandatory": true}
+      ],
       "ai_transitions": {
         "on_success": "photo_comment",
         "on_partial": "photo_comment",
@@ -123,6 +127,10 @@
         "min_exchanges": 2,
         "max_exchanges": 16
       },
+      "evaluator_checklist": [
+        {"id": "ec-photo-tells", "description": "Mokinys pastebėjo nuotraukos keistumus (užrašai, sezonas, langai, ar kt.)", "is_mandatory": false},
+        {"id": "ec-source-check", "description": "Mokinys supranta, kad šaltinio tikrinimas svarbiau nei vizualinė analizė", "is_mandatory": true}
+      ],
       "ai_transitions": {
         "on_success": "reveal",
         "on_partial": "reveal",
@@ -202,11 +210,11 @@
       },
       {
         "id": "cl-understands-sharing",
-        "description": "Supranta Elena_K pavojingą modelį",
+        "description": "Supranta Elena_K pavojingą modelį — tikras žmogus dalinasi neskaitydamas",
         "pattern_refs": [
           "p-genuine-sharing"
         ],
-        "is_mandatory": false
+        "is_mandatory": true
       }
     ],
     "pass_conditions": {

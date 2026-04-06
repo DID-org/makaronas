@@ -260,6 +260,10 @@
         "min_exchanges": 2,
         "max_exchanges": 16
       },
+      "evaluator_checklist": [
+        {"id": "ec-omission", "description": "Mokinys supranta, kad abu straipsniai nutyli skirtingus dalykus", "is_mandatory": true},
+        {"id": "ec-funding", "description": "Mokinys pamini finansavimo skirtumus arba motyvacijas", "is_mandatory": true}
+      ],
       "ai_transitions": {
         "on_success": "conclusions",
         "on_partial": "conclusions",
@@ -307,6 +311,9 @@
         "min_exchanges": 1,
         "max_exchanges": 16
       },
+      "evaluator_checklist": [
+        {"id": "ec-article-written", "description": "Mokinys parašė žinutę, kuri apima abi puses — ir Vaitkaus klaidą, ir privatumo problemą", "is_mandatory": true}
+      ],
       "ai_transitions": {
         "on_success": "reveal",
         "on_partial": "reveal",

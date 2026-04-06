@@ -730,7 +730,7 @@ class TestTransitionTool:
     def test_tool_included_when_at_min_exchanges(
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
-        """Tools include transition tool when exchange_count >= min_exchanges."""
+        """Tools are None — Flash Lite evaluator handles transitions."""
         setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
@@ -743,14 +743,12 @@ class TestTransitionTool:
             exchange_count=2, min_exchanges=2,
         )
 
-        assert result.tools is not None
-        assert len(result.tools) == 1
-        assert result.tools[0]["name"] == "transition_phase"
+        assert result.tools is None
 
     def test_tool_included_when_above_min_exchanges(
         self, tmp_path: Path, make_session, make_cartridge,
     ) -> None:
-        """Tools include transition tool when exchange_count > min_exchanges."""
+        """Tools are None — Flash Lite evaluator handles transitions."""
         setup_base_prompts(tmp_path)
         loader = PromptLoader(tmp_path)
         cm = ContextManager(loader)
@@ -763,7 +761,7 @@ class TestTransitionTool:
             exchange_count=5, min_exchanges=2,
         )
 
-        assert result.tools is not None
+        assert result.tools is None
 
     def test_tool_absent_when_below_min_exchanges(
         self, tmp_path: Path, make_session, make_cartridge,

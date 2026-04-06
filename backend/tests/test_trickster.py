@@ -351,10 +351,15 @@ class TestMinExchangesGate:
         assert spy.stream_calls[0]["tools"] is None
 
     @pytest.mark.asyncio
-    async def test_at_threshold_tools_present(
+    async def test_at_threshold_no_tools_evaluator_called(
         self, context_manager, make_session, make_cartridge,
     ):
-        """Second student message: exchange_count=2 == min_exchanges=2 -> tools."""
+        """Second student message: exchange_count=2 == min_exchanges=2.
+
+        In the new architecture, Flash never receives tools. Instead, the
+        Flash Lite evaluator is called after Flash responds.
+        Verify: Flash gets tools=None, evaluator is invoked.
+        """
         spy = SpyProvider(responses=["Second reply here."])
         engine = TricksterEngine(spy, context_manager)
         session = make_session()
@@ -366,10 +371,12 @@ class TestMinExchangesGate:
         result = await engine.respond(session, cartridge, phase, "Second message")
         await _consume_tokens(result)
 
-        assert len(spy.stream_calls) == 1
-        assert spy.stream_calls[0]["tools"] is not None
-        assert len(spy.stream_calls[0]["tools"]) == 1
-        assert spy.stream_calls[0]["tools"][0]["name"] == "transition_phase"
+        # Flash call: no tools (conversation only)
+        assert spy.stream_calls[0]["tools"] is None
+        # Evaluator call happens via the same mock provider (auto-patched).
+        # It's the second stream call with the evaluator system prompt.
+        assert len(spy.stream_calls) == 2
+        assert "evaluate ONE exchange" in spy.stream_calls[1]["system_prompt"]
 
 
 class TestMaxExchangesCeiling:

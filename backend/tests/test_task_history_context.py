@@ -18,13 +18,14 @@ T10: API-level integration test with multi-task session
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 from httpx import ASGITransport
 
 from backend.ai.context import ContextManager, _MAX_HISTORY_TASKS, _OUTCOME_LABELS
+from backend.ai.phase_evaluator import EvaluatorResult
 from backend.ai.prompts import PromptLoader
 from backend.ai.providers.base import TextChunk, UsageInfo
 from backend.ai.providers.mock import MockProvider
@@ -606,9 +607,11 @@ class TestAPILevelHistoryInjection:
     """API-level integration: task history appears in system prompt."""
 
     @pytest.mark.asyncio
+    @patch("backend.ai.phase_evaluator.evaluate_exchange_with_tool", new_callable=AsyncMock,
+           return_value=EvaluatorResult(should_transition=False))
     @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_system_prompt_contains_history(
-        self, _mock_readiness, client, api_context_manager
+        self, _mock_readiness, _mock_eval, client, api_context_manager
     ):
         """POST /respond with pre-existing task_history -> system prompt has history."""
         task_id = "test-ctx-001"
@@ -644,7 +647,7 @@ class TestAPILevelHistoryInjection:
         )
         assert resp.status_code == 200
 
-        # Verify system prompt captured by MockProvider
+        # Verify system prompt captured by MockProvider (Flash call, not evaluator)
         assert provider.last_system_prompt is not None
         prompt = provider.last_system_prompt
         assert "Ankstesni\u0173 u\u017eduo\u010di\u0173 kontekstas" in prompt

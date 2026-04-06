@@ -274,17 +274,14 @@ class ContextManager:
             system_prompt, messages, context_prefix_count,
         )
 
-        tools: list[dict] | None = None
-        if exchange_count >= min_exchanges:
-            if phase_id == "write_article":
-                tools = [PUBLISH_ARTICLE_TOOL]
-            else:
-                tools = [TRANSITION_TOOL]
+        # Tools are no longer passed to Flash — phase transitions are
+        # handled by the Flash Lite evaluator (phase_evaluator.py).
+        # Flash just has a conversation, no tool call pressure.
 
         return AssembledContext(
             system_prompt=system_prompt,
             messages=messages,
-            tools=tools,
+            tools=None,
         )
 
     def assemble_debrief_call(
@@ -456,6 +453,17 @@ class ContextManager:
 
         task_id = cartridge.task_id if cartridge.ai_config else None
         persona_mode = cartridge.ai_config.persona_mode if cartridge.ai_config else None
+        phase_id = session.current_phase
+
+        # Try phase-specific prompt first (e.g. trickster_dialogue_base.md)
+        if phase_id and task_id:
+            phase_prompts = self._loader.load_trickster_prompts(
+                provider, task_id, persona_mode=persona_mode,
+                phase_id=phase_id,
+            )
+            if phase_prompts.task_override is not None:
+                return phase_prompts
+
         return self._loader.load_trickster_prompts(
             provider, task_id, persona_mode=persona_mode,
         )
@@ -700,9 +708,23 @@ class ContextManager:
                     f"   Ry\u0161ys su realybe: {pattern.real_world_connection}"
                 )
 
-        # Checklist
-        if evaluation.checklist:
-            parts.append("\n### Kontrolinis sarasas")
+        # Checklist — guide the student toward these points
+        # Phase-level checklist takes priority (more specific)
+        current_phase = None
+        for p in cartridge.phases:
+            if p.id == session.current_phase:
+                current_phase = p
+                break
+
+        if current_phase and current_phase.evaluator_checklist:
+            parts.append("\n### Ko mokinys turi pasiekti sioje fazeje (vesk link siu tasku)")
+            parts.append("NESIBAIKITE kol mokinys neaprėpė VISŲ [PRIVALOMA] punktų!")
+            for item in current_phase.evaluator_checklist:
+                mandatory = " [PRIVALOMA]" if item.is_mandatory else ""
+                parts.append(f"- {item.description}{mandatory}")
+        elif evaluation.checklist:
+            parts.append("\n### Ko mokinys turi pasiekti (vesk link siu tasku)")
+            parts.append("NESIBAIKITE kol mokinys neaprėpė VISŲ [PRIVALOMA] punktų!")
             for item in evaluation.checklist:
                 mandatory = " [PRIVALOMA]" if item.is_mandatory else ""
                 parts.append(f"- {item.description}{mandatory}")

@@ -256,215 +256,54 @@ class TricksterEngine:
             accumulated = ""
             transition_signal: str | None = None
 
-            # 6-7. Call provider and stream + accumulate
-            # Force tool call only on the last possible exchange —
-            # earlier exchanges offer the tool but let the model choose.
-            # This prevents premature forced transitions while ensuring
-            # the conversation always ends cleanly at max_exchanges.
-            has_tools = ctx.tools is not None and len(ctx.tools) > 0
-            force_now = has_tools and exchange_count >= max_exchanges - 1
-            _leak_buf: str | None = None  # Buffer for suspected leaked tool calls
+            # 6. Stream Flash response — NO TOOLS
+            # Flash handles conversation only. Phase transitions are decided
+            # by the Flash Lite evaluator after the response completes.
             async for event in provider.stream(
                 system_prompt=ctx.system_prompt,
                 messages=ctx.messages,
                 model_config=model_config,
-                tools=ctx.tools,
-                force_tool=force_now,
+                tools=None,
+                force_tool=False,
             ):
                 if isinstance(event, TextChunk):
                     accumulated += event.text
-                    # Buffer tokens that look like the start of a leaked
-                    # tool call JSON — hold them back until we know whether
-                    # the model is leaking a tool call or writing normal text.
-                    if _leak_buf is not None:
-                        _leak_buf += event.text
-                        # Check if buffer is clearly NOT a tool call
-                        if len(_leak_buf) > 30 and 'transition_phase' not in _leak_buf and 'publish_article' not in _leak_buf:
-                            yield _leak_buf
-                            _leak_buf = None
-                        # Check if buffer IS a complete leaked tool call
-                        elif _leak_buf.rstrip().endswith('}') and _leak_buf.count('}') >= _leak_buf.count('{'):
-                            if _TEXT_SIGNAL_RE.search(_leak_buf):
-                                # Extract response_text so the student sees the message
-                                resp_m = _TEXT_RESPONSE_RE.search(_leak_buf)
-                                if resp_m and resp_m.group(1).strip():
-                                    resp_text = resp_m.group(1).replace('\\n', '\n')
-                                    yield resp_text
-                                    logger.info("Extracted response_text from leaked tool call (%d chars)", len(resp_text))
-                                else:
-                                    logger.info("Suppressed leaked tool call with no response_text (%d chars)", len(_leak_buf))
-                            else:
-                                yield _leak_buf
-                            _leak_buf = None
-                    elif 'transition_phase' in event.text or 'publish_article' in event.text:
-                        # Larger token that already contains the tool name
-                        _leak_buf = event.text
-                    elif event.text.lstrip().startswith('{'):
-                        # Opening brace — could be a tool call starting
-                        _leak_buf = event.text
-                    else:
-                        yield event.text
-                elif isinstance(event, ToolCallEvent):
-                    if event.function_name in ("transition_phase", "publish_article"):
-                        sig = event.arguments.get("signal")
-                        if sig not in _SIGNAL_MAP:
-                            # Unrecognised signal — default to "understood"
-                            logger.warning("Unrecognised transition signal %r, defaulting to 'understood'", sig)
-                            sig = "understood"
-                        transition_signal = sig
-                        response_text = event.arguments.get(
-                            "response_text", ""
-                        )
-                        if response_text:
-                            accumulated += response_text
-                            yield response_text
-                            # Store student's article when publish_article confirms it.
-                            # Use the LAST student exchange — that's the final article,
-                            # not Gemini's reformulation in article_text.
-                            if event.function_name == "publish_article":
-                                student_msgs = [
-                                    e.content for e in session.exchanges
-                                    if e.role == "student"
-                                ]
-                                final_article = student_msgs[-1] if student_msgs else ""
-                                if final_article:
-                                    session.generated_artifacts.append({
-                                        "type": "student_article",
-                                        "text": final_article,
-                                        "phase": phase.id,
-                                        "task_id": cartridge.task_id,
-                                    })
-                                    try:
-                                        from pathlib import Path
-                                        Path("/tmp/student_article.txt").write_text(
-                                            final_article, encoding="utf-8"
-                                        )
-                                    except Exception:
-                                        pass
-                                    logger.info("Student article saved (%d chars)", len(final_article))
-                        else:
-                            logger.warning(
-                                "Unknown transition signal: %s", sig,
-                            )
-                    else:
-                        logger.warning(
-                            "Unexpected tool call: %s",
-                            event.function_name,
-                        )
+                    yield event.text
 
-            # Flush leak buffer if stream ended mid-buffer
-            if _leak_buf is not None:
-                if not _TEXT_SIGNAL_RE.search(_leak_buf):
-                    yield _leak_buf
-                else:
-                    resp_m = _TEXT_RESPONSE_RE.search(_leak_buf)
-                    if resp_m and resp_m.group(1).strip():
-                        yield resp_m.group(1).replace('\\n', '\n')
-                    logger.info("Suppressed leaked tool call at stream end (%d chars)", len(_leak_buf))
-                _leak_buf = None
+            # 7. Strip any leaked tool call text Flash may still produce
+            # (from residual prompt instructions).
+            m = _TEXT_SIGNAL_RE.search(accumulated)
+            if m:
+                accumulated = _LEAKED_TOOL_CALL_RE.sub('', accumulated).rstrip()
+                logger.info("Stripped leaked tool call text from Flash response")
 
-            # 7b. Text-based signal fallback \u2014 some models emit the
-            # tool call as JSON text instead of using function calling.
-            if transition_signal is None:
-                m = _TEXT_SIGNAL_RE.search(accumulated)
-                if m:
-                    transition_signal = m.group(1)
-                    # Extract article_text from leaked publish_article JSON
-                    # Only in the write_article phase — other phases may
-                    # accidentally match the regex in their response text
-                    article_m = (
-                        _TEXT_ARTICLE_RE.search(accumulated)
-                        if phase.id == "write_article" else None
-                    )
-                    if article_m:
-                        article_text = article_m.group(1)
-                        session.generated_artifacts.append({
-                            "type": "student_article",
-                            "text": article_text,
-                            "phase": phase.id,
-                            "task_id": cartridge.task_id,
-                        })
-                        logger.info(
-                            "Extracted student article from leaked tool call text"
-                        )
-                    # Strip the leaked JSON from accumulated text so it
-                    # doesn't appear in exchanges or the done event
-                    accumulated = _LEAKED_TOOL_CALL_RE.sub(
-                        '', accumulated,
-                    ).rstrip()
-                    logger.warning(
-                        "Extracted transition signal from text: %s "
-                        "(model leaked tool call as text)",
-                        transition_signal,
-                    )
-
-            # 8. Empty response recovery — escalate to Pro model
-            if (
-                len(accumulated) < _MIN_RESPONSE_LENGTH
-                and transition_signal is None
-            ):
-                from backend.models import ModelConfig, GEMINI_PRO
-                fallback_config = ModelConfig(
-                    provider="gemini",
-                    model_id=GEMINI_PRO,
-                    thinking_level="low",
-                )
+            # 8. Empty response recovery — nudge and retry
+            if len(accumulated) < _MIN_RESPONSE_LENGTH:
                 logger.warning(
-                    "Empty response (<%d chars) from %s, escalating to %s",
-                    _MIN_RESPONSE_LENGTH, model_config.model_id, GEMINI_PRO,
+                    "Empty response (<%d chars), nudging Flash to retry",
+                    _MIN_RESPONSE_LENGTH,
                 )
                 nudge_messages = list(ctx.messages) + [
                     {"role": "assistant", "content": accumulated or ""},
                     {"role": "user", "content": (
-                        "[SYSTEM: Your last response was empty — the student "
-                        "saw nothing. Please respond to the student's last "
-                        "message. If you want to transition phases, use the "
-                        "transition_phase tool AND include response_text.]"
+                        "[SYSTEM: Your last response was empty \u2014 the student "
+                        "saw nothing. Please respond to the student\u2019s last "
+                        "message in Lithuanian.]"
                     )},
                 ]
-                retry_signal: str | None = None
-
                 async for event in provider.stream(
                     system_prompt=ctx.system_prompt,
                     messages=nudge_messages,
-                    model_config=fallback_config,
-                    tools=ctx.tools,
-                    force_tool=force_now,
+                    model_config=model_config,
+                    tools=None,
+                    force_tool=False,
                 ):
                     if isinstance(event, TextChunk):
                         accumulated += event.text
                         yield event.text
-                    elif isinstance(event, ToolCallEvent):
-                        if event.function_name in ("transition_phase", "publish_article"):
-                            sig = event.arguments.get("signal")
-                            if sig not in _SIGNAL_MAP:
-                                logger.warning("Retry: unrecognised signal %r, defaulting to 'understood'", sig)
-                                sig = "understood"
-                            retry_signal = sig
-                            response_text = event.arguments.get(
-                                "response_text", ""
-                            )
-                            if response_text:
-                                accumulated += response_text
-                                yield response_text
-                            if event.function_name == "publish_article":
-                                article_text = event.arguments.get(
-                                    "article_text", ""
-                                )
-                                if article_text:
-                                    session.generated_artifacts.append({
-                                        "type": "student_article",
-                                        "text": article_text,
-                                        "phase": phase.id,
-                                        "task_id": cartridge.task_id,
-                                    })
 
-                if retry_signal is not None:
-                    transition_signal = retry_signal
-
-            if len(accumulated) < _MIN_RESPONSE_LENGTH and transition_signal is None:
-                logger.error("Pro fallback also returned empty response")
-                fallback = "Hmm... pabandykite dar kartą."
+            if len(accumulated) < _MIN_RESPONSE_LENGTH:
+                fallback = "Hmm... pabandykite dar kart\u0105."
                 accumulated = fallback
                 yield fallback
                 result.done_data = {
@@ -473,10 +312,91 @@ class TricksterEngine:
                     "next_phase": None,
                     "exchanges_count": exchange_count,
                 }
-                result.usage = getattr(
-                    provider, "_last_usage", None,
-                )
+                result.usage = getattr(provider, "_last_usage", None)
                 return
+
+            # 9a. Phase transition evaluation — Flash Lite decides
+            logger.info(
+                "Evaluator gate: exchange_count=%d min_exchanges=%d phase=%s",
+                exchange_count, interaction.min_exchanges, phase.id,
+            )
+            if exchange_count >= interaction.min_exchanges:
+                from backend.ai.phase_evaluator import (
+                    evaluate_exchange_with_tool,
+                    format_checklist,
+                )
+                from backend.api.deps import create_provider as _create_provider
+                from backend.models import ModelConfig as _MC, GEMINI_FLASH_LITE
+
+                eval_model = _MC(provider="gemini", model_id=GEMINI_FLASH_LITE)
+                from backend.config import get_settings as _get_settings
+                eval_provider = _create_provider(eval_model, _get_settings())
+
+                # Phase-level checklist takes priority over task-level
+                checklist_items = []
+                if phase.evaluator_checklist:
+                    checklist_items = [
+                        {
+                            "id": item.id,
+                            "description": item.description,
+                            "is_mandatory": item.is_mandatory,
+                        }
+                        for item in phase.evaluator_checklist
+                    ]
+                elif cartridge.evaluation and cartridge.evaluation.checklist:
+                    checklist_items = [
+                        {
+                            "id": item.id,
+                            "description": item.description,
+                            "is_mandatory": item.is_mandatory,
+                        }
+                        for item in cartridge.evaluation.checklist
+                    ]
+                checklist_text = format_checklist(checklist_items)
+
+                eval_result = await evaluate_exchange_with_tool(
+                    provider=eval_provider,
+                    model_config=eval_model,
+                    student_message=student_input,
+                    assistant_response=accumulated,
+                    checklist_text=checklist_text,
+                )
+
+                if eval_result.should_transition:
+                    transition_signal = eval_result.signal or "understood"
+                    logger.info(
+                        "Evaluator: transition signal=%s items=%s",
+                        transition_signal, eval_result.satisfied_items,
+                    )
+                    # Handle write_article phase — save student's article
+                    if phase.id == "write_article":
+                        student_msgs = [
+                            e.content for e in session.exchanges
+                            if e.role == "student"
+                        ]
+                        final_article = student_msgs[-1] if student_msgs else ""
+                        if final_article:
+                            session.generated_artifacts.append({
+                                "type": "student_article",
+                                "text": final_article,
+                                "phase": phase.id,
+                                "task_id": cartridge.task_id,
+                            })
+                            try:
+                                from pathlib import Path
+                                Path("/tmp/student_article.txt").write_text(
+                                    final_article, encoding="utf-8"
+                                )
+                            except Exception:
+                                pass
+                            logger.info("Student article saved (%d chars)", len(final_article))
+                else:
+                    logger.debug("Evaluator: continue")
+
+            # 9b. Force transition at max exchanges
+            if transition_signal is None and exchange_count >= max_exchanges:
+                transition_signal = "max_reached"
+                logger.info("Max exchanges reached, forcing transition")
 
             # 9. Post-completion safety check
             safety_result = safety.check_output(

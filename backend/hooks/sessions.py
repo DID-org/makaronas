@@ -78,3 +78,16 @@ class InMemorySessionStore(SessionStore):
             session_id: The session identifier.
         """
         self._sessions.pop(session_id, None)
+
+    def get_all_sessions(self) -> list[GameSession]:
+        """Returns all active (non-expired) sessions.
+
+        Used by telemetry dump to capture data from students who
+        didn't complete all tasks.
+        """
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        return [
+            s for s in self._sessions.values()
+            if s.expires_at > now
+        ]

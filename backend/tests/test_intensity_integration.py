@@ -9,13 +9,14 @@ Constraint #15: API-level integration test for intensity tracking.
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 from httpx import ASGITransport
 
 from backend.ai.context import ContextManager
+from backend.ai.phase_evaluator import EvaluatorResult
 from backend.ai.prompts import PromptLoader
 from backend.ai.providers.base import UsageInfo
 from backend.ai.providers.mock import MockProvider
@@ -331,9 +332,11 @@ class TestIntensityIntegration:
         assert done_data["intensity_deescalation"] is True
 
     @pytest.mark.asyncio
+    @patch("backend.ai.phase_evaluator.evaluate_exchange_with_tool", new_callable=AsyncMock,
+           return_value=EvaluatorResult(should_transition=False))
     @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_deescalation_context_on_second_call(
-        self, _mock_readiness, client, context_manager,
+        self, _mock_readiness, _mock_eval, client, context_manager,
     ):
         """After a hot turn, the next call's system prompt has de-escalation."""
         indicators = _make_indicators_moderate_score()

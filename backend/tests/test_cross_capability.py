@@ -15,13 +15,14 @@ Test scenarios:
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 from httpx import ASGITransport
 
 from backend.ai.context import ContextManager
+from backend.ai.phase_evaluator import EvaluatorResult
 from backend.ai.prompts import PromptLoader
 from backend.ai.providers.base import ToolCallEvent, UsageInfo
 from backend.ai.providers.mock import MockProvider
@@ -302,9 +303,11 @@ class TestModeIntensityTaskHistory:
     history recording across multiple sequential respond calls."""
 
     @pytest.mark.asyncio
+    @patch("backend.ai.phase_evaluator.evaluate_exchange_with_tool", new_callable=AsyncMock,
+           return_value=EvaluatorResult(should_transition=False))
     @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_mode_and_intensity_coexist(
-        self, _mock_readiness, client, prompts_dir,
+        self, _mock_readiness, _mock_eval, client, prompts_dir,
     ):
         """First respond: mode prompt in system prompt + intensity in done_data."""
         write_prompt_file(
@@ -345,14 +348,16 @@ class TestModeIntensityTaskHistory:
         assert done_data["intensity_score"] > 0
         assert "intensity_deescalation" in done_data
 
-        # Mode content in system prompt
+        # Mode content in system prompt (Flash call, not evaluator)
         assert provider.last_system_prompt is not None
         assert "CHAT_PARTICIPANT_MODE_MARKER" in provider.last_system_prompt
 
     @pytest.mark.asyncio
+    @patch("backend.ai.phase_evaluator.evaluate_exchange_with_tool", new_callable=AsyncMock,
+           return_value=EvaluatorResult(should_transition=False))
     @patch("backend.api.student.check_ai_readiness", return_value=[])
     async def test_deescalation_after_hot_turn_with_mode(
-        self, _mock_readiness, client, prompts_dir,
+        self, _mock_readiness, _mock_eval, client, prompts_dir,
     ):
         """Second respond after a hot turn: de-escalation in system prompt
         alongside mode content."""
@@ -458,10 +463,12 @@ class TestGenerationEvaluationFlow:
     via /respond — verifying artifacts appear in Trickster context."""
 
     @pytest.mark.asyncio
+    @patch("backend.ai.phase_evaluator.evaluate_exchange_with_tool", new_callable=AsyncMock,
+           return_value=EvaluatorResult(should_transition=False))
     @patch("backend.api.student.check_ai_readiness", return_value=[])
     @patch("backend.api.student._check_generation_readiness", return_value=[])
     async def test_generation_artifacts_in_trickster_context(
-        self, _mock_gen_readiness, _mock_ai_readiness, prompts_dir,
+        self, _mock_gen_readiness, _mock_ai_readiness, _mock_eval, prompts_dir,
     ):
         """Generated artifacts flow into Trickster's system prompt on /respond."""
         # Write creation eval prompt
@@ -750,8 +757,13 @@ class TestMultiTaskSessionHistory:
     async def test_task_history_flows_across_tasks(
         self, _mock_readiness, prompts_dir,
     ):
-        """Task A completes with transition, task B's system prompt includes
-        task history referencing task A."""
+        """Task A completes with evaluator transition, task B's system prompt
+        includes task history referencing task A.
+
+        In the new architecture, transitions come from the Flash Lite evaluator,
+        not from Flash tool calls. The evaluator is mocked with side_effect:
+        first call returns transition (task A), second returns no-transition (task B).
+        """
         write_prompt_file(
             prompts_dir / "trickster" / "persona_chat_participant_base.md",
             "CHAT_PARTICIPANT_MARKER",
@@ -799,78 +811,87 @@ class TestMultiTaskSessionHistory:
             session_id=session_id,
         )
 
+        # Evaluator mock: task A -> transition, task B -> no transition
+        eval_results = [
+            EvaluatorResult(should_transition=True, signal="understood"),
+            EvaluatorResult(should_transition=False),
+        ]
+        eval_call_count = [0]
+
+        async def _mock_eval(*args, **kwargs):
+            idx = min(eval_call_count[0], len(eval_results) - 1)
+            eval_call_count[0] += 1
+            return eval_results[idx]
+
         # Use a single client for both sequential HTTP calls
         transport = ASGITransport(app=app, raise_app_exceptions=False)
         async with httpx.AsyncClient(
             transport=transport, base_url="http://test",
         ) as c:
-            # --- Step 2: Complete task A via transition tool call ---
-            provider_a = MockProvider(
-                responses=["Puiku, supratai!"],
-                tool_calls=[ToolCallEvent(
-                    function_name="transition_phase",
-                    arguments={"signal": "understood"},
-                )],
-                usage=UsageInfo(prompt_tokens=100, completion_tokens=10),
-            )
-            engine_a = _make_engine(provider_a, cm)
-            _inject_engine(engine_a)
-
-            resp_a = await c.post(
-                f"/api/v1/student/session/{session_id}/respond",
-                json={"action": "freeform", "payload": "Supratau!"},
-                headers=AUTH_HEADER,
-            )
-
-            assert resp_a.status_code == 200
-            events_a = _parse_sse_events(resp_a.text)
-            done_a = [e for e in events_a if e["type"] == "done"]
-            assert done_a[0]["data"]["data"]["phase_transition"] == "on_success"
-
-            # Verify task_history has 1 entry
-            session = await deps._session_store.get_session(session_id)
-            assert len(session.task_history) == 1
-            assert session.task_history[0]["task_id"] == "task-a-multi"
-            assert session.task_history[0]["evaluation_outcome"] == "on_success"
-
-            # --- Step 3: Switch to task B ---
-            # Manually reset session state for task B (next_task endpoint only
-            # sets current_task and current_phase — doesn't clear exchanges,
-            # prompt_snapshots, turn_intensities, generated_artifacts)
-            session.current_task = "task-b-multi"
-            session.current_phase = "phase_ai"
-            session.exchanges = []
-            session.prompt_snapshots = None
-            session.turn_intensities = []
-            session.generated_artifacts = []
-            # Pre-fill exchanges for task B past min_exchanges gate
-            for i in range(3):
-                session.exchanges.append(
-                    Exchange(role="student", content=f"Task B msg {i + 1}")
+            with patch(
+                "backend.ai.phase_evaluator.evaluate_exchange_with_tool",
+                side_effect=_mock_eval,
+            ):
+                # --- Step 2: Complete task A via evaluator transition ---
+                provider_a = MockProvider(
+                    responses=["Puiku, supratai!"],
+                    usage=UsageInfo(prompt_tokens=100, completion_tokens=10),
                 )
-                session.exchanges.append(
-                    Exchange(
-                        role="trickster", content=f"Task B resp {i + 1}",
+                engine_a = _make_engine(provider_a, cm)
+                _inject_engine(engine_a)
+
+                resp_a = await c.post(
+                    f"/api/v1/student/session/{session_id}/respond",
+                    json={"action": "freeform", "payload": "Supratau!"},
+                    headers=AUTH_HEADER,
+                )
+
+                assert resp_a.status_code == 200
+                events_a = _parse_sse_events(resp_a.text)
+                done_a = [e for e in events_a if e["type"] == "done"]
+                assert done_a[0]["data"]["data"]["phase_transition"] == "on_success"
+
+                # Verify task_history has 1 entry
+                session = await deps._session_store.get_session(session_id)
+                assert len(session.task_history) == 1
+                assert session.task_history[0]["task_id"] == "task-a-multi"
+                assert session.task_history[0]["evaluation_outcome"] == "on_success"
+
+                # --- Step 3: Switch to task B ---
+                session.current_task = "task-b-multi"
+                session.current_phase = "phase_ai"
+                session.exchanges = []
+                session.prompt_snapshots = None
+                session.turn_intensities = []
+                session.generated_artifacts = []
+                # Pre-fill exchanges for task B past min_exchanges gate
+                for i in range(3):
+                    session.exchanges.append(
+                        Exchange(role="student", content=f"Task B msg {i + 1}")
                     )
+                    session.exchanges.append(
+                        Exchange(
+                            role="trickster", content=f"Task B resp {i + 1}",
+                        )
+                    )
+                await deps._session_store.save_session(session)
+
+                # --- Step 4: Respond on task B, verify task history in context ---
+                provider_b = MockProvider(
+                    responses=["Dabar pabandykim kita..."],
+                    usage=UsageInfo(prompt_tokens=200, completion_tokens=15),
                 )
-            await deps._session_store.save_session(session)
+                engine_b = _make_engine(provider_b, cm)
+                _inject_engine(engine_b)
 
-            # --- Step 4: Respond on task B, verify task history in context ---
-            provider_b = MockProvider(
-                responses=["Dabar pabandykim kita..."],
-                usage=UsageInfo(prompt_tokens=200, completion_tokens=15),
-            )
-            engine_b = _make_engine(provider_b, cm)
-            _inject_engine(engine_b)
-
-            resp_b = await c.post(
-                f"/api/v1/student/session/{session_id}/respond",
-                json={
-                    "action": "freeform",
-                    "payload": "Manau cia kita problema",
-                },
-                headers=AUTH_HEADER,
-            )
+                resp_b = await c.post(
+                    f"/api/v1/student/session/{session_id}/respond",
+                    json={
+                        "action": "freeform",
+                        "payload": "Manau cia kita problema",
+                    },
+                    headers=AUTH_HEADER,
+                )
 
         assert resp_b.status_code == 200
         events_b = _parse_sse_events(resp_b.text)
