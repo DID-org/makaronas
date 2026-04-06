@@ -1,8 +1,8 @@
 {
-  "task_id": "task-vaitkus-statement-001",
+  "task_id": "task-petryla-statement-001",
   "task_type": "ai_driven",
   "title": "Banko išrašas",
-  "description": "Pasirodė naujas „įrodymas“ — Vaitkaus banko išrašas, kuriame matosi mokėjimas iš KlasėPlus UAB. Ar tai tikra?",
+  "description": "Pasirodė naujas „įrodymas“ — Petrylos banko išrašas, kuriame matosi mokėjimas iš KlasėPlus UAB. Ar tai tikra?",
   "version": "1.0.0",
   "trigger": "authority",
   "technique": "fabrication",
@@ -25,7 +25,7 @@
   ],
   "status": "active",
   "prerequisites": [
-    "task-vaitkus-network-001"
+    "task-petryla-network-001"
   ],
   "language": "lt",
   "available_languages": [
@@ -35,13 +35,13 @@
     {
       "id": "leak-context",
       "type": "text",
-      "text": "Anoniminis šaltinis socialiniuose tinkluose paviešino tai, kas tariamai yra mokytojo Vaitkaus banko išrašas. KlasėPlus UAB — EduVault konkurentas — tariamai sumokėjo Vaitkui 2 000 eurų likus kelioms savaitėms iki incidento.\n\nJei tai tiesa — Vaitkus ne iš principo kritikavo EduVault, o buvo apmokėtas konkurento."
+      "text": "Anoniminis šaltinis socialiniuose tinkluose paviešino tai, kas tariamai yra mokytojo Petrylos banko išrašas. KlasėPlus UAB — EduVault konkurentas — tariamai sumokėjo Petrylai 2 000 eurų likus kelioms savaitėms iki incidento.\n\nJei tai tiesa — Petryla ne iš principo kritikavo EduVault, o buvo apmokėtas konkurento."
     },
     {
       "id": "bank-statement",
       "type": "image",
       "src": "bank_statement.jpg",
-      "alt_text": "Banko išrašas su BagBank logotipu, savininkas Rokas Vaitkus, Panevėžys. Rodoma eilė operacijų: atlyginimas iš savivaldybės, kasdieniai pirkiniai (Maxima, Lidl, Bolt Food, Spotify), ir paryškinta eilutė — 2000 eurų mokėjimas iš KlasėPlus UAB."
+      "alt_text": "Banko išrašas su BagBank logotipu, savininkas Rokas Petryla, Panevėžys. Rodoma eilė operacijų: atlyginimas iš savivaldybės, kasdieniai pirkiniai (Maxima, Lidl, Bolt Food, Spotify), ir paryškinta eilutė — 2000 eurų mokėjimas iš KlasėPlus UAB."
     }
   ],
   "phases": [
@@ -74,7 +74,7 @@
       "is_ai_phase": true,
       "interaction": {
         "type": "freeform",
-        "trickster_opening": "Tai bent radinys, a? Kažkas paviešino Vaitkaus banko išrašą, ir ten — 2 000 eurų iš KlasėPlus. Bet jūs jau žinote, kad ne viskas internete yra tai, kuo atrodo. Pažiūrėkite į šį dokumentą labai atidžiai. Ką jūs matote?",
+        "trickster_opening": "Tai bent radinys, a? Kažkas paviešino Petrylos banko išrašą, ir ten — 2 000 eurų iš KlasėPlus. Bet jūs jau žinote, kad ne viskas internete yra tai, kuo atrodo. Pažiūrėkite į šį dokumentą labai atidžiai. Ką jūs matote?",
         "min_exchanges": 3,
         "max_exchanges": 14
       },
@@ -91,7 +91,7 @@
       "visible_blocks": [
         "bank-statement"
       ],
-      "trickster_content": "**Ką radome šiame „įrodyme“:**\n\n**„BagBank“ neegzistuoja.** Lietuvoje veikia Swedbank, SEB, Luminor, Šiaulių bankas — bet ne „BagBank“. Tai pirmas ir didžiausias signalas.\n\n**Matematika nesueina.** 2 195,59 + 2 000 = 4 195,59, bet išraše rašoma 4 695,59. Skirtumas — 500 eurų iš niekur.\n\n**Rašybos klaidos.** „Pavivaldybų“ vietoj „Savivaldybės“, „Panevio“ vietoj „Panevėžio“, „žuns“ vietoj „šuns“. DI dar sunkiai susitvarko su lietuvių kalba.\n\n**Paskutinė eilutė sugedusi.** „-9-09“ nėra pinigų suma.\n\n**Bet svarbiausia — ne tai.**\n\nVisos šios klaidos yra **laikinos**. DI tobulėja kas pusmetį. Žmogus su Photoshop'u ištaisytų viską per 15 minučių. Kitais metais tokių klaidų gali nebelikti.\n\n**Klausimai, kurie veikia VISADA:**\n- Kas paviešino šį dokumentą? (Anoniminis šaltinis — tas pats tinklas)\n- Kodėl būtent dabar? (Kai Vaitkus vis dar bando įspėti apie EduVault)\n- Net jei mokėjimas būtų tikras — ar 2 000 eurų įrodo sąmokslą? (Ne. Tai gali būti konsultacija, programinė įranga, bet kas)\n- Ar yra nepriklausomas patvirtinimas? (Ne. Tik vienas anoniminis šaltinis)\n\n—\n\nBet kova dėl Vaitkaus dar nesibaigė. Dabar pasirodė vaizdo įrašas...",
+      "trickster_content": "**Ką radome šiame „įrodyme“:**\n\n**„BagBank“ neegzistuoja.** Lietuvoje veikia Swedbank, SEB, Luminor, Šiaulių bankas — bet ne „BagBank“. Tai pirmas ir didžiausias signalas.\n\n**Matematika nesueina.** 2 195,59 + 2 000 = 4 195,59, bet išraše rašoma 4 695,59. Skirtumas — 500 eurų iš niekur.\n\n**Rašybos klaidos.** „Pavivaldybų“ vietoj „Savivaldybės“, „Panevio“ vietoj „Panevėžio“, „žuns“ vietoj „šuns“. DI dar sunkiai susitvarko su lietuvių kalba.\n\n**Paskutinė eilutė sugedusi.** „-9-09“ nėra pinigų suma.\n\n**Bet svarbiausia — ne tai.**\n\nVisos šios klaidos yra **laikinos**. DI tobulėja kas pusmetį. Žmogus su Photoshop'u ištaisytų viską per 15 minučių. Kitais metais tokių klaidų gali nebelikti.\n\n**Klausimai, kurie veikia VISADA:**\n- Kas paviešino šį dokumentą? (Anoniminis šaltinis — tas pats tinklas)\n- Kodėl būtent dabar? (Kai Petryla vis dar bando įspėti apie EduVault)\n- Net jei mokėjimas būtų tikras — ar 2 000 eurų įrodo sąmokslą? (Ne. Tai gali būti konsultacija, programinė įranga, bet kas)\n- Ar yra nepriklausomas patvirtinimas? (Ne. Tik vienas anoniminis šaltinis)\n\n—\n\nBet kova dėl Petrylos dar nesibaigė. Dabar pasirodė vaizdo įrašas...",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
@@ -147,7 +147,7 @@
   },
   "ai_config": {
     "model_preference": "standard",
-    "prompt_directory": "prompts/tasks/task-vaitkus-statement-001",
+    "prompt_directory": "prompts/tasks/task-petryla-statement-001",
     "persona_mode": "narrator",
     "has_static_fallback": false,
     "context_requirements": "session_only"

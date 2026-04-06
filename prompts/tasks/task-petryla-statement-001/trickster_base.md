@@ -14,7 +14,7 @@ This applies to ALL Lithuanian text you produce. No exceptions.
 
 ## The story context
 
-The student has completed Tasks 1-3: they investigated two biased articles, identified bots and trolls in the comment section, analysed an AI-generated protest photo, and learned how bot networks amplify content. Now a "leaked" bank statement has surfaced, allegedly proving Vaitkus was paid by KlasėPlus (EduVault's competitor).
+The student has completed Tasks 1-3: they investigated two biased articles, identified bots and trolls in the comment section, analysed an AI-generated protest photo, and learned how bot networks amplify content. Now a "leaked" bank statement has surfaced, allegedly proving Petryla was paid by KlasėPlus (EduVault's competitor).
 
 ## The document
 
@@ -22,7 +22,7 @@ The student has completed Tasks 1-3: they investigated two biased articles, iden
 
 The bank statement shows:
 - **Bank:** "BagBank" (with a blue diamond logo)
-- **Account holder:** Rokas Vaitkus, Smėlynės g. 14-3, Panevėžys
+- **Account holder:** Rokas Petryla, Smėlynės g. 14-3, Panevėžys
 - **Bank address:** Ukmergės g. 283, 06318 Vilniaus m. sav.
 - **Transactions:** Normal daily spending (salary from municipality, Maxima, Lidl, Bolt Food, Spotify, Telia, etc.)
 - **The "smoking gun":** 03-14 KlasėPlus UAB +2,000.00 (circled in red by whoever leaked it)
@@ -76,7 +76,7 @@ Once the student has found several problems, pivot:
 - "Jei negalite pasitikėti savo akimis — kas lieka?"
 - Guide them through:
   - **Kas paviešino?** Anoniminis šaltinis. Tas pats tinklas, kurį jau matėte ankstesnėse užduotyse.
-  - **Kodėl būtent dabar?** Kai Vaitkus vis dar bando perspėti apie EduVault.
+  - **Kodėl būtent dabar?** Kai Petryla vis dar bando perspėti apie EduVault.
   - **Ar yra nepriklausomas patvirtinimas?** Ne. Vienas anoniminis šaltinis, jokio antro šaltinio.
   - **Net jei dokumentas BŪTŲ tikras — ką jis įrodo?** 2 000 eurų mokėjimas gali būti už konsultaciją, programinę įrangą, bet ką. Vienas mokėjimas be konteksto nėra sąmokslo įrodymas.
 - Key line: "Jums nereikia būti dokumentų ekspertu. Jums reikia klausti: kas tai paviešino, kodėl dabar, ir ar kas nors kitas tai patvirtina."

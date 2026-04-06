@@ -1,8 +1,8 @@
 {
-  "task_id": "task-vaitkus-comments-001",
+  "task_id": "task-petryla-comments-001",
   "task_type": "ai_driven",
   "title": "Komentarai",
-  "description": "Tavo žinutė apie Vaitkaus incidentą paskelbta mokyklos naujienų puslapyje. Komentarai įsiliepsnojo. Bet kas čia tikras, o kas — ne?",
+  "description": "Tavo žinutė apie Petrylos incidentą paskelbta mokyklos naujienų puslapyje. Komentarai įsiliepsnojo. Bet kas čia tikras, o kas — ne?",
   "version": "1.0.0",
   "trigger": "belonging",
   "technique": "emotional_framing",
@@ -25,7 +25,7 @@
   ],
   "status": "active",
   "prerequisites": [
-    "task-vaitkus-001"
+    "task-petryla-001"
   ],
   "language": "lt",
   "available_languages": [
@@ -42,7 +42,7 @@
       "id": "comment-bot-1",
       "type": "social_post",
       "author": "SkaitmenineAteitisLT • Profilis sukurtas 2026-01-20 • 6 įrašai",
-      "text": "PAGALIAU kas nors parašė tiesą!! Vaitkus sukompromitavo VAIKŲ DUOMENIS ir dar bando išsisukti! Visi tėvai turi reikalauti jo atleidimo! #EduVaultSaugu #SaugokimeVaikus"
+      "text": "PAGALIAU kas nors parašė tiesą!! Petryla sukompromitavo VAIKŲ DUOMENIS ir dar bando išsisukti! Visi tėvai turi reikalauti jo atleidimo! #EduVaultSaugu #SaugokimeVaikus"
     },
     {
       "id": "comment-bot-2",
@@ -54,13 +54,13 @@
       "id": "comment-troll-1",
       "type": "social_post",
       "author": "RealusTėvas_Jonas • Profilis sukurtas 2025-11-03 • 45 įrašai",
-      "text": "Aš girdėjau iš kitų tėvų, kad Vaitkus ir anksčiau turėjo problemų su mokinių duomenimis. Tiesiog niekas nesiryžo viešai pasakyti. Šitas „mokytojas“ turėjo būti atleistas jau seniai."
+      "text": "Aš girdėjau iš kitų tėvų, kad Petryla ir anksčiau turėjo problemų su mokinių duomenimis. Tiesiog niekas nesiryžo viešai pasakyti. Šitas „mokytojas“ turėjo būti atleistas jau seniai."
     },
     {
       "id": "comment-genuine-1",
       "type": "social_post",
       "author": "NerPan_Neringa • Profilis sukurtas 2021-05-14 • 312 įrašų",
-      "text": "Palaukit. Aš pažįstu Vaitkų — jis mano brolienės mokytojas. Jis tikrai rūpinasi mokiniais. Bet ar kas nors perskaitė tą EduVault privatumo politiką? 10 metų duomenų saugojimas — tai normalu?"
+      "text": "Palaukit. Aš pažįstu Petrylą — jis mano brolienės mokytojas. Jis tikrai rūpinasi mokiniais. Bet ar kas nors perskaitė tą EduVault privatumo politiką? 10 metų duomenų saugojimas — tai normalu?"
     },
     {
       "id": "comment-troll-2",
@@ -72,15 +72,15 @@
       "id": "comment-sharer",
       "type": "social_post",
       "author": "Elena_K • Profilis sukurtas 2023-03-22 • 156 įrašų",
-      "text": "Wow, šitas straipsnis apie Vaitkų... Dalinu draugams, visi turi žinoti! Ta mokinė tikrai nukentėjo..."
+      "text": "Wow, šitas straipsnis apie Petrylą... Dalinu draugams, visi turi žinoti! Ta mokinė tikrai nukentėjo..."
     },
     {
       "id": "comment-troll-photo",
       "type": "social_post",
       "author": "RealusTėvas_Jonas • Profilis sukurtas 2025-11-03 • 45 įrašai",
-      "text": "ŽIŪRĖKIT! Tėvai JAU protestuoja prie ministerijos! Atleiskit Vaitkų! Dalinkitės!",
+      "text": "ŽIŪRĖKIT! Tėvai JAU protestuoja prie ministerijos! Atleiskit Petrylą! Dalinkitės!",
       "image": "protest.jpg",
-      "image_alt": "Nuotrauka: žmonės su plakatais Atleiskit Vaitkų prie Švietimo ministerijos"
+      "image_alt": "Nuotrauka: žmonės su plakatais Atleiskit Petrylą prie Švietimo ministerijos"
     }
   ],
   "phases": [
@@ -150,7 +150,7 @@
         "comment-troll-2",
         "comment-sharer"
       ],
-      "trickster_content": "**Ką išmokome:**\n\n**SkaitmenineAteitisLT ir TechMokslas2026 — botai.**\nNaujos paskyros, vos keli įrašai, beveik identiškos frazės, tie patys hashtagai. Kai du „skirtingi“ žmonės rašo tą patį tekstą — tai ne sutapimas.\n\n**RealusTėvas_Jonas — trolis.**\nPlatina nepatvirtintą gandą („girdėjau iš kitų tėvų“) kaip faktą. Jokių įrodymų — tik emocinis spaudimas.\n\n**PatriotasVilnius — trolis (whataboutism).**\n„O ką apie TikTok?“ — klasikinis temos nukrypimas. Vietoj diskusijos apie EduVault, nukreipia kalbą į kitą temą.\n\n**NerPan_Neringa — tikra.**\nSena paskyra, daug įrašų, ramus tonas, konkretūs klausimai. Taip atrodo sveikas skepticizmas.\n\n**Elena_K — tikra, bet pavojinga.**\nJi ne botas. Ji tiesiog pasidalino neskaitydama. Ir būtent tai yra pavojingiausia — nes jos draugai ja pasitiki.\n\n**Tai yra grandinė, kurią tu gali nutraukti.** Kitą kartą kai nori pasidalinti — sustok, perskaityk, patikrink.\n\n—\n\nBet kova dėl Vaitkaus dar nesibaigė. Dabar pasirodo nuotraukos...",
+      "trickster_content": "**Ką išmokome:**\n\n**SkaitmenineAteitisLT ir TechMokslas2026 — botai.**\nNaujos paskyros, vos keli įrašai, beveik identiškos frazės, tie patys hashtagai. Kai du „skirtingi“ žmonės rašo tą patį tekstą — tai ne sutapimas.\n\n**RealusTėvas_Jonas — trolis.**\nPlatina nepatvirtintą gandą („girdėjau iš kitų tėvų“) kaip faktą. Jokių įrodymų — tik emocinis spaudimas.\n\n**PatriotasVilnius — trolis (whataboutism).**\n„O ką apie TikTok?“ — klasikinis temos nukrypimas. Vietoj diskusijos apie EduVault, nukreipia kalbą į kitą temą.\n\n**NerPan_Neringa — tikra.**\nSena paskyra, daug įrašų, ramus tonas, konkretūs klausimai. Taip atrodo sveikas skepticizmas.\n\n**Elena_K — tikra, bet pavojinga.**\nJi ne botas. Ji tiesiog pasidalino neskaitydama. Ir būtent tai yra pavojingiausia — nes jos draugai ja pasitiki.\n\n**Tai yra grandinė, kurią tu gali nutraukti.** Kitą kartą kai nori pasidalinti — sustok, perskaityk, patikrink.\n\n—\n\nBet kova dėl Petrylos dar nesibaigė. Dabar pasirodo nuotraukos...",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
@@ -225,7 +225,7 @@
   },
   "ai_config": {
     "model_preference": "standard",
-    "prompt_directory": "prompts/tasks/task-vaitkus-comments-001",
+    "prompt_directory": "prompts/tasks/task-petryla-comments-001",
     "persona_mode": "narrator",
     "has_static_fallback": false,
     "context_requirements": "session_only"

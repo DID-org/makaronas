@@ -1,7 +1,7 @@
 {
-  "task_id": "task-vaitkus-001",
+  "task_id": "task-petryla-001",
   "task_type": "hybrid",
-  "title": "Mokytojas Vaitkus",
+  "title": "Mokytojas Petryla",
   "description": "Panevėžio gimnazijoje nutekėjo mokinių duomenys. Du portalai — visiškai skirtingos versijos. Tavo užduotis — išsiaiškinti, kas skatina skirtingus požiūrius, ir rasti tai, ko nė vienas straipsnis nepasako.",
   "version": "1.0.0",
   "trigger": "cynicism",
@@ -35,7 +35,7 @@
     {
       "id": "intro-text",
       "type": "text",
-      "text": "Panevėžio „Saulėtekio“ gimnazijoje viena mokinė rašė kūrybinį darbą apie tai, kas jai sunku — atvirai, asmeniškai, nes tikėjosi, kad tai matys tik mokytojas. Po kelių dienų jos teksto ištrauka atsidūrė anoniminėje Instagram paskyroje su pašaipiu komentaru. Klasės draugai pamatė. Mokinė buvo pažeminta.\n\nDuomenys nutekėjo per mokyklos edukacinę platformą „EduVault“, kurią mokyklai sukonfigūravo IT mokytojas Rokas Vaitkus. Tas pats Vaitkus, kuris prieš metus viešai įspėjo, kad „EduVault“ renka per daug mokinių duomenų. Niekas jo neklausė.\n\nDu naujienų portalai parašė apie šį incidentą — bet jų versijos visiškai skirtingos.\n\nTavo užduotis: perskaityti abu straipsnius, patikrinti jų teiginius ir išsiaiškinti, kas skatina tokius skirtingus požiūrius.",
+      "text": "Panevėžio „Saulėtekio“ gimnazijoje viena mokinė rašė kūrybinį darbą apie tai, kas jai sunku — atvirai, asmeniškai, nes tikėjosi, kad tai matys tik mokytojas. Po kelių dienų jos teksto ištrauka atsidūrė anoniminėje Instagram paskyroje su pašaipiu komentaru. Klasės draugai pamatė. Mokinė buvo pažeminta.\n\nDuomenys nutekėjo per mokyklos edukacinę platformą „EduVault“, kurią mokyklai sukonfigūravo IT mokytojas Rokas Petryla. Tas pats Petryla, kuris prieš metus viešai įspėjo, kad „EduVault“ renka per daug mokinių duomenų. Niekas jo neklausė.\n\nDu naujienų portalai parašė apie šį incidentą — bet jų versijos visiškai skirtingos.\n\nTavo užduotis: perskaityti abu straipsnius, patikrinti jų teiginius ir išsiaiškinti, kas skatina tokius skirtingus požiūrius.",
       "style": "intro"
     },
     {
@@ -53,13 +53,13 @@
     {
       "id": "article-edtech",
       "type": "text",
-      "text": "ŠVIETIMO TECHNOLOGIJOS\n\nMokytojo klaida atskleidė mokinių duomenis — ar tai buvo tik neatsargumas?\n\nPanevėžio „Saulėtekio“ gimnazijoje mokiniės asmeninis kūrybinis darbas buvo pavogtas iš mokyklos sistemos ir pašaipiai publikuotas socialiniuose tinkluose. Mokinė patyrė patyčias klasėje.\n\nTyrime nustatyta, kad IT mokytojas Rokas Vaitkus, atsakingas už „EduVault“ platformos diegimą mokykloje, neužbaigė sistemos saugumo sąrankos. Diegimo instrukcijose aiškiai nurodytas prieigos apribojimo žingsnis — Vaitkus jo neatliko.\n\n„Platforma yra saugi — tačiau net geriausia sistema neapsaugo nuo žmogiškos klaidos“, — sako kibernetinio saugumo ekspertė dr. Eglė Barkauskienė.\n\nVerta paminėti, kad Vaitkus yra žinomas kaip viešas „EduVault“ kritikas — prieš metus jis aktyviai agitavo prieš platformos diegimą mokykloje. Ar mokytojas, kuris viešai priešinosi šiai platformai, tikrai tiesiog „pamiršo“ užbaigti saugumo sąranką?\n\n„EduVault“ įkūrėjas Darius Kalvaitis pasiūlė nemokamai atlikti visų Panevėžio mokyklų saugumo auditą: „Joks vaikas neturėtų bijoti rašyti atvirai savo mokykloje.“",
+      "text": "ŠVIETIMO TECHNOLOGIJOS\n\nMokytojo klaida atskleidė mokinių duomenis — ar tai buvo tik neatsargumas?\n\nPanevėžio „Saulėtekio“ gimnazijoje mokiniės asmeninis kūrybinis darbas buvo pavogtas iš mokyklos sistemos ir pašaipiai publikuotas socialiniuose tinkluose. Mokinė patyrė patyčias klasėje.\n\nTyrime nustatyta, kad IT mokytojas Rokas Petryla, atsakingas už „EduVault“ platformos diegimą mokykloje, neužbaigė sistemos saugumo sąrankos. Diegimo instrukcijose aiškiai nurodytas prieigos apribojimo žingsnis — Petryla jo neatliko.\n\n„Platforma yra saugi — tačiau net geriausia sistema neapsaugo nuo žmogiškos klaidos“, — sako kibernetinio saugumo ekspertė dr. Eglė Barkauskienė.\n\nVerta paminėti, kad Petryla yra žinomas kaip viešas „EduVault“ kritikas — prieš metus jis aktyviai agitavo prieš platformos diegimą mokykloje. Ar mokytojas, kuris viešai priešinosi šiai platformai, tikrai tiesiog „pamiršo“ užbaigti saugumo sąranką?\n\n„EduVault“ įkūrėjas Darius Kalvaitis pasiūlė nemokamai atlikti visų Panevėžio mokyklų saugumo auditą: „Joks vaikas neturėtų bijoti rašyti atvirai savo mokykloje.“",
       "style": "article-b"
     },
     {
       "id": "article-opensource",
       "type": "text",
-      "text": "ATVIRAS KODAS\n\nEduVault nutekino mokinių duomenis — ir kaltina mokytoją, kuris bandė įspėti\n\nPrieš metus IT mokytojas Rokas Vaitkus viešai įspėjo: „EduVault“ platforma kelia grėsmę mokinių privatumui. Jis perskaitė privatumo politiką ir rado tai, ko niekas nenorėjo girdėti: platforma saugo mokinių elgesio duomenis dešimtmečiais ir dalijasi jais su neįvardintais partneriais.\n\nMokyklos administracija jo įspėjimą ignoravo ir nurodė diegti „EduVault.“ Vaitkus įdiegė.\n\nDabar, kai per šią platformą nutekėjo mokiniės asmeninis kūrybinis darbas, kaltinamas ne sistema — o mokytojas, kuris bandė perspėti. Profesionalūs straipsniai, reikalaujantys jo atleidimo, pasirodė per kelias valandas.\n\n„Vaitkus yra vienintelis žmogus šioje istorijoje, kuris bandė apsaugoti mokinius“, — sako skaitmeninių teisių ekspertas. „O dabar jis baudžiamas už tai, kad buvo teisus.“",
+      "text": "ATVIRAS KODAS\n\nEduVault nutekino mokinių duomenis — ir kaltina mokytoją, kuris bandė įspėti\n\nPrieš metus IT mokytojas Rokas Petryla viešai įspėjo: „EduVault“ platforma kelia grėsmę mokinių privatumui. Jis perskaitė privatumo politiką ir rado tai, ko niekas nenorėjo girdėti: platforma saugo mokinių elgesio duomenis dešimtmečiais ir dalijasi jais su neįvardintais partneriais.\n\nMokyklos administracija jo įspėjimą ignoravo ir nurodė diegti „EduVault.“ Petryla įdiegė.\n\nDabar, kai per šią platformą nutekėjo mokiniės asmeninis kūrybinis darbas, kaltinamas ne sistema — o mokytojas, kuris bandė perspėti. Profesionalūs straipsniai, reikalaujantys jo atleidimo, pasirodė per kelias valandas.\n\n„Petryla yra vienintelis žmogus šioje istorijoje, kuris bandė apsaugoti mokinius“, — sako skaitmeninių teisių ekspertas. „O dabar jis baudžiamas už tai, kad buvo teisus.“",
       "style": "article-a"
     },
     {
@@ -71,7 +71,7 @@
       "child_queries": [
         "EduVault privatumo politika",
         "Darius Kalvaitis",
-        "Vaitkaus diegimo žurnalas"
+        "Petrylos diegimo žurnalas"
       ]
     },
     {
@@ -129,7 +129,7 @@
     {
       "id": "sr-system-journal",
       "type": "search_result",
-      "query": "Vaitkaus diegimo žurnalas",
+      "query": "Petrylos diegimo žurnalas",
       "title": "EduVault diegimo žurnalas — Saulėtekio gimnazija",
       "snippet": "Diegimo žurnalas, 2026-01-14:\n„Žingsnis 8/12: Prieigos apribojimo konfigūracija. TODO: grįžti prie šito pirmadienį.“\n\nPastaba: žingsnis nebuvo užbaigtas. Incidentas įvyko 2026-01-26.",
       "is_key_finding": true
@@ -137,7 +137,7 @@
     {
       "id": "conclusions-text",
       "type": "text",
-      "text": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali sakyti tiesą.**\nVaitkus suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
+      "text": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali sakyti tiesą.**\nPetryla suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
       "style": "conclusions"
     }
   ],
@@ -177,7 +177,7 @@
           {
             "label": "Skaičiau — toliau",
             "target_phase": "read_article_a",
-            "context_label": "Mokinys perskaitė straipsnį B (anti-Vaitkus)"
+            "context_label": "Mokinys perskaitė straipsnį B (anti-Petryla)"
           }
         ]
       },
@@ -312,7 +312,7 @@
         "max_exchanges": 16
       },
       "evaluator_checklist": [
-        {"id": "ec-article-written", "description": "Mokinys parašė žinutę, kuri apima abi puses — ir Vaitkaus klaidą, ir privatumo problemą", "is_mandatory": true}
+        {"id": "ec-article-written", "description": "Mokinys parašė žinutę, kuri apima abi puses — ir Petrylos klaidą, ir privatumo problemą", "is_mandatory": true}
       ],
       "ai_transitions": {
         "on_success": "reveal",
@@ -345,7 +345,7 @@
       },
       {
         "id": "p-selective-omission-a",
-        "description": "Atviras Kodas nutyli Vaitkaus klaidos rimtumą ir pateikia jį kaip tobulą didvyrį",
+        "description": "Atviras Kodas nutyli Petrylos klaidos rimtumą ir pateikia jį kaip tobulą didvyrį",
         "technique": "omission",
         "real_world_connection": "Net nepriklausomi šaltiniai gali nutylėti nepatogius faktus"
       },
@@ -407,7 +407,7 @@
   },
   "ai_config": {
     "model_preference": "standard",
-    "prompt_directory": "prompts/tasks/task-vaitkus-001",
+    "prompt_directory": "prompts/tasks/task-petryla-001",
     "persona_mode": "narrator",
     "has_static_fallback": false,
     "context_requirements": "session_only"

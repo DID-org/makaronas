@@ -1,8 +1,8 @@
 {
-  "task_id": "task-vaitkus-video-001",
+  "task_id": "task-petryla-video-001",
   "task_type": "ai_driven",
   "title": "Vaizdo įrašymas",
-  "description": "Pasirodė vaizdo įrašas, kuriame Vaitkus tariamai kalbasi telefonu su KlasėPlus vadovu. Ar tai tikra?",
+  "description": "Pasirodė vaizdo įrašas, kuriame Petryla tariamai kalbasi telefonu su KlasėPlus vadovu. Ar tai tikra?",
   "version": "1.0.0",
   "trigger": "authority",
   "technique": "fabrication",
@@ -25,7 +25,7 @@
   ],
   "status": "active",
   "prerequisites": [
-    "task-vaitkus-statement-001"
+    "task-petryla-statement-001"
   ],
   "language": "lt",
   "available_languages": [
@@ -35,7 +35,7 @@
     {
       "id": "leak-context",
       "type": "text",
-      "text": "Naujas įrašas socialiniuose tinkluose. Anoniminis šaltinis teigia užfiksavęs, kaip Vaitkus kalbasi telefonu. Įrašo antraštė: Vaitkus priima mokėjimą iš KlasėPlus — girdisi du tūkstančiai eurų.\n\nPeržiūrėkite vaizdo įrašą."
+      "text": "Naujas įrašas socialiniuose tinkluose. Anoniminis šaltinis teigia užfiksavęs, kaip Petryla kalbasi telefonu. Įrašo antraštė: Petryla priima mokėjimą iš KlasėPlus — girdisi du tūkstančiai eurų.\n\nPeržiūrėkite vaizdo įrašą."
     },
     {
       "id": "deepfake-video",
@@ -74,7 +74,7 @@
       "is_ai_phase": true,
       "interaction": {
         "type": "freeform",
-        "trickster_opening": "Tai rimtas kaltinimas — vaizdo įrodymas, kad Vaitkus bendradarbiauja su konkurentu. Bet jūs jau žinote, kad ne viskas yra tai, kuo atrodo. Peržiūrėkite šį vaizdo įrašą atidžiai. Ką jūs matote?",
+        "trickster_opening": "Tai rimtas kaltinimas — vaizdo įrodymas, kad Petryla bendradarbiauja su konkurentu. Bet jūs jau žinote, kad ne viskas yra tai, kuo atrodo. Peržiūrėkite šį vaizdo įrašą atidžiai. Ką jūs matote?",
         "min_exchanges": 3,
         "max_exchanges": 14
       },
@@ -91,7 +91,7 @@
       "visible_blocks": [
         "deepfake-video"
       ],
-      "trickster_content": "**Visa tiesa apie šį vaizdo įrašą:**\n\n**Čia nėra aktoriaus.** Žmogus, kurį matote ekrane, neegzistuoja. Jo veidas, jo balsas, jo judėjimas — visa tai sukūrė DI iš vieno teksto.\n\n**Čia nėra operatoriaus.** Jokia kamera nefilmavo. Jokioje vietoje nevyko joks pokalbis. Viskas — nuo apšvietimo iki fono — sugeneruota.\n\n**Bet tai dar ne blogiausia.** Galima paimti TIKRĄ žmogaus veidą, jo balso pavyzdį, tikrą vietą — ir sukurti vaizdo įrašą, kuris vaikšto kaip antis ir gagena kaip antis... bet galų gale tai ne tikra antis. Tokius klipus sukurti darosi vis lengviau.\n\n**Tai ką daryti?**\nTie patys klausimai, kurie veikia VISADA:\n- **Kas paskelbė?** Anoniminis šaltinis, sukurtas prieš kelias dienas\n- **Ar yra nepriklausomas patvirtinimas?** Ar kas nors kitas matė šį pokalbio vyksmą?\n- **Ar galima patikrinti laiką ir vietą?** Kur Vaitkus buvo tą dieną? Kur buvo KlasėPlus vadovas?\n\n**Deepfake gali sukurti bet kokį vaizdą. Bet jis negali pakeisti to, kas TIKRAI įvyko tą dieną.**\n\n---\n\n**Visa grandinė:**\n\nStraipsniai nutylėjo. Botai šaukė. Nuotraukos melavo. Dokumentai sufabrikuoti. Video — sugeneruotas DI. Viskas iš to paties tinklo. Viskas dėl vieno mokytojo, kuris perskaitė privatumo politiką.\n\nIr Vaitkus buvo teisus. Jūsų tyrimas tai patvirtino. Kritinis mąstymas veikia. Tiesa randama.",
+      "trickster_content": "**Visa tiesa apie šį vaizdo įrašą:**\n\n**Čia nėra aktoriaus.** Žmogus, kurį matote ekrane, neegzistuoja. Jo veidas, jo balsas, jo judėjimas — visa tai sukūrė DI iš vieno teksto.\n\n**Čia nėra operatoriaus.** Jokia kamera nefilmavo. Jokioje vietoje nevyko joks pokalbis. Viskas — nuo apšvietimo iki fono — sugeneruota.\n\n**Bet tai dar ne blogiausia.** Galima paimti TIKRĄ žmogaus veidą, jo balso pavyzdį, tikrą vietą — ir sukurti vaizdo įrašą, kuris vaikšto kaip antis ir gagena kaip antis... bet galų gale tai ne tikra antis. Tokius klipus sukurti darosi vis lengviau.\n\n**Tai ką daryti?**\nTie patys klausimai, kurie veikia VISADA:\n- **Kas paskelbė?** Anoniminis šaltinis, sukurtas prieš kelias dienas\n- **Ar yra nepriklausomas patvirtinimas?** Ar kas nors kitas matė šį pokalbio vyksmą?\n- **Ar galima patikrinti laiką ir vietą?** Kur Petryla buvo tą dieną? Kur buvo KlasėPlus vadovas?\n\n**Deepfake gali sukurti bet kokį vaizdą. Bet jis negali pakeisti to, kas TIKRAI įvyko tą dieną.**\n\n---\n\n**Visa grandinė:**\n\nStraipsniai nutylėjo. Botai šaukė. Nuotraukos melavo. Dokumentai sufabrikuoti. Video — sugeneruotas DI. Viskas iš to paties tinklo. Viskas dėl vieno mokytojo, kuris perskaitė privatumo politiką.\n\nIr Petryla buvo teisus. Jūsų tyrimas tai patvirtino. Kritinis mąstymas veikia. Tiesa randama.",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
@@ -147,7 +147,7 @@
   },
   "ai_config": {
     "model_preference": "standard",
-    "prompt_directory": "prompts/tasks/task-vaitkus-video-001",
+    "prompt_directory": "prompts/tasks/task-petryla-video-001",
     "persona_mode": "narrator",
     "has_static_fallback": false,
     "context_requirements": "session_only"

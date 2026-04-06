@@ -1,5 +1,5 @@
 {
-  "task_id": "task-vaitkus-network-001",
+  "task_id": "task-petryla-network-001",
   "task_type": "static",
   "title": "Botų tinklas",
   "description": "Kaip dirbtinai sukurtos paskyros manipuliuoja organišku srautu? Stebėk vizualizaciją ir perskaityk, kaip atpažinti dirbtinai sukeltą populiarumą.",
@@ -25,7 +25,7 @@
   ],
   "status": "active",
   "prerequisites": [
-    "task-vaitkus-comments-001"
+    "task-petryla-comments-001"
   ],
   "language": "lt",
   "available_languages": [

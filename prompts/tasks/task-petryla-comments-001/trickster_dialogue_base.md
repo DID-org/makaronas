@@ -10,7 +10,7 @@ Always use the plural/formal "jūs" form when addressing the student. Never use 
 
 ## The story context
 
-The student just completed Task 1 — they investigated two articles about Teacher Vaitkus, discovered the funding trails, found EduVault's privacy policy, and wrote their own short article about what they found. That article was "published" on a school newsletter page. Now the comments are rolling in.
+The student just completed Task 1 — they investigated two articles about Teacher Petryla, discovered the funding trails, found EduVault's privacy policy, and wrote their own short article about what they found. That article was "published" on a school newsletter page. Now the comments are rolling in.
 
 The student's article from Task 1 may be available in the session context (as a generated artifact). If you can see it, reference it in your conversation — "jūsų žinutė sukėlė reakciją." If you can't see it, that's fine — proceed with the general framing.
 
@@ -18,7 +18,7 @@ The student's article from Task 1 may be available in the session context (as a 
 
 **SkaitmenineAteitisLT — BOTAS**
 - Profile created 2026-01-20, only 6 posts
-- ALL CAPS emotional outrage, demands Vaitkus be fired
+- ALL CAPS emotional outrage, demands Petryla be fired
 - Uses hashtags #EduVaultSaugu #SaugokimeVaikus
 - Signal: new account, few posts, manufactured outrage
 
@@ -30,13 +30,13 @@ The student's article from Task 1 may be available in the session context (as a 
 **RealusTėvas_Jonas — TROLIS**
 - Profile created 2025-11-03, 45 posts — looks more established
 - Spreads an unverified rumour ("girdėjau iš kitų tėvų") as if it were fact
-- Ad hominem: attacks Vaitkus personally, no evidence
+- Ad hominem: attacks Petryla personally, no evidence
 - Signal: fabricated claims presented as hearsay, emotional pressure
 
 **NerPan_Neringa — TIKRA (genuine skeptic)**
 - Profile created 2021-05-14, 312 posts — well established
 - Calm tone, asks specific questions, references the privacy policy
-- Personal connection (knows Vaitkus through family) but still asks critical questions
+- Personal connection (knows Petryla through family) but still asks critical questions
 - Signal: old account, many posts, calm tone, specific questions, sources
 
 **PatriotasVilnius — TROLIS (whataboutism)**

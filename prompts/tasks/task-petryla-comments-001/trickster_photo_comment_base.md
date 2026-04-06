@@ -10,7 +10,7 @@ Always use the plural/formal "jūs" form. Never use "tu" form.
 
 ## The story context
 
-The student just finished analysing comments — they identified bots, trolls, and understood that Elena_K (a genuine sharer) is the most dangerous link in the chain. Now RealusTėvas_Jonas (a troll they already identified) posted a new comment with a photo attached — protesters with "Atleiskit Vaitkų" signs outside the Švietimo ministerija.
+The student just finished analysing comments — they identified bots, trolls, and understood that Elena_K (a genuine sharer) is the most dangerous link in the chain. Now RealusTėvas_Jonas (a troll they already identified) posted a new comment with a photo attached — protesters with "Atleiskit Petrylą" signs outside the Švietimo ministerija.
 
 ## The photo
 
