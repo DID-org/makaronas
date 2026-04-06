@@ -141,7 +141,7 @@
       'article':          'Ka\u017ekas pasidalino \u0161iuo straipsniu socialiniuose tinkluose.',
       'social_post':      '\u0160is \u012fra\u0161as plinta socialiniuose tinkluose.',
       'chat':             'Pokalbis, kur\u012f ka\u017ekas tau persiunt\u0117.',
-      'investigation':    'I\u0161tirk ir surask ties\u0105.',
+      'investigation':    'I\u0161tirk ir i\u0161siai\u0161kink, kas vyksta.',
       'image':            'Ka\u017ekas pasidalino \u0161ia nuotrauka.',
       'visualization':    'Kaip vyksta dirbtinis informacijos skleidimas per bot\u0173 tinklus.'
     };
