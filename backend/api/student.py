@@ -1485,3 +1485,46 @@ async def dump_sessions(
         ok=True,
         data={"dumped": count, "message": f"Dumped {count} active sessions to data/sessions/"},
     ).model_dump()
+
+
+# ---------------------------------------------------------------------------
+# GET /download-sessions — admin: download all session telemetry as JSON
+# ---------------------------------------------------------------------------
+
+
+@router.get("/download-sessions")
+async def download_sessions(
+    session_store: SessionStore = Depends(get_session_store),
+) -> dict:
+    """Downloads all session telemetry as a single JSON payload.
+
+    First dumps all active in-memory sessions to disk, then reads
+    every JSON file from data/sessions/ and returns them. Hit this
+    endpoint before redeploying Railway to preserve student data.
+    """
+    import json
+    from pathlib import Path
+    from backend.telemetry import save_active_session, DATA_DIR
+
+    # Step 1: dump active sessions so nothing is lost
+    for session in session_store.get_all_sessions():
+        try:
+            save_active_session(session)
+        except Exception:
+            pass
+
+    # Step 2: read all session files
+    sessions = []
+    if DATA_DIR.exists():
+        for path in sorted(DATA_DIR.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                data["_filename"] = path.name
+                sessions.append(data)
+            except (json.JSONDecodeError, OSError):
+                pass
+
+    return ApiResponse(
+        ok=True,
+        data={"session_count": len(sessions), "sessions": sessions},
+    ).model_dump()

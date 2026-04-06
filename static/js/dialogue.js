@@ -162,6 +162,11 @@
 
     function sdScrollToBottom() {
       container.scrollTop = container.scrollHeight;
+      // Mobile: container is in page flow (overflow: visible), scroll page instead
+      if (window.innerWidth <= 800) {
+        var target = sdStreamingBubble || sdTypingIndicator || container.lastElementChild;
+        if (target) target.scrollIntoView({ block: 'end', behavior: 'auto' });
+      }
     }
 
     function sdShowTyping(show) {
@@ -318,7 +323,7 @@
           } else {
             // Re-enable input so student can retry or skip
             setInputDisabled(false);
-            if (textarea) textarea.focus();
+            if (textarea && window.innerWidth > 800) textarea.focus();
           }
           scrollToBottom();
           return;
@@ -355,7 +360,7 @@
           }
         } else {
           setInputDisabled(false);
-          if (textarea) textarea.focus();
+          if (textarea && window.innerWidth > 800) textarea.focus();
 
           // Failsafe: after min_exchanges with no transition, show a manual
           // advance button so the student isn't stuck if the AI won't transition
@@ -387,7 +392,7 @@
         currentAbort = null;
         exchanges.push({ role: 'trickster', content: fallbackText });
         setInputDisabled(false);
-        if (textarea) textarea.focus();
+        if (textarea && window.innerWidth > 800) textarea.focus();
         scrollToBottom();
       },
       onError: function (code, msg, partial) {
@@ -742,8 +747,11 @@
   }
 
   function scrollToBottom() {
-    if (dialogueArea) {
-      dialogueArea.scrollTop = dialogueArea.scrollHeight;
+    if (!dialogueArea) return;
+    dialogueArea.scrollTop = dialogueArea.scrollHeight;
+    // Mobile: dialogueArea is in page flow, scroll page to show input area
+    if (window.innerWidth <= 800 && inputArea) {
+      inputArea.scrollIntoView({ block: 'end', behavior: 'smooth' });
     }
   }
 
