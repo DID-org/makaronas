@@ -26,14 +26,13 @@
   // Task Sequence (honest stub — replaced by V9 Roadmap Engine)
   // --------------------------------------------------------------------------
 
-  // MVP Story Arc: "Mokytojas Petryla" — 5 linked tasks
+  // MVP Story Arc: "Mokytojas Petryla" — 4 linked tasks
   // Non-story tasks excluded until post-MVP content expansion.
   var TASK_SEQUENCE = [
     'task-petryla-001',           // Task 1: two articles investigation
     'task-petryla-comments-001',  // Task 2: comment section + protest photo
     'task-petryla-network-001',   // Task 3: bot network visualization + article
-    'task-petryla-statement-001', // Task 4: fake bank statement analysis
-    'task-petryla-video-001'      // Task 5: deepfake video — MVP finale
+    'task-petryla-video-001'      // Task 4: deepfake video — MVP finale
   ];
 
   // --------------------------------------------------------------------------
