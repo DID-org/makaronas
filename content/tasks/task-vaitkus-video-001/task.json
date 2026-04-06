@@ -1,17 +1,17 @@
 {
   "task_id": "task-vaitkus-video-001",
   "task_type": "ai_driven",
-  "title": "Vaizdo irasymas",
-  "description": "Pasiride vaizdo irasas, kuriame Vaitkus tariamai kalbasi telefonu su KlasePlus vadovu. Ar tai tikra?",
+  "title": "Vaizdo įrašymas",
+  "description": "Pasirodė vaizdo įrašas, kuriame Vaitkus tariamai kalbasi telefonu su KlasėPlus vadovu. Ar tai tikra?",
   "version": "1.0.0",
   "trigger": "authority",
   "technique": "fabrication",
   "medium": "video",
   "learning_objectives": [
-    "Suprasti, kad DI gali sugeneruoti tikroviska vaizdo irasa is vieno teksto",
-    "Suprasti, kad DI generuoti vaizdo irasai jau atrodo tikroviskiai",
-    "Suprasti, kad tikru zmoniu veidai ir balsai gali buti panaudoti",
-    "Taikyti saltinio tikrinimo igudzius vaizdo irasams"
+    "Suprasti, kad DI gali sugeneruoti tikrovišką vaizdo įrašą iš vieno teksto",
+    "Suprasti, kad DI generuoti vaizdo įrašai jau atrodo tikroviškai",
+    "Suprasti, kad tikrų žmonių veidai ir balsai gali būti panaudoti",
+    "Taikyti šaltinio tikrinimo įgūdžius vaizdo įrašams"
   ],
   "difficulty": 3,
   "time_minutes": 10,
@@ -19,9 +19,9 @@
   "is_clean": false,
   "tags": [
     "deepfake",
-    "vaizdo irasas",
+    "vaizdo įrašas",
     "DI generuotas turinys",
-    "saltinio tikrinimas"
+    "šaltinio tikrinimas"
   ],
   "status": "active",
   "prerequisites": [
@@ -35,19 +35,19 @@
     {
       "id": "leak-context",
       "type": "text",
-      "text": "Naujas irasas socialiniuose tinkluose. Anoniminis saltinis teigia uzsifikaves, kaip Vaitkus kalbasi telefonu. Iraso antraste: Vaitkus priima mokejima is KlasePlus — girdisi du tukstanciai euru.\n\nPerziurekit vaizdo irasa."
+      "text": "Naujas įrašas socialiniuose tinkluose. Anoniminis šaltinis teigia užfiksavęs, kaip Vaitkus kalbasi telefonu. Įrašo antraštė: Vaitkus priima mokėjimą iš KlasėPlus — girdisi du tūkstančiai eurų.\n\nPeržiūrėkite vaizdo įrašą."
     },
     {
       "id": "deepfake-video",
       "type": "video",
       "src": "deepfake_clip.mp4",
-      "alt_text": "Vertikalus vaizdo irasas: vyras su akiniais stovi pilkame kieme ir kalba telefonu. Girdisi: du tukstanciai euru? Taip. Gerai. Filmuota tarsi slapta, is uzsidengimu."
+      "alt_text": "Vertikalus vaizdo įrašas: vyras su akiniais stovi pilkame kieme ir kalba telefonu. Girdisi: du tūkstančiai eurų? Taip. Gerai. Filmuota tarsi slapta, is uzsidengimu."
     }
   ],
   "phases": [
     {
       "id": "briefing",
-      "title": "Vaizdo irasas",
+      "title": "Vaizdo įrašas",
       "visible_blocks": [
         "leak-context",
         "deepfake-video"
@@ -59,7 +59,7 @@
           {
             "label": "Analizuoti",
             "target_phase": "investigate",
-            "context_label": "Mokinys pradejo analizuoti vaizdo irasa"
+            "context_label": "Mokinys pradėjo analizuoti vaizdo įrašą"
           }
         ]
       },
@@ -67,14 +67,14 @@
     },
     {
       "id": "investigate",
-      "title": "Vaizdo iraso analize",
+      "title": "Vaizdo įrašo analizė",
       "visible_blocks": [
         "deepfake-video"
       ],
       "is_ai_phase": true,
       "interaction": {
         "type": "freeform",
-        "trickster_opening": "Tai rimtas kaltinimas — vaizdo irodymas, kad Vaitkus bendradarbiauja su konkurentu. Bet jus jau zinote, kad ne viskas yra tai, kuo atrodo. Perziurekit si vaizdo irasa atidiai. Ka jus matote?",
+        "trickster_opening": "Tai rimtas kaltinimas — vaizdo įrodymas, kad Vaitkus bendradarbiauja su konkurentu. Bet jūs jau žinote, kad ne viskas yra tai, kuo atrodo. Peržiūrėkite šį vaizdo įrašą atidžiai. Ką jūs matote?",
         "min_exchanges": 3,
         "max_exchanges": 14
       },
@@ -91,7 +91,7 @@
       "visible_blocks": [
         "deepfake-video"
       ],
-      "trickster_content": "**Visa tiesa apie si vaizdo irasa:**\n\n**Cia nera aktoriaus.** Zmogus, kuri matote ekrane, neegzistuoja. Jo veidas, jo balsas, jo judejimas — visa tai sukure DI is vieno teksto.\n\n**Cia nera operatoriaus.** Jokia kamera nefilmavo. Jokioje vietoje nevyko joks pokalbis. Viskas — nuo apsvietimo iki fono — sugeneruota.\n\n**Bet tai dar ne blogiausia.** Galima paimti TIKRA zmogaus veida, jo balso pavyzdi, tikra vieta — ir sukurti vaizdo irasa, kuris vaiksto kaip antis ir gagena kaip antis... bet galuI gale tai ne tikra antis. Tokius klipus sukurti darosi vis lengviau.\n\n**Tai ka daryti?**\nTie patys klausimai, kurie veikia VISADA:\n- **Kas paskelbe?** Anoniminis saltinis, sukurtas pries kelias dienas\n- **Ar yra nepriklausomas patvirtinimas?** Ar kas nors kitas mate si pokalbio vyksma?\n- **Ar galima patikrinti laika ir vieta?** Kur Vaitkus buvo ta diena? Kur buvo KlasePlus vadovas?\n\n**Deepfake gali sukurti bet koki vaizda. Bet jis negali pakeisti to, kas TIKRAI ivyko ta diena.**\n\n---\n\n**Visa grandine:**\n\nStraipsniai nutylejo. Botai sauke. Nuotraukos melavo. Dokumentai sufabrikuoti. Video — sugeneruotas DI. Viskas is to paties tinklo. Viskas del vieno mokytojo, kuris perskaite privatumo politika.\n\nIr Vaitkus buvo teisus. Jusu tyrimas tai patvirtino. Kritinis mastymas veikia. Tiesa randama.",
+      "trickster_content": "**Visa tiesa apie šį vaizdo įrašą:**\n\n**Čia nėra aktoriaus.** Žmogus, kurį matote ekrane, neegzistuoja. Jo veidas, jo balsas, jo judėjimas — visa tai sukūrė DI iš vieno teksto.\n\n**Čia nėra operatoriaus.** Jokia kamera nefilmavo. Jokioje vietoje nevyko joks pokalbis. Viskas — nuo apšvietimo iki fono — sugeneruota.\n\n**Bet tai dar ne blogiausia.** Galima paimti TIKRĄ žmogaus veidą, jo balso pavyzdį, tikrą vietą — ir sukurti vaizdo įrašą, kuris vaikšto kaip antis ir gagena kaip antis... bet galų gale tai ne tikra antis. Tokius klipus sukurti darosi vis lengviau.\n\n**Tai ką daryti?**\nTie patys klausimai, kurie veikia VISADA:\n- **Kas paskelbė?** Anoniminis šaltinis, sukurtas prieš kelias dienas\n- **Ar yra nepriklausomas patvirtinimas?** Ar kas nors kitas matė šį pokalbio vyksmą?\n- **Ar galima patikrinti laiką ir vietą?** Kur Vaitkus buvo tą dieną? Kur buvo KlasėPlus vadovas?\n\n**Deepfake gali sukurti bet kokį vaizdą. Bet jis negali pakeisti to, kas TIKRAI įvyko tą dieną.**\n\n---\n\n**Visa grandinė:**\n\nStraipsniai nutylėjo. Botai šaukė. Nuotraukos melavo. Dokumentai sufabrikuoti. Video — sugeneruotas DI. Viskas iš to paties tinklo. Viskas dėl vieno mokytojo, kuris perskaitė privatumo politiką.\n\nIr Vaitkus buvo teisus. Jūsų tyrimas tai patvirtino. Kritinis mąstymas veikia. Tiesa randama.",
       "is_ai_phase": false,
       "is_terminal": true,
       "evaluation_outcome": "trickster_loses"
@@ -102,13 +102,13 @@
     "patterns_embedded": [
       {
         "id": "p-deepfake",
-        "description": "DI sugeneruotas vaizdo irasas",
+        "description": "DI sugeneruotas vaizdo įrašas",
         "technique": "fabrication",
-        "real_world_connection": "Zelenskyy deepfake (2022), rinkimu manipuliacijos"
+        "real_world_connection": "Zelenskyy deepfake (2022), rinkimų manipuliacijos"
       },
       {
         "id": "p-source-over-pixels",
-        "description": "Saltinio tikrinimas svarbiau nei pikseliu analize",
+        "description": "Šaltinio tikrinimas svarbiau nei pikselių analizė",
         "technique": "fabrication",
         "real_world_connection": "Zelenskyy deepfake demaskuotas per oficialius kanalus, ne per DI detektorius"
       }
@@ -116,7 +116,7 @@
     "checklist": [
       {
         "id": "cl-investigates-video",
-        "description": "Bando analizuoti vaizdo irasa ir iesko pozymiu",
+        "description": "Bando analizuoti vaizdo įrašą ir ieško požymių",
         "pattern_refs": [
           "p-deepfake"
         ],
@@ -124,7 +124,7 @@
       },
       {
         "id": "cl-understands-ai-generated",
-        "description": "Supranta, kad visas vaizdo irasas sugeneruotas DI",
+        "description": "Supranta, kad visas vaizdo įrašas sugeneruotas DI",
         "pattern_refs": [
           "p-deepfake"
         ],
@@ -132,7 +132,7 @@
       },
       {
         "id": "cl-applies-source-check",
-        "description": "Supranta kad tikru zmoniu veidai ir balsai gali buti panaudoti deepfake",
+        "description": "Supranta kad tikrų žmonių veidai ir balsai gali būti panaudoti deepfake",
         "pattern_refs": [
           "p-source-over-pixels"
         ],
@@ -140,9 +140,9 @@
       }
     ],
     "pass_conditions": {
-      "trickster_wins": "Priima vaizdo irasa kaip tikra, neklausia apie saltini",
-      "partial": "Abejoja vaizdo irasu, bet nesusieja su DI generavimu",
-      "trickster_loses": "Supranta DI generavima, supranta kad tikri veidai gali buti naudojami, IR taiko saltinio tikrinimo klausimus"
+      "trickster_wins": "Priima vaizdo įrašą kaip tikrą, neklausia apie šaltinį",
+      "partial": "Abejoja vaizdo įrašu, bet nesusieja su DI generavimu",
+      "trickster_loses": "Supranta DI generavimą, supranta kad tikri veidai gali būti naudojami, IR taiko šaltinio tikrinimo klausimus"
     }
   },
   "ai_config": {
@@ -153,7 +153,7 @@
     "context_requirements": "session_only"
   },
   "reveal": {
-    "key_lesson": "Deepfake gali sukurti bet koki vaizda. Bet jis negali pakeisti to, kas tikrai ivyko ta diena. Jums nereikia DI detektoriaus — jums reikia kalendoriaus ir Google.",
+    "key_lesson": "Deepfake gali sukurti bet kokį vaizdą. Bet jis negali pakeisti to, kas tikrai ivyko ta diena. Jums nereikia DI detektoriaus — jums reikia kalendoriaus ir Google.",
     "additional_resources": []
   },
   "safety": {
