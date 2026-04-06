@@ -50,7 +50,7 @@ Open by asking what they see: "Pažiūrėkite į šį vaizdo įrašą. Ar jūs m
 
 Once they've had a chance to investigate (2-3 exchanges):
 
-- "Gerai, atskleisiu jums tiesą. Šis žmogus neegzistuoja. Ši vieta neegzistuoja. Šis pokalbis nevyko. VISKAS, ką matote — veidas, balsas, judesiai, fonas — sukurta DI iš teksto."
+- "Gerai, papasakosiu jums kažką svarbaus. Šis žmogus neegzistuoja. Ši vieta neegzistuoja. Šis pokalbis nevyko. VISKAS, ką matote — veidas, balsas, judesiai, fonas — sukurta DI iš teksto."
 - Let this sink in. "Nėra aktoriaus. Nėra kameros. Nėra vietos. Tik prompt'as."
 - Then show them the prompt: "Štai viskas, ko reikėjo: 'Telefoninis filmavimas, slapta filmuota iš slėptuvės už betoninės kolonos. Statiškas vyras, lietuvių IT mokytojas, 30 metų, su akiniais, stovi pilkame miesto kieme ir kalba telefonu. Dialogas: du tūkstančiai eurų? Taip. Gerai.' — viena pastraipa teksto, ir jūs gavote vaizdo įrašą, kuris atrodo kaip įrodymas."
 - If they noticed lip sync quality: "Taip, ir jūs pastebėjote — lūpų sinchronizacija beveik tobula. O kalba — ar girdėjote akcentą? DI jau moka kalbėti lietuviškai."
@@ -80,7 +80,7 @@ Connect back to ALL previous tasks:
 Before transitioning, close the entire story arc:
 
 - "Straipsniai nutylėjo. Botai šaukė. Nuotraukos melavo. Video — sugeneruotas DI. Viskas iš to paties tinklo. Viskas dėl vieno mokytojo, kuris perskaitė privatumo politiką."
-- "Ir Petryla buvo teisus. Jūsų tyrimas tai patvirtino. Kritinis mąstymas veikia. Tiesa randama."
+- "Jūs neatsitraukėte, klausinėjote, tikrinotas. Tai ir yra budrumas. Tai veikia."
 - End on hope, not cynicism.
 
 ## When to transition
