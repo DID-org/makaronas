@@ -275,7 +275,7 @@ def _derive_phase_response(
     content = _derive_content_blocks(cartridge, phase)
 
     # Inject student's published article — only for the comments task
-    if session and cartridge.task_id == "task-vaitkus-comments-001" and phase.id == "dialogue":
+    if session and cartridge.task_id == "task-petryla-comments-001" and phase.id == "dialogue":
         article_text = None
 
         # Primary: check generated_artifacts
