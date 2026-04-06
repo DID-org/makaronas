@@ -1201,6 +1201,20 @@ button,
   background-color: var(--color-dialogue-trickster);
   color: #0E0E0E;
   border-bottom-left-radius: 2px;
+  position: relative;
+  margin-left: 36px;
+}
+
+.dialogue-message--trickster::before {
+  content: '';
+  position: absolute;
+  left: -36px;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  background-image: url('/img/makaronas-portrait.png');
+  background-size: cover;
+  background-position: center 20%;
 }
 
 /* Markdown rendered inside trickster bubbles */
