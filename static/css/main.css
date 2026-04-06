@@ -306,8 +306,8 @@ a:hover {
 
 /* Conclusions block — task summary/lessons learned */
 .block-text--conclusions {
-  background-color: rgba(202, 253, 0, 0.04);
-  border: 1px solid rgba(202, 253, 0, 0.2);
+  background-color: var(--color-platform-bg);
+  border: 2px solid #CAFD00;
   border-radius: 0;
   padding: var(--space-xl);
   color: var(--color-content-text);
@@ -992,8 +992,8 @@ button,
   max-width: 600px;
   margin: var(--space-xl) auto;
   padding: var(--space-xl);
-  background: rgba(202, 253, 0, 0.04);
-  border: 1px solid rgba(202, 253, 0, 0.2);
+  background: var(--color-platform-bg);
+  border: 2px solid #CAFD00;
   border-radius: 0;
   text-align: center;
 }
@@ -1027,8 +1027,8 @@ button,
 .task-done-box {
   margin-top: var(--space-xl);
   padding: var(--space-lg);
-  background: rgba(202, 253, 0, 0.04);
-  border: 1px solid rgba(202, 253, 0, 0.2);
+  background: var(--color-platform-bg);
+  border: 2px solid #CAFD00;
   border-radius: 0;
 }
 
