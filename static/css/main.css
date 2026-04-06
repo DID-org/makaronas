@@ -1202,19 +1202,20 @@ button,
   color: #0E0E0E;
   border-bottom-left-radius: 2px;
   position: relative;
-  margin-left: 36px;
+  margin-left: 48px;
 }
 
 .dialogue-message--trickster::before {
   content: '';
   position: absolute;
-  left: -36px;
+  left: -48px;
   top: 0;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   background-image: url('/img/makaronas-portrait.png');
   background-size: cover;
   background-position: center 20%;
+  border: 1px solid #CAFD00;
 }
 
 /* Markdown rendered inside trickster bubbles */
@@ -1240,6 +1241,21 @@ button,
   background-color: var(--color-dialogue-student);
   color: #0E0E0E;
   border-bottom-right-radius: 2px;
+  position: relative;
+  margin-right: 48px;
+}
+
+.dialogue-message--student::after {
+  content: '';
+  position: absolute;
+  right: -48px;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  background-image: url('/img/player-portrait.png');
+  background-size: cover;
+  background-position: center 30%;
+  border: 1px solid #D873FF;
 }
 
 /* Redacted bubble: persistent left border accent + brief flash (P12) */
