@@ -1498,8 +1498,8 @@ button,
 .investigation-tree {
   margin-bottom: var(--space-lg);
   padding: var(--space-lg);
-  background-color: rgba(202, 253, 0, 0.03);
-  border: 1px solid rgba(202, 253, 0, 0.2);
+  background-color: var(--color-platform-bg);
+  border: 2px solid #CAFD00;
   border-radius: 0;
 }
 
@@ -1512,9 +1512,9 @@ button,
   border-color: var(--color-platform-accent);
 }
 
-/* Marked finding visual state — subtle gold background tint */
+/* Marked finding visual state — near-black with thicker acid green left border */
 .block-search-result--marked {
-  background-color: rgba(202, 253, 0, 0.06);
+  background-color: var(--color-platform-bg);
   border-left: 3px solid #CAFD00;
 }
 
@@ -1582,8 +1582,8 @@ button,
 
 .investigation-findings-list__item {
   padding: var(--space-xs) var(--space-sm);
-  background-color: rgba(202, 253, 0, 0.06);
-  border-left: 2px solid #CAFD00;
+  background-color: var(--color-platform-bg);
+  border-left: 3px solid #CAFD00;
   border-radius: 0;
   font-size: var(--font-size-sm);
   color: var(--color-platform-text);
