@@ -45,11 +45,11 @@
   --color-debrief-border: #D873FF;
   --color-debrief-heading: #D873FF;
 
-  /* Reveal (factual/grounded — verified truth) */
-  --color-reveal-bg: #141A14;
+  /* Reveal (factual/grounded — acid green border) */
+  --color-reveal-bg: #1A1919;
   --color-reveal-text: #E6E1E6;
-  --color-reveal-border: #50A070;
-  --color-reveal-heading: #70C090;
+  --color-reveal-border: #CAFD00;
+  --color-reveal-heading: #CAFD00;
 
   /* Functional */
   --color-error: #FF4444;
@@ -282,12 +282,12 @@ a:hover {
 
 /* Student's published article — prominent purple, stands out from comments */
 .block-text--student-article {
-  background-color: rgba(128, 80, 200, 0.15);
-  border: 2px solid rgba(160, 100, 220, 0.5);
+  background-color: rgba(216, 115, 255, 0.08);
+  border: 2px solid rgba(216, 115, 255, 0.4);
   border-radius: 0;
   padding: var(--space-lg);
   margin-bottom: var(--space-xl);
-  color: #e0d0e8;
+  color: var(--color-content-text);
   line-height: var(--line-height-body);
 }
 
@@ -298,16 +298,16 @@ a:hover {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(180, 140, 240, 0.9);
+  color: #D873FF;
   margin-bottom: var(--space-sm);
   padding-bottom: var(--space-xs);
-  border-bottom: 1px solid rgba(160, 100, 220, 0.4);
+  border-bottom: 1px solid rgba(216, 115, 255, 0.3);
 }
 
 /* Conclusions block — task summary/lessons learned */
 .block-text--conclusions {
-  background-color: rgba(26, 46, 34, 0.5);
-  border: 1px solid rgba(80, 160, 100, 0.3);
+  background-color: rgba(202, 253, 0, 0.04);
+  border: 1px solid rgba(202, 253, 0, 0.2);
   border-radius: 0;
   padding: var(--space-xl);
   color: var(--color-content-text);
@@ -315,7 +315,7 @@ a:hover {
 }
 
 .block-text--conclusions strong {
-  color: rgba(140, 210, 160, 0.9);
+  color: #CAFD00;
 }
 
 /* Instruction block — brief phase instruction */
@@ -582,8 +582,8 @@ button,
 
 /* AI summary style — visually distinct purple */
 .block-text--ai-summary {
-  background-color: rgba(128, 80, 200, 0.1);
-  border-left: 3px solid #8050c8;
+  background-color: rgba(216, 115, 255, 0.06);
+  border-left: 3px solid #D873FF;
   padding: var(--space-md);
   border-radius: 0;
   font-style: italic;
@@ -605,7 +605,7 @@ button,
 
 /* Article style — news outlet card with distinct visual identity */
 .block-text--article {
-  background-color: rgba(26, 34, 48, 0.6);
+  background-color: var(--color-platform-bg-alt);
   border: 1px solid var(--color-content-border);
   border-radius: 0;
   padding: var(--space-lg);
@@ -633,8 +633,9 @@ button,
 
 /* Article A — green-tinted (environmental outlet) */
 .block-text--article-a {
-  background-color: rgba(26, 46, 34, 0.5);
-  border: 1px solid rgba(80, 160, 100, 0.3);
+  background-color: var(--color-platform-bg-alt);
+  border: 1px solid rgba(216, 115, 255, 0.25);
+  border-left: 3px solid #D873FF;
   border-radius: 0;
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
@@ -645,24 +646,25 @@ button,
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(120, 200, 140, 0.8);
+  color: #D873FF;
   margin-bottom: var(--space-xs);
   padding-bottom: var(--space-xs);
-  border-bottom: 1px solid rgba(80, 160, 100, 0.3);
+  border-bottom: 1px solid rgba(216, 115, 255, 0.2);
 }
 
 .block-text--article-a > p:nth-child(2) {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: rgba(140, 210, 160, 0.9);
+  color: #E08FFF;
   line-height: 1.3;
   margin-bottom: var(--space-md);
 }
 
 /* Article B — blue-tinted (business/progress outlet) */
 .block-text--article-b {
-  background-color: rgba(26, 34, 56, 0.5);
-  border: 1px solid rgba(80, 128, 200, 0.3);
+  background-color: var(--color-platform-bg-alt);
+  border: 1px solid rgba(100, 160, 255, 0.25);
+  border-left: 3px solid #6BA0FF;
   border-radius: 0;
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
@@ -673,16 +675,16 @@ button,
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(120, 160, 220, 0.8);
+  color: #6BA0FF;
   margin-bottom: var(--space-xs);
   padding-bottom: var(--space-xs);
-  border-bottom: 1px solid rgba(80, 128, 200, 0.3);
+  border-bottom: 1px solid rgba(100, 160, 255, 0.2);
 }
 
 .block-text--article-b > p:nth-child(2) {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: rgba(140, 180, 230, 0.9);
+  color: #8BB8FF;
   line-height: 1.3;
   margin-bottom: var(--space-md);
 }
@@ -990,8 +992,8 @@ button,
   max-width: 600px;
   margin: var(--space-xl) auto;
   padding: var(--space-xl);
-  background: rgba(80, 200, 120, 0.06);
-  border: 1px solid rgba(80, 200, 120, 0.2);
+  background: rgba(202, 253, 0, 0.04);
+  border: 1px solid rgba(202, 253, 0, 0.2);
   border-radius: 0;
   text-align: center;
 }
@@ -999,7 +1001,7 @@ button,
 .session-report__title {
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: rgba(80, 200, 120, 0.9);
+  color: #CAFD00;
   margin-bottom: var(--space-lg);
 }
 
@@ -1025,15 +1027,15 @@ button,
 .task-done-box {
   margin-top: var(--space-xl);
   padding: var(--space-lg);
-  background: rgba(80, 200, 120, 0.08);
-  border: 1px solid rgba(80, 200, 120, 0.25);
+  background: rgba(202, 253, 0, 0.04);
+  border: 1px solid rgba(202, 253, 0, 0.2);
   border-radius: 0;
 }
 
 .task-done-box__title {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: rgba(80, 200, 120, 0.9);
+  color: #CAFD00;
   margin-bottom: var(--space-sm);
 }
 
@@ -1137,7 +1139,7 @@ button,
 
 /* Key finding: warm left border accent */
 .block-search-result--key-finding {
-  border-left: 3px solid #d4a843;
+  border-left: 3px solid #CAFD00;
 }
 
 /* Dead end: muted/dimmed — subtle, must not spoil the investigation (Framework P1) */
@@ -1466,8 +1468,8 @@ button,
 .investigation-tree {
   margin-bottom: var(--space-lg);
   padding: var(--space-lg);
-  background-color: rgba(60, 20, 30, 0.6);
-  border: 1px solid rgba(160, 60, 70, 0.4);
+  background-color: rgba(202, 253, 0, 0.03);
+  border: 1px solid rgba(202, 253, 0, 0.2);
   border-radius: 0;
 }
 
@@ -1482,8 +1484,8 @@ button,
 
 /* Marked finding visual state — subtle gold background tint */
 .block-search-result--marked {
-  background-color: rgba(212, 168, 67, 0.08);
-  border-left: 3px solid #d4a843;
+  background-color: rgba(202, 253, 0, 0.06);
+  border-left: 3px solid #CAFD00;
 }
 
 /* Mark button inside search result cards */
@@ -1493,24 +1495,24 @@ button,
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--font-size-sm);
   background-color: transparent;
-  color: #d4a843;
-  border: 1px solid #d4a843;
+  color: #CAFD00;
+  border: 1px solid #CAFD00;
   border-radius: 0;
   cursor: pointer;
   font-family: var(--font-body);
 }
 
 .investigation-mark-btn:hover {
-  background-color: rgba(212, 168, 67, 0.1);
+  background-color: rgba(202, 253, 0, 0.08);
 }
 
 .investigation-mark-btn--marked {
-  background-color: #d4a843;
-  color: #1a1a2e;
+  background-color: #CAFD00;
+  color: #0E0E0E;
 }
 
 .investigation-mark-btn--marked:hover {
-  background-color: #c49a38;
+  background-color: #a8d400;
 }
 
 /* Trickster message within investigation phase */
@@ -1550,8 +1552,8 @@ button,
 
 .investigation-findings-list__item {
   padding: var(--space-xs) var(--space-sm);
-  background-color: rgba(212, 168, 67, 0.08);
-  border-left: 2px solid #d4a843;
+  background-color: rgba(202, 253, 0, 0.06);
+  border-left: 2px solid #CAFD00;
   border-radius: 0;
   font-size: var(--font-size-sm);
   color: var(--color-platform-text);
