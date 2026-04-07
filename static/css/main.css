@@ -95,6 +95,39 @@ body {
   min-height: 100vh;
 }
 
+/* --------------------------------------------------------------------------
+   Scrollbars — dark themed to match the void
+   -------------------------------------------------------------------------- */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2A2A29 #0E0E0E;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0E0E0E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A2A29;
+  border: 2px solid #0E0E0E;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a39;
+}
+
+::-webkit-scrollbar-corner {
+  background: #0E0E0E;
+}
+
 h1, h2, h3 {
   font-family: var(--font-heading);
   text-transform: uppercase;
