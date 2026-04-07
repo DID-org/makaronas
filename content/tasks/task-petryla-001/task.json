@@ -33,6 +33,12 @@
   ],
   "presentation_blocks": [
     {
+      "id": "intro-image",
+      "type": "image",
+      "src": "sad-girl.png",
+      "alt_text": "Liūdna mergaitė skaitmeninių duomenų sūkuryje — jos asmeniniai duomenys ištekėjo į internetą."
+    },
+    {
       "id": "intro-text",
       "type": "text",
       "text": "Panevėžio „Saulėtekio“ gimnazijoje viena mokinė rašė kūrybinį darbą apie tai, kas jai sunku — atvirai, asmeniškai, nes tikėjosi, kad tai matys tik mokytojas. Po kelių dienų jos teksto ištrauka atsidūrė anoniminėje Instagram paskyroje su pašaipiu komentaru. Klasės draugai pamatė. Mokinė buvo pažeminta.\n\nDuomenys nutekėjo per mokyklos edukacinę platformą „EduVault“, kurią mokyklai sukonfigūravo IT mokytojas Rokas Petryla. Tas pats Petryla, kuris prieš metus viešai įspėjo, kad „EduVault“ renka per daug mokinių duomenų. Niekas jo neklausė.\n\nDu naujienų portalai parašė apie šį incidentą — bet jų versijos visiškai skirtingos.\n\nTavo užduotis: perskaityti abu straipsnius, patikrinti jų teiginius ir išsiaiškinti, kas skatina tokius skirtingus požiūrius.",
@@ -146,6 +152,7 @@
       "id": "briefing",
       "title": "Užduoties aprašymas",
       "visible_blocks": [
+        "intro-image",
         "intro-text"
       ],
       "trickster_content": null,

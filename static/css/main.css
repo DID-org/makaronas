@@ -716,6 +716,7 @@ button,
 
 .block-image {
   max-width: 100%;
+  margin-bottom: var(--space-lg);
 }
 
 .block-image img {
@@ -723,6 +724,16 @@ button,
   height: auto;
   display: block;
   border-radius: 0;
+}
+
+/* Briefing illustration — centered, constrained width, neon framing */
+#block-intro-image {
+  max-width: 420px;
+  margin: 0 auto var(--space-lg);
+}
+
+#block-intro-image img {
+  border: 2px solid #D873FF;
 }
 
 .block-image__caption {
