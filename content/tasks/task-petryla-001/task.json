@@ -35,8 +35,8 @@
     {
       "id": "intro-image",
       "type": "image",
-      "src": "sad-girl.png",
-      "alt_text": "Liūdna mergaitė skaitmeninių duomenų sūkuryje — jos asmeniniai duomenys ištekėjo į internetą."
+      "src": "data-rain.jpg",
+      "alt_text": "Duomenų kasetė krenta į balą lietingoje cyberpunko miesto gatvėje — duomenų nuotėkio simbolis."
     },
     {
       "id": "intro-text",
@@ -49,6 +49,18 @@
       "type": "text",
       "text": "Perskaityk šį straipsnį atidžiai.",
       "style": "instruction"
+    },
+    {
+      "id": "article-edtech-image",
+      "type": "image",
+      "src": "petryla-stressed.jpg",
+      "alt_text": "IT mokytojas Petryla sėdi prie kompiuterių, rankomis prisidengęs veidą — fone matomi serveriai ir kodų ekranai."
+    },
+    {
+      "id": "article-opensource-image",
+      "type": "image",
+      "src": "data-cartridge.jpg",
+      "alt_text": "Magenta neonu apšviesta duomenų kasetė, plūduriuojanti tamsioje erdvėje — simbolinis duomenų saugyklos atvaizdas."
     },
     {
       "id": "read-instruction-a",
@@ -174,6 +186,7 @@
       "title": "Pirmasis straipsnis",
       "visible_blocks": [
         "read-instruction-b",
+        "article-edtech-image",
         "article-edtech"
       ],
       "trickster_content": null,
@@ -195,6 +208,7 @@
       "title": "Antrasis straipsnis",
       "visible_blocks": [
         "read-instruction-a",
+        "article-opensource-image",
         "article-opensource"
       ],
       "trickster_content": null,

@@ -849,31 +849,6 @@
       });
     }
 
-    // DEV: Write button — skips to write_article phase via /choice API
-    var devWriteBtn = document.getElementById('btn-dev-write');
-    if (devWriteBtn) {
-      devWriteBtn.addEventListener('click', function () {
-        if (!state.session) return;
-        var sessionId = state.session.session_id;
-        console.log('[DEV] Skipping to write_article phase');
-        Api.submitChoice(sessionId, 'write_article', 'DEV: skipped to write_article').then(function (data) {
-          handlePhaseTransition(data);
-        }).catch(function (err) {
-          // If write_article isn't reachable from current phase, try jumping through phases
-          console.log('[DEV] Direct skip failed, trying phase sequence...');
-          // Try chaining: briefing -> read_b -> read_a -> investigate needs findings...
-          // Simplest: just navigate to conclusions then write_article
-          Api.submitChoice(sessionId, 'conclusions', 'DEV skip').then(function (d1) {
-            return Api.submitChoice(sessionId, 'write_article', 'DEV skip');
-          }).then(function (d2) {
-            handlePhaseTransition(d2);
-          }).catch(function (e2) {
-            console.error('[DEV] Could not skip to write_article:', e2);
-          });
-        });
-      });
-    }
-
     // Keyboard: Escape dismisses error section, returns to welcome
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && state.section === 'error') {

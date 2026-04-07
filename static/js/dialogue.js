@@ -28,8 +28,11 @@
   // Exchange counter
   var exchangeCounter = null; // DOM element
   var maxExchanges = null;    // From interaction.max_exchanges
-  var minExchanges = 3;       // From interaction.min_exchanges (failsafe threshold)
+  var minExchanges = 3;       // From interaction.min_exchanges (cartridge config)
   var failsafeTarget = null;  // Phase ID from ai_transitions.on_success
+  // Emergency-only failsafe: only appears if a student is hopelessly stuck.
+  // Flash + the evaluator should drive transitions normally; this is a safety net.
+  var FAILSAFE_THRESHOLD = 30;
 
   // Draft persistence key — same string as STORAGE_KEYS.interactionState in app.js
   // (STORAGE_KEYS is private to app.js IIFE — scout brief §1 confirmed)
@@ -362,9 +365,9 @@
           setInputDisabled(false);
           if (textarea && window.innerWidth > 800) textarea.focus();
 
-          // Failsafe: after min_exchanges with no transition, show a manual
-          // advance button so the student isn't stuck if the AI won't transition
-          if (data && data.exchanges_count >= minExchanges) {
+          // Failsafe: only after FAILSAFE_THRESHOLD exchanges (emergency only).
+          // Flash + the evaluator handle normal transitions.
+          if (data && data.exchanges_count >= FAILSAFE_THRESHOLD) {
             var existing = dialogueArea && dialogueArea.querySelector('.dialogue-failsafe-btn');
             if (!existing && dialogueArea) {
               var failsafeBtn = document.createElement('button');

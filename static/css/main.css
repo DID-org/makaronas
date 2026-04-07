@@ -639,6 +639,7 @@ button,
   border-radius: 0;
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
+  display: flow-root;
 }
 
 .block-text--article-a > p:first-child {
@@ -668,6 +669,7 @@ button,
   border-radius: 0;
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
+  display: flow-root;
 }
 
 .block-text--article-b > p:first-child {
@@ -726,14 +728,49 @@ button,
   border-radius: 0;
 }
 
-/* Briefing illustration — centered, constrained width, neon framing */
-#block-intro-image {
-  max-width: 420px;
-  margin: 0 auto var(--space-lg);
+/* Phase illustrations — mobile-first: stacked & centered by default */
+#block-intro-image,
+#block-article-edtech-image,
+#block-article-opensource-image {
+  display: block !important;
+  max-width: 100% !important;
+  width: 420px;
+  margin: 0 auto var(--space-lg) !important;
+  float: none !important;
+  clear: both;
 }
 
 #block-intro-image img {
   border: 2px solid #D873FF;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+#block-article-edtech-image img {
+  border: 2px solid #6BA0FF;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+#block-article-opensource-image img {
+  border: 2px solid #D873FF;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Desktop: float to the side of text */
+@media (min-width: 801px) {
+  #block-intro-image,
+  #block-article-edtech-image,
+  #block-article-opensource-image {
+    width: 280px !important;
+    max-width: 280px !important;
+    float: left !important;
+    margin: 0 var(--space-lg) var(--space-md) 0 !important;
+  }
 }
 
 .block-image__caption {

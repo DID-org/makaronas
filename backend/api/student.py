@@ -718,6 +718,49 @@ async def next_task(
         and session.current_task != resolved_task_id
     )
     if is_task_switch:
+        # Telemetry: save completion for the OUTGOING task if it isn't already
+        # in task_history. AI tasks save themselves via /respond when the
+        # evaluator transitions. Static tasks (no AI exchanges) need this
+        # safety net so they're captured too.
+        outgoing_task_id = session.current_task
+        already_recorded = any(
+            entry.get("task_id") == outgoing_task_id
+            for entry in session.task_history
+        )
+        if not already_recorded:
+            outgoing_cartridge = registry.get_task(outgoing_task_id)
+            session.task_history.append({
+                "task_id": outgoing_task_id,
+                "evaluation_outcome": "static_complete",
+                "exchange_count": 0,
+                "intensity_score": None,
+                "is_clean": (
+                    outgoing_cartridge.is_clean
+                    if outgoing_cartridge is not None
+                    else False
+                ),
+            })
+            try:
+                from backend.telemetry import save_task_completion
+                save_task_completion(
+                    session=session,
+                    task_id=outgoing_task_id,
+                    phase_exchanges=[
+                        {
+                            "role": e.role,
+                            "content": e.content,
+                            "timestamp": e.timestamp.isoformat(),
+                        }
+                        for e in session.exchanges
+                    ],
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Static task telemetry save failed for %s: %s",
+                    outgoing_task_id,
+                    exc,
+                )
+
         session.exchanges = []
         session.choices = []
         session.turn_intensities = []
@@ -1381,41 +1424,79 @@ async def session_report(
             data={"report": "Sveikiname baigus sesiją!"},
         ).model_dump()
 
-    # Build summary of what the student did across tasks
-    task_summaries = []
+    # Human-readable Lithuanian descriptions for each task — anchors the AI
+    # to real content so it can't hallucinate tasks that weren't done.
+    task_descriptions_lt = {
+        "task-petryla-001": (
+            "straipsnių apie mokytoją Petrylą tyrimas (perskaitė du skirtingus "
+            "straipsnius, ieškojo šaltinių ir parašė žinutę draugams)"
+        ),
+        "task-petryla-comments-001": (
+            "komentarų skilties bei nuotraukos analizė (atpažino botus, trolius "
+            "ir tikrus dalintojus, ištyrė nuotraukos kilmę)"
+        ),
+        "task-petryla-network-001": (
+            "botų tinklo vizualizacija ir trumpas straipsnis apie tinklus"
+        ),
+        "task-petryla-video-001": (
+            "deepfake vaizdo įrašo analizė (ieškojo požymių, kad asmuo nerealus)"
+        ),
+    }
+
+    # Build the task list from actual session data — no hardcoded sequence.
+    task_lines = []
     for entry in session.task_history:
+        task_id = entry.get("task_id", "")
+        desc = task_descriptions_lt.get(task_id, task_id)
         outcome = entry.get("evaluation_outcome", "unknown")
         outcome_lt = {
-            "on_success": "puikiai",
-            "on_partial": "iš dalies",
-            "on_max_exchanges": "su pagalba",
-        }.get(outcome, "baigta")
-        task_summaries.append(
-            f"- {entry['task_id']}: {outcome_lt} "
-            f"({entry.get('exchange_count', '?')} pokalbių)"
-        )
+            "on_success": "puikiai atliko",
+            "on_partial": "iš dalies atliko",
+            "on_max_exchanges": "atliko su pagalba",
+        }.get(outcome, "atliko")
+        task_lines.append(f"- {desc} — {outcome_lt}")
 
-    summary_text = "\n".join(task_summaries)
+    summary_text = "\n".join(task_lines)
+
+    # Personal touch: pull the student's actual article from generated_artifacts.
+    # This is THEIR words — the strongest signal for a unique, personal report.
+    student_article_text = None
+    for artifact in session.generated_artifacts:
+        if artifact.get("type") == "student_article" and artifact.get("text"):
+            student_article_text = artifact["text"].strip()
+            break
+
+    personal_section = ""
+    if student_article_text:
+        personal_section = (
+            f"\n\nMokinio žinutė draugams (jo paties žodžiais):\n"
+            f'"{student_article_text}"\n\n'
+            f"PASTABA: Pakomentuok šią žinutę konkrečiai vienu sakiniu — "
+            f"pagirk už tai, kas joje stipru, arba paminėk konkrečią detalę, "
+            f"kurią pastebėjai. Nepakartok jos visos."
+        )
 
     system_prompt = (
         "Tu esi Makaronas — DI asistentas, kuris moko paauglius atpažinti "
         "dezinformaciją. Mokinys ką tik baigė visas užduotis. Parašyk ASMENINĘ "
-        "ataskaitą lietuvių kalba (100-160 žodžių). Naudok 'jūs' formą.\n\n"
+        "ataskaitą lietuvių kalba (120-180 žodžių). Naudok 'jūs' formą.\n\n"
+        "KRITIŠKAI SVARBU: minėk TIK tas užduotis, kurios išvardintos žemiau. "
+        "NESUGALVOK papildomų užduočių, veiklų ar detalių (pvz., banko išrašų, "
+        "naujienų laidų ar kitų dalykų, kurių sąraše nėra). Jeigu nesi tikras — "
+        "geriau apskritai apie tai nekalbėk.\n\n"
         "Ataskaita turi:\n"
         "- Pagirti mokinį už pastangas ir kantrybę\n"
-        "- Paminėti konkrečiai, ką jie darė gerai (pagal užduočių rezultatus)\n"
-        "- Trumpai paminėti, ką galėtų tobulinti (bet pozityviai)\n"
-        "- Paskatinti būti budriems ateityje\n"
-        "- Padėkoti už dalyvavimą\n"
-        "- Baigti viltingai: kritinis mąstymas veikia, tiesa randama\n\n"
+        "- Paminėti konkrečiai, ką jie darė šiose užduotyse (pagal sąrašą)\n"
+        "- Jeigu yra mokinio žinutė — pakomentuoti ją asmeniškai\n"
+        "- Trumpai paskatinti būti budriems ateityje\n"
+        "- Padėkoti už dalyvavimą\n\n"
         "Nerašyk pavadinimo ar antraštės. Tik tekstą."
     )
 
     messages = [
         {"role": "user", "content": (
-            f"Mokinio sesijos rezultatai:\n{summary_text}\n\n"
-            f"Užduočių seka: straipsniai → komentarai → botų tinklas → "
-            f"banko išrašas → deepfake video.\n\n"
+            f"Mokinys atliko šias užduotis:\n{summary_text}"
+            f"{personal_section}\n\n"
             f"Parašyk asmeninę ataskaitą."
         )},
     ]
