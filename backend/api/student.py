@@ -26,7 +26,7 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from backend.ai.trickster import DebriefResult, TricksterEngine, TricksterResult
@@ -618,6 +618,7 @@ async def _static_fallback_stream() -> AsyncGenerator[str, None]:
 @router.post("/session")
 async def create_session(
     body: CreateSessionRequest,
+    request: Request,
     user: User = Depends(get_current_user),
     session_store: SessionStore = Depends(get_session_store),
 ) -> dict:
@@ -629,12 +630,15 @@ async def create_session(
     settings = get_settings()
     language = body.language or settings.default_language
 
+    user_agent = request.headers.get("user-agent")
+
     session = GameSession(
         session_id=str(uuid4()),
         student_id=user.id,
         school_id=user.school_id,
         language=language,
         roadmap_id=body.roadmap_id,
+        user_agent=user_agent,
     )
     await session_store.save_session(session)
 

@@ -63,6 +63,7 @@ def save_task_completion(
 
     data = _load_existing(session.session_id)
     data["created_at"] = session.created_at.isoformat()
+    data["user_agent"] = session.user_agent
 
     # Build task record
     task_record = {
@@ -103,6 +104,7 @@ def save_session_end(
 
     data = _load_existing(session.session_id)
     data["created_at"] = session.created_at.isoformat()
+    data["user_agent"] = session.user_agent
     data["completed"] = True
     data["completed_at"] = datetime.now(timezone.utc).isoformat()
     data["session_report"] = report_text
@@ -123,6 +125,7 @@ def save_active_session(session: GameSession) -> None:
 
     data = _load_existing(session.session_id)
     data["created_at"] = session.created_at.isoformat()
+    data["user_agent"] = session.user_agent
     data["completed"] = False
     data["current_task"] = session.current_task
     data["current_phase"] = session.current_phase
