@@ -81,6 +81,8 @@
     figure.id = 'block-' + block.id;
 
     var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.src = window.Api.assetUrl(taskId, block.src);
     img.alt = block.alt_text || '';
     img.onerror = function () {
@@ -228,6 +230,8 @@
       imgWrap.className = 'block-social-post__image-wrap';
       var img = document.createElement('img');
       img.className = 'block-social-post__image';
+      img.loading = 'lazy';
+      img.decoding = 'async';
       img.src = window.Api.assetUrl(taskId, block.image);
       img.alt = block.image_alt || '';
       img.onerror = function () {
@@ -270,6 +274,8 @@
 
     var img = document.createElement('img');
     img.className = 'block-meme__image';
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.src = window.Api.assetUrl(taskId, block.image_src);
     img.alt = block.alt_text || '';
     img.onerror = function () {

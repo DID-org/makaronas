@@ -712,8 +712,27 @@
     textarea.value = '';
     clearDraft();
 
+    // Mobile scroll-to-top guard:
+    // On iOS Safari, disabling a focused textarea dismisses the keyboard and
+    // can yank window.scrollY to 0 (body becomes the active element). Blur
+    // explicitly first so keyboard dismissal is deterministic, then restore
+    // scroll position after one frame if iOS moved us away from where we were.
+    var isMobile = window.innerWidth <= 800;
+    var savedScrollY = isMobile ? window.scrollY : null;
+    if (isMobile && textarea) {
+      textarea.blur();
+    }
+
     // Disable input during streaming
     setInputDisabled(true);
+
+    if (isMobile && savedScrollY !== null) {
+      requestAnimationFrame(function () {
+        if (Math.abs(window.scrollY - savedScrollY) > 100) {
+          window.scrollTo(0, savedScrollY);
+        }
+      });
+    }
 
     // Show typing indicator via streaming display
     if (streamDisplay) {
@@ -752,9 +771,12 @@
   function scrollToBottom() {
     if (!dialogueArea) return;
     dialogueArea.scrollTop = dialogueArea.scrollHeight;
-    // Mobile: dialogueArea is in page flow, scroll page to show input area
+    // Mobile: dialogueArea is in page flow, scroll page to show input area.
+    // Use 'auto' (instant) — 'smooth' races with iOS keyboard-dismiss reflow
+    // when textarea.disabled fires immediately after, and the browser can
+    // cancel the animation mid-flight and resolve to the page top.
     if (window.innerWidth <= 800 && inputArea) {
-      inputArea.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      inputArea.scrollIntoView({ block: 'end', behavior: 'auto' });
     }
   }
 

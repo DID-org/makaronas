@@ -153,6 +153,12 @@
       "is_key_finding": true
     },
     {
+      "id": "findings-reveal",
+      "type": "text",
+      "text": "**Tavo tyrimas atskleidė:**\n\n**1. Kas leidžia „Švietimo Technologijų“ portalą?**\nUAB „Ryšių Sprendimai“ — viešųjų ryšių agentūra. Tarp jų reklaminių partnerių: UAB „EduVault“ (Kalvaitis Holdings). Portalas, rašantis apie EduVault, finansuojamas EduVault PR agentūros.\n\n**2. Kas finansuoja „Atvirą Kodą“?**\nKlasėPlus fondas — mokyklų valdymo platforma, tiesioginis EduVault konkurentas. Portalo straipsniai eina iš KlasėPlus rinkodaros biudžeto.\n\n**3. Ką sako EduVault privatumo politika?**\n§7.3: elgesio duomenys saugomi „viso mokymosi laikotarpio metu ir 10 metų po jo pabaigos.“\n§9.1: duomenys „gali būti dalijami su tyrimų partneriais.“\n\n**4. Ką rodo Petrylos diegimo žurnalas?**\n2026-01-14 įrašas: „Žingsnis 8/12: Prieigos apribojimo konfigūracija. TODO: grįžti prie šito pirmadienį.“ Žingsnis neužbaigtas. Incidentas įvyko 2026-01-26.",
+      "style": "conclusions"
+    },
+    {
       "id": "conclusions-text",
       "type": "text",
       "text": "**Ką išmokome:**\n\n**1. Visi informacijos šaltiniai turi rėmėjus.**\nŽurnalai, tinklaraščiai, portalai — visi kažkieno finansuojami. Tai nebūtinai blogai. Bet kai jie pradeda rašyti savo rėmėjų naudai — tai vadinama interesų konfliktu. Šioje istorijoje abu portalai turėjo finansinį interesą pasakoti istoriją būtent taip, kaip pasakojo.\n\n**2. Manipuliuoti galima be melo.**\nNė vienas straipsnis nemelavo. Visi faktai buvo tikri. Bet abu portalai nutylėjo tai, kas buvo nepatogu jų rėmėjams. Ta pati tiesa, papasakota skirtingai — tai ne objektyvumas, o rėminimas. Ir tai yra pavojingiau nei melas, nes to negalima paprastai paneigti.\n\n**3. Diskredituotas žmogus vis tiek gali kelti svarbius klausimus.**\nPetryla suklydo — tai faktas. Bet jo įspėjimas apie EduVault privatumo politiką pasitvirtino jų pačių dokumentuose. Kai kažkas suklydo vienoje vietoje, neautomatiškai reiškia, kad jie klysta visur. Tikrink teiginį — ne žmogų.\n\n**4. Svarbiausia žinutė ne visada atrodo svarbi.**\nPrivatumo politika — 10 puslapių juridinio teksto, kurį niekas neskaito. Bet būtent ten slypi tai, kas svarbiausia: tavo duomenys saugomi dešimtmečius. Kai tau bus 26 — politikas, verslininkas, žurnalistas — kažkas vis dar turės tavo 16-mečio elgesio profilį.\n\n**5. Kai du šaltiniai nesutaria — neklausk, kuris teisus.**\nKlausk: kas moka? Kas nutyli? Ir kas nuo to laimi? Atsakymai į šiuos klausimus papasakos daugiau nei bet kuris straipsnis.\n\n—\n\nTavo žinutė paskelbta mokyklos naujienų puslapyje. Pažiūrėk, kas vyksta komentaruose...",
@@ -217,9 +223,9 @@
         "type": "button",
         "choices": [
           {
-            "label": "Pradėti tyrimą",
+            "label": "Pažiūrėti, ką radau",
             "target_phase": "investigate",
-            "context_label": "Mokinys perskaitė abu straipsnius ir pradeda tyrimą"
+            "context_label": "Mokinys perskaitė abu straipsnius ir eina prie tyrimo rezultatų"
           },
           {
             "label": "← Grįžti prie pirmojo straipsnio",
@@ -232,30 +238,23 @@
     },
     {
       "id": "investigate",
-      "title": "Tyrimas",
+      "title": "Tyrimo rezultatai",
       "visible_blocks": [
         "article-edtech",
         "article-opensource",
-        "sr-st-about",
-        "sr-st-rysiai",
-        "sr-eduvault-main",
-        "sr-eduvault-privacy",
-        "sr-kalvaitis",
-        "sr-ak-about",
-        "sr-ak-fondas",
-        "sr-system-journal"
+        "findings-reveal"
       ],
-      "trickster_content": "Kas stovi už šių straipsnių? Kas juos finansuoja? Ir ką „EduVault“ slepia savo privatumo politikoje? Tyrinėk.",
+      "trickster_content": "Išsiaiškinau štai ką — kas moka kam, kas nutyli ką, ir ką iš tikrųjų rodo Petrylos žurnalas. Pažiūrėk.",
       "is_ai_phase": false,
       "interaction": {
-        "type": "investigation",
-        "starting_queries": [
-          "Švietimo Technologijos portalas",
-          "Atviras Kodas portalas",
-          "EduVault platforma"
-        ],
-        "submit_target": "discuss",
-        "min_key_findings": 4
+        "type": "button",
+        "choices": [
+          {
+            "label": "Aptarkime",
+            "target_phase": "discuss",
+            "context_label": "Mokinys peržiūrėjo tyrimo rezultatus"
+          }
+        ]
       },
       "is_terminal": false
     },
@@ -277,8 +276,8 @@
       "is_ai_phase": true,
       "interaction": {
         "type": "freeform",
-        "trickster_opening": "Taigi, nė vienas straipsnis nemeluoja. Bet jie atrodo taip skirtingai! Tu padarei tyrimą — ar radai, kas motyvuoja tokius skirtingus požiūrius?",
-        "min_exchanges": 2,
+        "trickster_opening": "Taigi, nė vienas straipsnis nemeluoja. Bet jie atrodo taip skirtingai! Matei, ką atskleidė tyrimas — tai kas, tavo nuomone, motyvuoja tokius skirtingus požiūrius?",
+        "min_exchanges": 1,
         "max_exchanges": 16
       },
       "evaluator_checklist": [
@@ -333,7 +332,7 @@
         "max_exchanges": 16
       },
       "evaluator_checklist": [
-        {"id": "ec-article-written", "description": "Mokinys parašė žinutę, kuri apima abi puses — ir Petrylos klaidą, ir privatumo problemą", "is_mandatory": true}
+        {"id": "ec-article-written", "description": "Mokinys pamini abi puses — ir Petrylos klaidą, ir privatumo politikos problemą. Skaičiuoja, jei abu dalykai paminėti bet kuriuo metu šiame pokalbyje — nebūtinai vienoje žinutėje.", "is_mandatory": true}
       ],
       "ai_transitions": {
         "on_success": "reveal",
