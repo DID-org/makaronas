@@ -47,6 +47,35 @@ def _load_existing(session_id: str) -> dict:
     }
 
 
+def save_task_start(session: GameSession, task_id: str) -> None:
+    """Records that a student started a task, even if they never finish it.
+
+    Captures the gap where students begin task N but class ends before
+    they reach the terminal phase — without this, the session file would
+    show no evidence they ever got there.
+    """
+    _ensure_dir()
+
+    data = _load_existing(session.session_id)
+    data["created_at"] = session.created_at.isoformat()
+    data["user_agent"] = session.user_agent
+
+    if "tasks_started" not in data:
+        data["tasks_started"] = []
+
+    # Avoid duplicates (e.g., page refresh reloads the same task)
+    already = {t["task_id"] for t in data["tasks_started"]}
+    if task_id not in already:
+        data["tasks_started"].append({
+            "task_id": task_id,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    path = _session_path(session.session_id)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("Telemetry: task_start %s for session %s", task_id, session.session_id)
+
+
 def save_task_completion(
     session: GameSession,
     task_id: str,
@@ -81,9 +110,16 @@ def save_task_completion(
             task_record["intensity_score"] = entry.get("intensity_score")
             break
 
-    # Avoid duplicates
-    existing_ids = {t["task_id"] for t in data["tasks"]}
-    if task_id not in existing_ids:
+    # Update existing record if present (later AI phases have richer data),
+    # otherwise append new. This ensures the final phase's full exchange set
+    # overwrites the partial set from earlier mid-task transitions.
+    existing_idx = next(
+        (i for i, t in enumerate(data["tasks"]) if t["task_id"] == task_id),
+        None,
+    )
+    if existing_idx is not None:
+        data["tasks"][existing_idx] = task_record
+    else:
         data["tasks"].append(task_record)
 
     path = _session_path(session.session_id)
@@ -114,6 +150,48 @@ def save_session_end(
     path = _session_path(session.session_id)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("Telemetry: session %s completed (%d tasks)", session.session_id, len(data["tasks"]))
+
+
+def save_client_error(
+    session_id: str,
+    error_type: str,
+    details: dict,
+    user_agent: str | None = None,
+) -> None:
+    """Appends a client-side error record to the session telemetry file.
+
+    Captures asset-load failures and AI/LLM errors so we can see on Sunday
+    which students hit which problems during testing.
+
+    Args:
+        session_id: The session that reported the error.
+        error_type: Category — "asset" (image/video) or "ai" (LLM/stream).
+        details: Arbitrary dict with error-specific fields (url, code, etc).
+        user_agent: The student's User-Agent string, if available.
+    """
+    _ensure_dir()
+
+    data = _load_existing(session_id)
+    if "client_errors" not in data:
+        data["client_errors"] = []
+
+    record = {
+        "error_type": error_type,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "details": details,
+    }
+    if user_agent:
+        record["user_agent"] = user_agent
+
+    data["client_errors"].append(record)
+
+    path = _session_path(session_id)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info(
+        "Telemetry: client_error (%s) recorded for session %s",
+        error_type,
+        session_id,
+    )
 
 
 def save_active_session(session: GameSession) -> None:

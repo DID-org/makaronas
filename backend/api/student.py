@@ -106,6 +106,13 @@ class ChoiceRequest(BaseModel):
     context_label: str | None = None
 
 
+class ClientErrorRequest(BaseModel):
+    """Request body for POST /session/{session_id}/client-error."""
+
+    error_type: str  # "asset" or "ai"
+    details: dict
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -783,6 +790,14 @@ async def next_task(
     session.current_phase = cartridge.initial_phase
     await session_store.save_session(session)
 
+    # Telemetry: record task start so we know the student reached this task
+    # even if they never finish it (class ends, phone dies, etc).
+    try:
+        from backend.telemetry import save_task_start
+        save_task_start(session, resolved_task_id)
+    except Exception as exc:
+        logger.warning("Task start telemetry failed for %s: %s", resolved_task_id, exc)
+
     return ApiResponse(
         ok=True,
         data=_derive_phase_response(cartridge, initial_phase, session=session),
@@ -1075,6 +1090,44 @@ async def respond(
         result, session, session_store, cartridge, call_type="trickster",
     )
     return create_sse_response(generator)
+
+
+@router.post("/session/{session_id}/client-error")
+async def client_error(
+    session_id: str,
+    body: ClientErrorRequest,
+    user: User = Depends(get_current_user),
+    session_store: SessionStore = Depends(get_session_store),
+) -> dict:
+    """Records a client-side error (asset load failure, AI stream error) in
+    session telemetry. Fire-and-forget from the browser — never raises into
+    the student's flow.
+    """
+    session = await _get_session_or_404(session_id, session_store)
+    _check_ownership(session, user)
+
+    allowed_types = {"asset", "ai"}
+    if body.error_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=ApiResponse(
+                ok=False,
+                error=ApiError(
+                    code="BAD_REQUEST",
+                    message=f"error_type must be one of {sorted(allowed_types)}.",
+                ),
+            ).model_dump(),
+        )
+
+    from backend.telemetry import save_client_error
+    save_client_error(
+        session_id=session_id,
+        error_type=body.error_type,
+        details=body.details,
+        user_agent=session.user_agent,
+    )
+
+    return ApiResponse(ok=True, data={"recorded": True}).model_dump()
 
 
 @router.get("/session/{session_id}/debrief")

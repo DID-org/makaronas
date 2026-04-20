@@ -58,6 +58,16 @@
     fallback.className = 'block-asset-error';
     fallback.textContent = fallbackText || window.I18n.error_asset;
     mediaEl.parentNode.insertBefore(fallback, mediaEl.nextSibling);
+
+    // Telemetry: record the asset failure so we can see on Sunday which
+    // students hit which missing/slow assets. Fire-and-forget.
+    if (window.Api && window.Api.reportClientError) {
+      window.Api.reportClientError('asset', {
+        url: mediaEl.src || mediaEl.currentSrc || null,
+        tag: mediaEl.tagName || null,
+        alt: mediaEl.alt || null
+      });
+    }
   }
 
   // --------------------------------------------------------------------------

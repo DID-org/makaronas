@@ -401,6 +401,21 @@
       onError: function (code, msg, partial) {
         currentAbort = null;
 
+        // Telemetry: record AI/LLM failure. Skip the session-fatal codes
+        // because those get a full error section anyway; we care about the
+        // in-flow failures (AI_TIMEOUT, STREAM_ERROR, AI_UNAVAILABLE, etc).
+        if (code !== 'UNAUTHORIZED' && code !== 'SESSION_NOT_FOUND'
+            && window.Api && window.Api.reportClientError) {
+          var appState = window.App.getState();
+          window.Api.reportClientError('ai', {
+            code: code,
+            message: msg || null,
+            task_id: (appState.task && appState.task.task_id) || null,
+            phase_id: appState.phase || null,
+            partial_length: partial ? partial.length : 0
+          });
+        }
+
         // Session-fatal errors — route to full error section (Plan §6.2)
         if (code === 'UNAUTHORIZED' || code === 'SESSION_NOT_FOUND') {
           window.App.updateState({ error: { message: msg } });
@@ -705,20 +720,18 @@
     removeErrorDisplay();
 
     // Add student bubble
-    appendStudentBubble(text);
+    var studentBubble = appendStudentBubble(text);
     exchanges.push({ role: 'student', content: text });
 
     // Clear textarea and draft
     textarea.value = '';
     clearDraft();
 
-    // Mobile scroll-to-top guard:
-    // On iOS Safari, disabling a focused textarea dismisses the keyboard and
-    // can yank window.scrollY to 0 (body becomes the active element). Blur
-    // explicitly first so keyboard dismissal is deterministic, then restore
-    // scroll position after one frame if iOS moved us away from where we were.
+    // Mobile: blur first so keyboard dismissal is deterministic, then
+    // re-pin the view to the latest exchange once the keyboard reflow
+    // settles. Without this, the browser's own scroll-restoration after
+    // keyboard-dismiss can drop the student anywhere in a tall chat.
     var isMobile = window.innerWidth <= 800;
-    var savedScrollY = isMobile ? window.scrollY : null;
     if (isMobile && textarea) {
       textarea.blur();
     }
@@ -726,12 +739,25 @@
     // Disable input during streaming
     setInputDisabled(true);
 
-    if (isMobile && savedScrollY !== null) {
-      requestAnimationFrame(function () {
-        if (Math.abs(window.scrollY - savedScrollY) > 100) {
-          window.scrollTo(0, savedScrollY);
+    if (isMobile) {
+      var pinTarget = typingIndicator || studentBubble;
+      var pinned = false;
+      var pinView = function () {
+        if (pinned || !pinTarget) return;
+        pinned = true;
+        pinTarget.scrollIntoView({ block: 'end', behavior: 'auto' });
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', pinView);
         }
-      });
+      };
+      // Primary trigger: visualViewport resize fires when the virtual keyboard
+      // finishes animating away — that's the moment the viewport is stable.
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', pinView);
+      }
+      // Fallback: if no resize event (older browser, or keyboard was already
+      // dismissed), re-pin after a short delay so we don't wait forever.
+      setTimeout(pinView, 400);
     }
 
     // Show typing indicator via streaming display

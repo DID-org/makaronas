@@ -24,7 +24,8 @@
     radar:         function (id) { return '/api/v1/student/profile/' + id + '/radar'; },
     deleteProfile: function (id) { return '/api/v1/student/profile/' + id; },
     exportProfile: function (id) { return '/api/v1/student/profile/' + id + '/export'; },
-    asset:         function (taskId, src) { return '/api/v1/assets/' + taskId + '/' + src; }
+    asset:         function (taskId, src) { return '/api/v1/assets/' + taskId + '/' + src; },
+    clientError:   function (id) { return '/api/v1/student/session/' + id + '/client-error'; }
   };
 
   // --------------------------------------------------------------------------
@@ -290,6 +291,27 @@
 
   function assetUrl(taskId, src) {
     return PATHS.asset(taskId, src);
+  }
+
+  /**
+   * Reports a client-side error (asset load failure, AI stream error) to
+   * session telemetry. Fire-and-forget — failures here are swallowed so
+   * the student's flow is never affected. Requires a live session.
+   */
+  function reportClientError(errorType, details) {
+    try {
+      var appState = (window.App && window.App.getState && window.App.getState()) || {};
+      var sessionId = appState.session && appState.session.session_id;
+      if (!sessionId) return;
+      request('POST', PATHS.clientError(sessionId), {
+        error_type: errorType,
+        details: details || {}
+      }, { skipLock: true }).catch(function () {
+        // Swallow — telemetry must never break the student's session.
+      });
+    } catch (e) {
+      // Ditto — defensive.
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -693,6 +715,7 @@
     // Utility
     getReport: getReport,
     assetUrl: assetUrl,
+    reportClientError: reportClientError,
 
     // Exposed for SSE functions and future use
     PATHS: PATHS

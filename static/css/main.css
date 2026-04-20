@@ -548,6 +548,19 @@ button,
     border-bottom: 1px solid var(--color-content-border);
   }
 
+  /* AI dialogue phases (default layout, not fullpage/investigation):
+     put the chat panel on top on mobile, materials below. The scroll-to-top
+     that happens after submitting a message is now benign — "top of page"
+     is where the student wants to be anyway. */
+  .task-layout:not(.layout-fullpage):not(.layout-investigation) .interaction-panel {
+    order: 0;
+    border-bottom: 1px solid var(--color-content-border);
+  }
+  .task-layout:not(.layout-fullpage):not(.layout-investigation) .content-panel {
+    order: 1;
+    border-bottom: none;
+  }
+
   #section-welcome,
   #section-end,
   #section-error {
