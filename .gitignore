@@ -26,5 +26,59 @@ venv/
 # Claude Code
 .claude/
 
+# Agent-context / instruction files — never ship (kept locally)
+/CLAUDE.md
+GEMINI.md
+AGENTS.md
+
+# Internal planning, design & vision docs — never ship (kept locally)
+/FRAMEWORK.md
+/ROADMAP.md
+/DECISIONS.md
+/decisions.md
+/Decisions.md
+/PLATFORM_VISION.md
+/PAGRINDAS.md
+/CONTEXT_MAP.md
+/MEGA_STORY.md
+/MVP_STORY.md
+/EMPATHY_FLIP_CONCEPT.md
+/TASK_ROADMAP.md
+/TEAM_ROADMAP.md
+/TEAM_ISSUES_DRAFT.md
+/VIDEO_TASK_BRIEF_LT.md
+/darbu_sarasas.md
+/FutureTaskList.md
+/COMPLETED.md
+/INVESTIGATION_REDESIGN.md
+/POST_TRIAL_FIXES.md
+/AUTH.md
+/bot_swarm_social_viz.md
+/APRIL7_GOLD.md
+/APRIL7_REPORT.md
+/APRIL18_REPORT.md
+
 # Telemetry data (student sessions — anonymous, delete after analysis)
 data/sessions/
+# Loose session/log exports at repo root (student data — never commit)
+/sessions_*.json
+/logs.*.json
+
+# Scratch media & brainstorm assets at repo root (NOT product content under content/)
+/*.pdf
+/*.mp4
+/*.jpg
+/*.jpeg
+/*.png
+/*.gif
+
+# Ad-hoc experiments & scratch scripts
+/test_tool_eval*.py
+/ui_experiments/
+/screenshots/
+FRAMEWORK.md
+ROADMAP.md
+CLAUDE.md
+decisions.md
+DECISIONS.md
+Decisions.md
