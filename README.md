@@ -11,7 +11,7 @@ Prerequisites: Python 3.13+, pip
 git clone <repo-url> && cd makaronas
 python -m venv venv
 source venv/bin/activate
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 
 # Configure
 cp .env.example .env

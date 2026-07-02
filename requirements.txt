@@ -1,4 +1,6 @@
 # Makaronas Platform — Python Dependencies
+# Single source of truth: used by local dev (README) AND the nixpacks deploy build.
+# Exact pins for reproducible builds — do not fork a second requirements file.
 # Install: pip install -r requirements.txt
 
 # Web framework
